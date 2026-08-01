@@ -26,3 +26,7 @@ This build implements the first connected vertical slice from the full design do
 5. Cloud saves and multi-device play.
 6. Awards, syndication buyers, international sales, ownership changes, acquisitions, and regulatory events.
 7. More sophisticated schedule duration and live-event handling.
+
+## CI test command fix (v0.2.1)
+
+The project now defines `npm test` as `vite build`. This gives GitHub Actions a meaningful compile-time validation step and resolves the previous `Missing script: "test"` failure.

@@ -1,10 +1,11 @@
 {
   "name": "tv-empire-chronicle",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "test": "vite build",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
