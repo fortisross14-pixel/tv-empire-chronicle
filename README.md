@@ -103,3 +103,9 @@ The complete design document is included in `/docs`.
 ## GitHub Actions note
 
 Version 0.2.2 runs the production validation through `node scripts/ci-build.mjs` instead of executing the `node_modules/.bin/vite` shim. The repository also includes `.gitignore` and a clean-install CI workflow. See `GIT_FIX.md` when upgrading an existing repository that may already track `node_modules`.
+
+## GitHub Pages deployment
+
+The included workflow builds and deploys the `dist` directory automatically on pushes to `main` or `master`.
+
+One GitHub setting is required: open **Settings → Pages** and choose **GitHub Actions** as the deployment source. See `GITHUB_PAGES_DEPLOYMENT.md` for the exact steps.
