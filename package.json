@@ -1,7 +1,7 @@
 {
   "name": "tv-empire-chronicle",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -12,5 +12,6 @@
     "vite": "^6.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
-  }
+  },
+  "description": "A living TV network and broadcast-industry CEO simulation built with Vite and React."
 }
