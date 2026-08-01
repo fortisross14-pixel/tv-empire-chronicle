@@ -1,18 +1,24 @@
 {
   "name": "tv-empire-chronicle",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "test": "vite build",
-    "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "dev": "node ./node_modules/vite/bin/vite.js --host 0.0.0.0",
+    "test": "node ./scripts/ci-build.mjs",
+    "build": "node ./scripts/ci-build.mjs",
+    "preview": "node ./node_modules/vite/bin/vite.js preview --host 0.0.0.0"
   },
   "dependencies": {
-    "vite": "^6.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
-  "description": "A living TV network and broadcast-industry CEO simulation built with Vite and React."
+  "description": "A living TV network and broadcast-industry CEO simulation built with Vite and React.",
+  "devDependencies": {
+    "vite": "^6.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
 }

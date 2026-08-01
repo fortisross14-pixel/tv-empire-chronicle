@@ -99,3 +99,7 @@ There is no generic quality or budget slider. Episode and season cost are calcul
 - No server or database is required for this build.
 
 The complete design document is included in `/docs`.
+
+## GitHub Actions note
+
+Version 0.2.2 runs the production validation through `node scripts/ci-build.mjs` instead of executing the `node_modules/.bin/vite` shim. The repository also includes `.gitignore` and a clean-install CI workflow. See `GIT_FIX.md` when upgrading an existing repository that may already track `node_modules`.
