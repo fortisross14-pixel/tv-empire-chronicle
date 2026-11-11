@@ -250,7 +250,7 @@ export function WeekScreen({
       </section>
 
       <div style={{ textAlign: 'center' }}>
-        <button className="btn ghost small" onClick={onMenu}>🏠 Menu &amp; save slots</button>
+        <button className="btn ghost small" onClick={onMenu}>🏠 Main menu</button>
       </div>
     </>
   );
