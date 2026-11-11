@@ -353,6 +353,76 @@ colours + topic icon) until the poster editor and its art library
 - Data files hold formats, topics, fit tables, name generators and parody content.
 - Versioned localStorage save.
 
+## 14. Game modes: Beginner, Campaign, Sandbox (planned)
+
+Main menu: **Beginner** → **Campaign** → **Sandbox**. Progress (which scenarios are
+done, stars) lives in a profile, separate from save slots.
+
+**A scenario** = a preset station (tier, cash, loan, people, shows with their novelty,
+rights, rivals, reputation) + 1–3 goals + a deadline in weeks. Fail the deadline →
+retry. Stars: ★ goal met, ★★ met with time to spare, ★★★ met with a bonus condition.
+
+### Beginner (6, finish 5 to open the Campaign)
+1. **First Hit** — air a show that reaches an easy share (e.g. 8%).
+2. **Play Ball** — win a local sports right and air one game.
+3. **Movie Night** — buy a movie pack and air 4 movies.
+4. **In the Black** — end a month with a positive balance.
+5. **No Filler** — fill all 6 slots with your own content for 4 weeks.
+6. **Back for More** — make season 2 of a show.
+
+### Campaign (18: 6 Local, 6 State, 6 National, each tier from easy to hard)
+The easiest of each tier is open at once; each win opens the next in that tier.
+- **Local:** Zero to Hero (0 audience → #1 in Port Ellison in a year) · Shoestring
+  (no cash, a loan, profitable for 3 months) · Sports Town (hold all 3 local sports
+  rights and win weekends) · Critics' Darling (win an Indie Award) · The Comeback
+  (a tired lineup, every show low novelty: rebuild it) · State Bound (earn the State
+  license in 2 years).
+- **State:** Bleeding Money (great rights and licenses, low cash, losing money every
+  month → 3 profitable months in a row) · Prime Time War (win prime in all 3 day
+  blocks) · Rights Rush (win State College Football and make it pay) · House Rules
+  (house staff only + packs → a Show for the Ages) · Franchise Builder (grow one of
+  your shows to an IP worth $X) · National Ambition (the National license).
+- **National:** The Stale Giant (#1 network, lineup out of novelty: renew and replace,
+  stay #1 for 26 weeks) · Glimmy Night (win Best Drama) · Coast to Coast (sign 10
+  affiliates) · The Big Gamble (bought Galaxy Wars on a loan: pay it off) · Underdog
+  (last of 4 networks → top 2) · Empire (#1 with 3 IPs worth $X each).
+
+### Sandbox (opens after one win in each campaign tier)
+Today's game: a new station from scratch, Local → State → National. Pick a
+difficulty (cash, rival strength, event rate) and optional goals from the scenario
+goal list, or none. Existing saves become Sandbox saves.
+
+## 15. Your shows become IP (planned)
+
+Every show you make is an **IP**. Its **IP value** ($K, same scale as bought IP)
+grows with each successful season (share, reviews, awards, Show for the Ages) and
+fades slowly while nothing new is made from it. A hit like a Friends-type sitcom can
+end up worth as much as Galaxy Wars (900) or more.
+
+What an IP opens (cost and hype scale with IP value):
+- **New season** (as today).
+- **Spin-off** — same world, new show; starts with fame and hype from the IP.
+- **Adaptation** into a matching format: Series/Sitcom → TV Movie, Animation;
+  News → Documentary, Magazine; Talk → Late Show special; Contest → Celebrity
+  edition; Reality → Documentary; Movie → Series.
+- **Prequel / sequel** — Series, Sitcom and TV Movie.
+- Each new show feeds value back into the IP; a flop costs the IP value.
+- **Bought IP works the same**: some rights lots include **production rights** (e.g.
+  make a Galaxy Wars series), not only airings.
+- Later: sell **syndication** of a big IP to rivals for cash.
+
+## 16. Movie packs (planned)
+
+Cheap content you buy and air straight away, no production.
+- **Movie packs in the Shop** (Local / State / National packs), like card packs:
+  each pack gives 3–5 **movie cards** (title, topic, quality, 2–4 airings, rarity).
+- **Classics** (most cards): no novelty and no premiere buzz, but a steady,
+  easy audience — good filler that beats Filler.
+- **New releases** (rare/epic cards): a premiere boost and real novelty for their
+  first airing, then like a classic.
+- Duplicates add airings. Cards expire once their airings are used.
+- The big film libraries (Galaxy Wars, Prestige Vault) stay in the Rights Market.
+
 ## 13. Build waves
 
 0. **Foundation** — remove the old code, TS + engine/UI split, card components,
@@ -378,6 +448,14 @@ colours + topic icon) until the poster editor and its art library
    2 topics, new formats, State rights.
 7. **National + payoff** ✅ — national tier, affiliates, AAA, big IP, full
    Glimmys, spin-offs, #1 crown.
+
+Next (planned):
+
+11. **Movie packs + IP** — movie cards in the Shop, IP value, adaptations,
+    prequels/sequels, production rights on bought IP.
+12. **Scenario engine + Beginner** — main menu, profile, preset starts, goals,
+    deadlines, stars, the 6 Beginner scenarios.
+13. **Campaign + Sandbox** — the 18 campaign scenarios, unlock rules, Sandbox setup.
 
 The last three waves are always:
 
