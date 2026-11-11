@@ -14,5 +14,5 @@
     "noEmit": true,
     "types": ["vitest/globals"]
   },
-  "include": ["src", "scripts/*.ts"]
+  "include": ["src", "scripts/*.ts", "vitest.playtest.config.ts"]
 }

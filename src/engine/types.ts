@@ -278,7 +278,8 @@ export interface PendingEvent {
   defId: string;
   title: string;
   text: string;
-  choices: { label: string; detail: string }[];
+  /** cost: cash the choice takes ($K); it can't be picked without that much. */
+  choices: { label: string; detail: string; cost?: number }[];
   /** Ids the event is about (person, show, project). */
   targetId: string | null;
   amount: number;

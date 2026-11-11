@@ -47,7 +47,7 @@ const EVENTS: EventDef[] = [
         text: `Fans stop ${p.name.split(' ')[0]} in the street now. Their agent calls: pay up, or they work fewer seasons for you.`,
         amount,
         choices: [
-          { label: `Pay $${amount}K`, detail: '+1 use and +3 fame' },
+          { label: `Pay $${amount}K`, detail: '+1 use and +3 fame', cost: amount },
           { label: 'Refuse', detail: '−1 use' },
         ],
       };
@@ -93,7 +93,7 @@ const EVENTS: EventDef[] = [
       text: 'The signal flickers during the evening news. The engineer can fix it properly, or tape it together.',
       amount: 6,
       choices: [
-        { label: 'Repair it · $6K', detail: 'No harm done' },
+        { label: 'Repair it · $6K', detail: 'No harm done', cost: 6 },
         { label: 'Tape it together', detail: '−10% viewers for 2 weeks' },
       ],
     }),
@@ -163,7 +163,7 @@ const EVENTS: EventDef[] = [
         text: `They offered ${p.name.split(' ')[0]} more money. You can make a counter-offer, or let them go for a transfer fee.`,
         amount,
         choices: [
-          { label: `Counter-offer · $${amount}K`, detail: '+2 uses' },
+          { label: `Counter-offer · $${amount}K`, detail: '+2 uses', cost: amount },
           { label: 'Let them go', detail: `Lose the card, get $${POACH_FEE}K` },
         ],
       };
@@ -188,7 +188,7 @@ const EVENTS: EventDef[] = [
       text: `The script for "${s.projects.find((p) => p.id === id)!.name}" is stuck. A script doctor could help.`,
       amount: 5,
       choices: [
-        { label: 'Hire a script doctor · $5K', detail: '+8 script score' },
+        { label: 'Hire a script doctor · $5K', detail: '+8 script score', cost: 5 },
         { label: 'Push through', detail: 'Script takes 1 more week' },
       ],
     }),
@@ -212,7 +212,7 @@ const EVENTS: EventDef[] = [
       text: `They announced a show suspiciously like "${show(s, id).name}". Two of the same will tire viewers faster.`,
       amount: 4,
       choices: [
-        { label: 'Answer with a promo · $4K', detail: '+20 hype for your show' },
+        { label: 'Answer with a promo · $4K', detail: '+20 hype for your show', cost: 4 },
         { label: 'Ignore it', detail: 'Nothing else happens' },
       ],
     }),

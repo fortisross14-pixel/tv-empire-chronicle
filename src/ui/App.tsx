@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, createShow, ackMission, newMissionGame, recordMission,
   dateLabel, dismissFinished, dismissReveal, openPack, saveGame, scheduleShow, useBusinessCard,
-  rightsById, setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, projectPeople, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
+  setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
   reachOf, SANDBOX_GOALS, type GameState, type Goal, type ShowPlan,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
@@ -16,12 +16,14 @@ import { Sheet } from './components/Sheet';
 import { ShowSheet } from './components/ShowSheet';
 import { PosterEditor } from './posters/PosterEditor';
 import { ConfirmProvider, useConfirm } from './components/Confirm';
-import { WeekScreen, type Todo } from './screens/WeekScreen';
+import { WeekScreen } from './screens/WeekScreen';
 import { ScheduleScreen } from './screens/ScheduleScreen';
 import { StudioScreen } from './screens/StudioScreen';
 import { CardsScreen } from './screens/CardsScreen';
 import { ShopScreen } from './screens/ShopScreen';
 import { MenuScreen } from './screens/MenuScreen';
+import { buildTodos } from './todos';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { MissionResult } from './components/MissionCard';
 import { cx, money } from './util';
 
@@ -63,8 +65,10 @@ export function App() {
   };
   return (
     <ConfirmProvider>
+      <ErrorBoundary key={`eb-${play.gen}`} onMenu={toMenu}>
       <Game key={play.gen} slot={play.slot} state={play.state}
         setState={(s) => setPlay({ ...play, state: s })} onMenu={toMenu} onRetry={retry} />
+      </ErrorBoundary>
     </ConfirmProvider>
   );
 }
@@ -136,53 +140,13 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
     );
   }
 
-  // To-do list on the Week tab.
-  const todos: Todo[] = [];
-  const week = state.year * 52 + state.week;
-  for (const pack of state.unopened) {
-    const people = pack.kind === 'starter-people' || pack.kind === 'people';
-    const label = { starter: 'program', 'starter-people': 'people', program: 'program', people: 'people', network: 'network', movies: 'movie' }[pack.kind];
-    todos.push({
-      id: `pack-${pack.id}`,
-      emoji: people ? '👥' : pack.kind === 'network' ? '📡' : '🎁',
-      title: `Open your free ${label} pack`,
-      detail: people ? 'Meet 3 new people to join your house staff.' : pack.kind === 'network' ? 'Promos, sponsors or studio upgrades.' : 'See which format and topics you start with.',
-      onClick: () => run((s) => openPack(s, pack.id)),
-    });
-  }
-  const booked = (id: string) => state.projects.some((pr) => projectPeople(pr).includes(id));
-  const freeKinds = new Set(state.people.filter((p) => (p.house || p.uses > 0) && !booked(p.id)).map((p) => p.kind));
-  if (state.formats.length > 0 && freeKinds.size === 3) {
-    todos.push({
-      id: 'team-free',
-      emoji: '✍️',
-      title: state.shows.length === 0 && state.projects.length === 0 ? 'Create your first show' : 'Your team is free',
-      detail: 'Pick a format and topic, build the team, split the focus points.',
-      onClick: () => { setTab('studio'); setWizard({}); },
-    });
-  }
-  const promoTargets = state.projects.length + state.shows.filter((x) => !x.premiered).length;
-  if (promoTargets > 0 && state.networkCards.some((c) => networkById(c.defId).kind === 'promo')) {
-    todos.push({ id: 'promo', emoji: '📣', title: 'Build hype before the premiere', detail: 'You have promo cards. Use them in Cards → Network.', onClick: () => setTab('cards') });
-  }
-  if (state.rightsMarket && state.rightsMarket.lots.every((l) => !l.bid)) {
-    todos.push({ id: 'market', emoji: '📜', title: 'The Rights Market is open', detail: `Sports and IP licenses. Bids close in ${state.rightsMarket.closesAt - week} weeks.`, onClick: () => setTab('shop') });
-  }
-  for (const r of state.rights) {
-    const def = rightsById(r.defId);
-    if (def.kind === 'film' && !Object.values(state.schedule).includes(r.id)) {
-      todos.push({ id: `film-${r.id}`, emoji: def.icon, title: `Schedule ${def.name}`, detail: `${r.airingsLeft} airings left before the license runs out.`, onClick: () => setTab('schedule') });
-    }
-  }
+  // To-do list on the Home tab.
+  const todos = buildTodos(state, {
+    openPack: (id) => run((s) => openPack(s, id)),
+    goTab: setTab,
+    newShow: () => { setTab('studio'); setWizard({}); },
+  });
   const scheduled = new Set(Object.values(state.schedule));
-  for (const show of state.shows) {
-    if (show.episodesLeft > 0 && !scheduled.has(show.id)) {
-      todos.push({ id: `schedule-${show.id}`, emoji: '📺', title: `Schedule "${show.name}"`, detail: 'It is ready to air. Pick a time slot.', onClick: () => setTab('schedule') });
-    }
-    if (show.episodesLeft <= 0 && !state.projects.some((p) => p.showId === show.id) && show.history.length > 0 && show.history[show.history.length - 1].week === state.lastResult?.week) {
-      todos.push({ id: `ended-${show.id}`, emoji: '🔁', title: `"${show.name}" season is over`, detail: 'Renew it, keep it on as reruns, or rest it to recover novelty.', onClick: () => setTab('schedule') });
-    }
-  }
 
   const finishedShows = state.newlyFinished.map((id) => state.shows.find((s) => s.id === id)).filter(Boolean) as GameState['shows'];
   const shopDot = (state.shopUnlocked && state.cash >= 40 && state.unopened.length === 0) || !!state.rightsMarket;
@@ -269,7 +233,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
         <CeremonyModal ceremony={state.ceremony} national={state.tier === 'national'} onClose={() => run(dismissCeremony)} />
       )}
       {!state.reveal && !showResults && !state.ceremony && state.pendingEvent && (
-        <EventModal event={state.pendingEvent} onChoose={(i) => run((s) => answerEvent(s, i))} />
+        <EventModal event={state.pendingEvent} cash={state.cash} onChoose={(i) => run((s) => answerEvent(s, i))} />
       )}
       {usingCard && (
         <TargetPicker state={state} cardId={usingCard} onClose={() => setUsingCard(null)}

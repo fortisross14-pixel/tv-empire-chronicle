@@ -588,3 +588,5 @@ select.input option { background: var(--surface); }
 .save-icon { font-size: 28px; flex: none; width: 40px; text-align: center; }
 .save-info { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .save-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.todo:disabled { opacity: .5; cursor: not-allowed; }
