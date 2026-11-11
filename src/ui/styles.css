@@ -713,3 +713,55 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
 }
 
 @media (min-width: 1000px) { .home-side .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+
+/* ================= Orientation: phones portrait, tablets landscape ================= */
+.rotate-gate { display: none; }
+.rotate-tablet { display: none; }
+/* A phone held sideways (touch, short height). */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 540px) {
+  .rotate-gate { display: grid; }
+}
+/* A tablet held upright (touch, wide enough to be a tablet). */
+@media (pointer: coarse) and (orientation: portrait) and (min-width: 600px) {
+  .rotate-gate { display: grid; }
+  .rotate-gate .rotate-phone { display: none; }
+  .rotate-gate .rotate-tablet { display: block; }
+  .rotate-icon { transform: rotate(0deg); animation-name: turnSideways; }
+}
+.rotate-gate { position: fixed; inset: 0; z-index: 200; place-items: center; padding: 24px; text-align: center;
+  background: radial-gradient(circle at 50% 30%, var(--tile-2), var(--bg) 70%); }
+.rotate-card { display: grid; gap: 10px; max-width: 360px; }
+.rotate-card h2 { font-size: 24px; font-weight: 900; }
+.rotate-card p { color: var(--text-2); }
+.rotate-icon { font-size: 64px; animation: turnUpright 2.4s ease-in-out infinite; }
+@keyframes turnUpright { 0%, 30% { transform: rotate(-90deg); } 60%, 100% { transform: rotate(0deg); } }
+@keyframes turnSideways { 0%, 30% { transform: rotate(0deg); } 60%, 100% { transform: rotate(-90deg); } }
+
+/* ================= Landscape tablets and laptops: side rail ================= */
+@media (min-width: 900px) and (orientation: landscape) {
+  :root { --rail: 104px; }
+  .app { padding-left: var(--rail); padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+  .tabbar { top: 0; bottom: 0; right: auto; width: var(--rail); padding: 18px 12px calc(18px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+    background: linear-gradient(90deg, var(--bg) 70%, rgba(28, 15, 51, 0)); display: flex; align-items: center; }
+  .tabbar-inner { grid-template-columns: 1fr; gap: 8px; max-width: none; width: 100%; padding: 8px; border-radius: 24px; }
+  .tab { padding: 12px 4px; gap: 4px; font-size: 12px; border-radius: 16px; }
+  .tab .tab-icon { font-size: 24px; }
+  .tab .dot { top: 6px; right: 10px; }
+  .air-fab { bottom: calc(24px + env(safe-area-inset-bottom)); right: 24px; padding: 16px 28px; font-size: 18px; }
+  .toast { bottom: 96px; }
+  .main, .hud-inner { max-width: 1180px; }
+  /* Wide grids get more columns. */
+  .grid-cards { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+  .poster-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  .sheet.wide { max-width: 980px; }
+  .sheet { max-height: 92vh; }
+}
+@media (min-width: 900px) and (orientation: landscape) and (min-width: 1240px) {
+  .air-fab { right: calc((100% - var(--rail) - 1180px) / 2 + 16px); }
+}
+/* Touch tablets: a little more room to aim. */
+@media (pointer: coarse) and (min-width: 900px) and (orientation: landscape) {
+  .tab { padding: 14px 4px; }
+  .btn { min-height: 46px; }
+}

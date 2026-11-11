@@ -51,9 +51,10 @@ test('goals tick and a mission is won with stars; running out of time loses it',
     week: s.week, year: s.year, revenue: 0, sponsors: 0, overhead: 0, loanPayment: 0, net: 0, reputationDelta: 0,
     slots: [{ kind: 'show', slot: 'weekday-prime', showId: 'x', showName: 'X', rerun: false, premiere: true, viewers: 10, share: 0.13, revenue: 1, rivalName: '', rivalShare: 0.1, won: true, rivals: [] }],
   };
+  s.shareHistory = [0.13];
   trackMission(s);
   expect(s.mission!.status).toBe('won');
-  expect(s.mission!.stars).toBe(3); // fast, and the 12% bonus too
+  expect(s.mission!.stars).toBe(3); // fast, and the average-share bonus too
 
   const t = newMissionGame(2, 'T', 'b1-first-hit');
   t.year += 1; // past the deadline
