@@ -41,7 +41,7 @@ export function applyPack(state: GameState, pack: Pack): Pack {
   const cards = pack.cards.map((card): PackCard => {
     if (card.type === 'format') {
       const duplicate = state.formats.includes(card.id);
-      if (duplicate) state.cash += FORMAT_REFUND;
+      if (duplicate) state.cash = Math.round((state.cash + FORMAT_REFUND) * 10) / 10;
       else state.formats.push(card.id);
       return { ...card, duplicate };
     }
@@ -55,7 +55,7 @@ export function applyPack(state: GameState, pack: Pack): Pack {
       const def = networkById(card.card.defId);
       if (def.kind === 'facility') {
         const duplicate = state.facilities.includes(def.id);
-        if (duplicate) state.cash += FACILITY_REFUND;
+        if (duplicate) state.cash = Math.round((state.cash + FACILITY_REFUND) * 10) / 10;
         else state.facilities.push(def.id);
         return { ...card, duplicate };
       }

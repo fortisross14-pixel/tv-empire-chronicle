@@ -85,6 +85,7 @@ test('balance: a simple strategy survives the first year', () => {
     let s = newGame(seed * 101, 'Sim');
     s = openPack(s, s.unopened[0].id);
     for (let w = 0; w < 52 && !s.gameOver; w++) {
+      if (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
       const idle = (k: string) => s.people.filter((p) => p.kind === k && p.uses > 0)
         .find((p) => !s.projects.some((pr) => pr.writerId === p.id || pr.crewId === p.id || pr.talentId === p.id));
       const writer = idle('writer'); const crew = idle('crew'); const talent = idle('talent');
@@ -102,7 +103,6 @@ test('balance: a simple strategy survives the first year', () => {
       const slots: SlotId[] = ['weekday-prime', 'weekday-evening', 'weekday-morning', 'weekend-prime', 'weekend-evening', 'weekend-morning'];
       slots.forEach((slot, i) => { s = scheduleShow(s, slot, fresh[i]?.id ?? null); });
       if (s.shopUnlocked && s.cash > 90) s = buyPack(s, s.people.length < 6 ? 'people' : 'program');
-      if (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
       s = airWeek(s);
       s.reveal = null;
     }

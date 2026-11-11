@@ -3,6 +3,7 @@ import { BUSINESS_CARD_USES, FORMATS, NETWORK_CARDS, TOPICS, networkById, type G
 import { FormatCard, PersonCard, TopicCard } from '../components/Cards';
 import { NetworkCardView } from '../components/NetworkCard';
 import { Sheet } from '../components/Sheet';
+import { useConfirm } from '../components/Confirm';
 
 type Tab = 'people' | 'network' | 'formats' | 'topics';
 
@@ -16,6 +17,7 @@ export function CardsScreen({
 }) {
   const [tab, setTab] = useState<Tab>('people');
   const [selected, setSelected] = useState<Person | null>(null);
+  const ask = useConfirm();
   const twistTotal = Object.values(state.twists).reduce((a, b) => a + b, 0);
   const sortedTopics = [...TOPICS].sort((a, b) => Number(state.topics.includes(b.id)) - Number(state.topics.includes(a.id)));
   const sortedFormats = [...FORMATS].sort((a, b) => Number(state.formats.includes(b.id)) - Number(state.formats.includes(a.id)));
@@ -90,7 +92,8 @@ export function CardsScreen({
         <Sheet title={live.name} onClose={() => setSelected(null)}
           footer={live.house ? undefined : <>
             <button className="btn danger" onClick={() => {
-              if (confirm(`Release ${live.name}? The card is gone for good.`)) { onRelease(live.id); setSelected(null); }
+              void ask({ title: `Release ${live.name}?`, text: 'The card is gone for good.', confirm: 'Release', danger: true })
+                .then((ok) => { if (ok) { onRelease(live.id); setSelected(null); } });
             }}>Release</button>
             <button className="btn good" disabled={state.businessCards <= 0} onClick={() => onUseBusinessCard(live.id)}>
               💼 +{BUSINESS_CARD_USES} uses ({state.businessCards})

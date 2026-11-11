@@ -48,8 +48,9 @@ Three kinds:
   sometimes fewer uses (stars are strong but short-lived unless renewed).
 - **Growth:** cards gain XP per use and level up (small skill gains). Your
   veteran writer becomes your star.
-- **Busy state:** a card is locked while working on a stage. On-screen cards stay
-  locked to the show while it airs.
+- **Busy state:** a card is locked while working on a stage (script, production,
+  post) and while calling sports games in season. Once a show is finished, its
+  on-screen talent is free for other productions.
 - **A use = one season.** Every show runs in 13-week seasons (one quarter of
   the 52-week year). Each person on the team spends 1 use per season. After a
   season you renew it (new uses) or rest it so its novelty recovers.

@@ -103,7 +103,7 @@ export function holdCeremony(state: GameState, level: AwardLevel): Ceremony | nu
     const ourScore = clamp(Math.round(cat.score(best) + randInt(state, -3, 3)), 1, 99);
     let nominees = rivalsField;
     if (ourScore > rivalsField[rivalsField.length - 1].score) {
-      nominees = [...rivalsField.slice(0, -1), { name: best.name, station: state.stationName, score: ourScore, ours: true }]
+      nominees = [...rivalsField.slice(0, -1), { name: best.name, station: state.stationName, score: ourScore, ours: true, showId: best.id }]
         .sort((a, b) => b.score - a.score);
     }
     const winner = nominees[0];
@@ -117,7 +117,7 @@ export function holdCeremony(state: GameState, level: AwardLevel): Ceremony | nu
     state.reputation = Math.min(100, state.reputation + (c.weWon ? def.rep.won : def.rep.nominated));
     if (c.weWon) {
       wins++;
-      const show = state.shows.find((s) => s.name === ours.name);
+      const show = state.shows.find((s) => s.id === ours.showId);
       const label = `${def.title} Y${state.year} · ${c.category}`;
       show?.awards.push(label);
       state.trophies.push({ title: c.category, showName: ours.name, year: state.year, level });
@@ -127,7 +127,7 @@ export function holdCeremony(state: GameState, level: AwardLevel): Ceremony | nu
   let prize: string | null = null;
   if (wins > 0) {
     state.unopened.push(makePack(state, def.prize));
-    state.cash += def.cashPrize;
+    state.cash = Math.round((state.cash + def.cashPrize) * 10) / 10;
     prize = `A free ${def.prize} pack${def.cashPrize ? ` and $${def.cashPrize}K` : ''}`;
   }
   return { level, title, year: state.year, categories, prize };

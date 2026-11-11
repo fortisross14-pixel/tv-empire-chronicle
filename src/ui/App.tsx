@@ -13,6 +13,7 @@ import { EventModal } from './components/EventModal';
 import { CeremonyModal } from './components/CeremonyModal';
 import { TargetPicker } from './components/TargetPicker';
 import { Sheet } from './components/Sheet';
+import { ConfirmProvider, useConfirm } from './components/Confirm';
 import { WeekScreen, type Todo } from './screens/WeekScreen';
 import { ScheduleScreen } from './screens/ScheduleScreen';
 import { StudioScreen } from './screens/StudioScreen';
@@ -30,12 +31,13 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 ];
 
 export function App() {
-  const [state, setState] = useState<GameState | null>(() => loadGame());
-  if (!state) return <TitleScreen onStart={(name) => setState(newGame((Math.random() * 2 ** 31) | 0, name))} />;
-  return <Game state={state} setState={setState} />;
+  const [loaded] = useState(() => loadGame());
+  const [state, setState] = useState<GameState | null>(loaded.state);
+  if (!state) return <TitleScreen notice={loaded.notice} onStart={(name) => setState(newGame((Math.random() * 2 ** 31) | 0, name))} />;
+  return <ConfirmProvider><Game state={state} setState={setState} /></ConfirmProvider>;
 }
 
-function TitleScreen({ onStart }: { onStart: (name: string) => void }) {
+function TitleScreen({ onStart, notice }: { onStart: (name: string) => void; notice: string | null }) {
   const [name, setName] = useState('Ellison 8');
   return (
     <div className="title-screen">
@@ -45,6 +47,7 @@ function TitleScreen({ onStart }: { onStart: (name: string) => void }) {
         <p style={{ opacity: 0.8 }}>
           You just bought a tiny local TV station in {CITY}. Collect cards, make shows, win the ratings — and grow into a national network.
         </p>
+        {notice && <p className="panel small" style={{ color: 'var(--ink)' }}>{notice}</p>}
         <div className="field" style={{ textAlign: 'left' }}>
           <label htmlFor="station" style={{ color: '#fff' }}>Name your channel</label>
           <input id="station" className="input" value={name} maxLength={24} onChange={(e) => setName(e.target.value)} />
@@ -63,7 +66,14 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
 
-  useEffect(() => { saveGame(state); }, [state]);
+  const ask = useConfirm();
+  const saveWarned = useRef(false);
+  useEffect(() => {
+    if (!saveGame(state) && !saveWarned.current) {
+      saveWarned.current = true;
+      say('Your browser blocked saving: progress will be lost when you close this page.');
+    }
+  }, [state]);
   useEffect(() => { window.scrollTo({ top: 0 }); }, [tab]);
 
   const say = (msg: string) => {
@@ -74,6 +84,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
 
   /** Run an engine action; show its error as a toast. */
   const run = (fn: (s: GameState) => GameState, okMsg?: string): boolean => {
+    setToast(null);
     try {
       setState(fn(state));
       if (okMsg) say(okMsg);
@@ -91,9 +102,8 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   };
 
   const newGameConfirm = () => {
-    if (!confirm('Start over? Your current station will be lost.')) return;
-    clearSave();
-    setState(null);
+    void ask({ title: 'Start a new game?', text: 'Your current station will be lost for good.', confirm: 'Start over', danger: true })
+      .then((ok) => { if (ok) { clearSave(); setState(null); } });
   };
 
   if (state.gameOver) {
@@ -111,10 +121,12 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
 
   // To-do list on the Week tab.
   const todos: Todo[] = [];
+  const week = state.year * 52 + state.week;
   for (const pack of state.unopened) {
     const people = pack.kind === 'starter-people' || pack.kind === 'people';
     const label = { starter: 'program', 'starter-people': 'people', program: 'program', people: 'people', network: 'network' }[pack.kind];
     todos.push({
+      id: `pack-${pack.id}`,
       emoji: people ? '👥' : pack.kind === 'network' ? '📡' : '🎁',
       title: `Open your free ${label} pack`,
       detail: people ? 'Meet 3 new people to join your house staff.' : pack.kind === 'network' ? 'Promos, sponsors or studio upgrades.' : 'See which format and topics you start with.',
@@ -125,6 +137,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   const freeKinds = new Set(state.people.filter((p) => (p.house || p.uses > 0) && !booked(p.id)).map((p) => p.kind));
   if (state.formats.length > 0 && freeKinds.size === 3) {
     todos.push({
+      id: 'team-free',
       emoji: '✍️',
       title: state.shows.length === 0 && state.projects.length === 0 ? 'Create your first show' : 'Your team is free',
       detail: 'Pick a format and topic, build the team, split the focus points.',
@@ -133,24 +146,24 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   }
   const promoTargets = state.projects.length + state.shows.filter((x) => !x.premiered).length;
   if (promoTargets > 0 && state.networkCards.some((c) => networkById(c.defId).kind === 'promo')) {
-    todos.push({ emoji: '📣', title: 'Build hype before the premiere', detail: 'You have promo cards. Use them in Cards → Network.', onClick: () => setTab('cards') });
+    todos.push({ id: 'promo', emoji: '📣', title: 'Build hype before the premiere', detail: 'You have promo cards. Use them in Cards → Network.', onClick: () => setTab('cards') });
   }
   if (state.rightsMarket && state.rightsMarket.lots.every((l) => !l.bid)) {
-    todos.push({ emoji: '📜', title: 'The Rights Market is open', detail: `Films and sports. Bids close in ${state.rightsMarket.closesWeek - state.week} weeks.`, onClick: () => setTab('shop') });
+    todos.push({ id: 'market', emoji: '📜', title: 'The Rights Market is open', detail: `Films and sports. Bids close in ${state.rightsMarket.closesAt - week} weeks.`, onClick: () => setTab('shop') });
   }
   for (const r of state.rights) {
     const def = rightsById(r.defId);
     if (def.kind === 'film' && !Object.values(state.schedule).includes(r.id)) {
-      todos.push({ emoji: def.icon, title: `Schedule ${def.name}`, detail: `${r.airingsLeft} airings left before the license runs out.`, onClick: () => setTab('schedule') });
+      todos.push({ id: `film-${r.id}`, emoji: def.icon, title: `Schedule ${def.name}`, detail: `${r.airingsLeft} airings left before the license runs out.`, onClick: () => setTab('schedule') });
     }
   }
   const scheduled = new Set(Object.values(state.schedule));
   for (const show of state.shows) {
     if (show.episodesLeft > 0 && !scheduled.has(show.id)) {
-      todos.push({ emoji: '📺', title: `Schedule "${show.name}"`, detail: 'It is ready to air. Pick a time slot.', onClick: () => setTab('schedule') });
+      todos.push({ id: `schedule-${show.id}`, emoji: '📺', title: `Schedule "${show.name}"`, detail: 'It is ready to air. Pick a time slot.', onClick: () => setTab('schedule') });
     }
     if (show.episodesLeft <= 0 && !state.projects.some((p) => p.showId === show.id) && show.history.length > 0 && show.history[show.history.length - 1].week === state.lastResult?.week) {
-      todos.push({ emoji: '🔁', title: `"${show.name}" season is over`, detail: 'Renew it, keep it on as reruns, or rest it to recover novelty.', onClick: () => setTab('schedule') });
+      todos.push({ id: `ended-${show.id}`, emoji: '🔁', title: `"${show.name}" season is over`, detail: 'Renew it, keep it on as reruns, or rest it to recover novelty.', onClick: () => setTab('schedule') });
     }
   }
 
@@ -177,27 +190,27 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
         {tab === 'week' && (
           <WeekScreen state={state} todos={todos} onNewGame={newGameConfirm}
             onExpand={() => {
-              if (!confirm('Buy the license? Running costs rise a lot, but so does the audience.')) return;
-              run(state.tier === 'local' ? expandToState : expandToNational);
+              void ask({ title: 'Buy the license?', text: 'Running costs rise a lot, but so does the audience. Make sure you have shows ready for the bigger schedule.', confirm: 'Buy license' })
+                .then((ok) => { if (ok) run(state.tier === 'local' ? expandToState : expandToNational); });
             }}
-            onAffiliate={() => run(signAffiliate)} />
+            onAffiliate={() => run(signAffiliate, 'Affiliate signed! 📡')} />
         )}
         {tab === 'schedule' && (
           <ScheduleScreen state={state}
             onSchedule={(slot, id) => run((s) => scheduleShow(s, slot, id))}
             onRenew={(id) => setWizard({ renew: id })}
             onSpinoff={(id) => setWizard({ spinoff: id })}
-            onCancelShow={(id) => run((s) => cancelShow(s, id))}
+            onCancelShow={(id) => run((s) => cancelShow(s, id), 'Show cancelled.')}
             onAssignTeam={(rid, c, t) => run((s) => assignSportsTeam(s, rid, c, t), 'Broadcast team set.')} />
         )}
         {tab === 'studio' && (
           <StudioScreen state={state} onNewShow={() => setWizard({})}
-            onCancelProject={(id) => run((s) => cancelProject(s, id))} />
+            onCancelProject={(id) => run((s) => cancelProject(s, id), 'Production scrapped.')} />
         )}
         {tab === 'cards' && (
           <CardsScreen state={state}
             onUseBusinessCard={(id) => run((s) => useBusinessCard(s, id), 'Contract renewed!')}
-            onRelease={(id) => run((s) => releasePerson(s, id))}
+            onRelease={(id) => run((s) => releasePerson(s, id), 'Card released.')}
             onUseNetworkCard={(id) => setUsingCard(id)} />
         )}
         {tab === 'shop' && (
@@ -233,7 +246,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
         <WeekResults result={state.lastResult} state={state} onClose={() => setShowResults(false)} />
       )}
       {!state.reveal && !showResults && state.ceremony && (
-        <CeremonyModal ceremony={state.ceremony} onClose={() => run(dismissCeremony)} />
+        <CeremonyModal ceremony={state.ceremony} national={state.tier === 'national'} onClose={() => run(dismissCeremony)} />
       )}
       {!state.reveal && !showResults && !state.ceremony && state.pendingEvent && (
         <EventModal event={state.pendingEvent} onChoose={(i) => run((s) => answerEvent(s, i))} />

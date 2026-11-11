@@ -39,7 +39,7 @@ export function RightsMarket({ state, onBid }: { state: GameState; onBid: (lotId
       </div>
     );
   }
-  const left = m.closesWeek - state.week;
+  const left = m.closesAt - (state.year * 52 + state.week);
   const committed = m.lots.reduce((s, l) => s + (l.bid ?? 0), 0);
   return (
     <div className="stack">

@@ -21,6 +21,8 @@ export interface RightsDef {
   decay?: number;
   /** Film: extra appeal in these weeks (e.g. holiday movies in December). */
   boostWeeks?: [number, number];
+  /** Only sold at these market weeks (default: any). */
+  markets?: number[];
   /** Sports: season weeks (may wrap past New Year), the slot games take over, market week. */
   season?: [number, number];
   slot?: SlotId;
@@ -34,7 +36,7 @@ export const RIGHTS: RightsDef[] = [
   // Local film packages
   r({ id: 'monster-matinee', kind: 'film', tier: 'local', name: 'Monster Matinee Classics', icon: '🧟', text: 'Rubber-suit monsters from the 50s. Cheap, cheerful, cult following.', value: 18, quality: 45, fame: 5, topicId: 'scifi', airings: 8, weeks: 26, decay: 6 }),
   r({ id: 'kungfu-theater', kind: 'film', tier: 'local', name: 'Kung Fu Theater', icon: '🥋', text: 'Dubbed martial-arts classics. Saturday afternoon gold.', value: 22, quality: 50, fame: 8, topicId: 'martial-arts', airings: 8, weeks: 26, decay: 6 }),
-  r({ id: 'holiday-bundle', kind: 'film', tier: 'local', name: 'Holiday Movie Bundle', icon: '🎄', text: 'Cozy holiday films. Huge in December.', value: 20, quality: 52, fame: 6, topicId: 'family', airings: 6, weeks: 14, decay: 7, boostWeeks: [48, 52] }),
+  r({ id: 'holiday-bundle', kind: 'film', tier: 'local', name: 'Holiday Movie Bundle', icon: '🎄', text: 'Cozy holiday films. Huge in December.', value: 20, quality: 52, fame: 6, topicId: 'family', airings: 6, weeks: 14, decay: 7, boostWeeks: [48, 52], markets: [42] }),
   r({ id: 'rom-com', kind: 'film', tier: 'local', name: 'Rom-Com Collection', icon: '💞', text: 'Meet-cutes and airport chases.', value: 22, quality: 52, fame: 10, topicId: 'romance', airings: 8, weeks: 26, decay: 6 }),
   r({ id: 'westerns', kind: 'film', tier: 'local', name: 'Dusty Trails Westerns', icon: '🤠', text: 'Old westerns. Older viewers love them.', value: 15, quality: 42, fame: 4, topicId: 'history', airings: 10, weeks: 30, decay: 5 }),
   r({ id: 'cult-scifi', kind: 'film', tier: 'local', name: 'Cult Sci-Fi Pack', icon: '👽', text: 'Strange, beloved sci-fi from the 80s.', value: 28, quality: 58, fame: 12, topicId: 'scifi', airings: 6, weeks: 26, decay: 7 }),

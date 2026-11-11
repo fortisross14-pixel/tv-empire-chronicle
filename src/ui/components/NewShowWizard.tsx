@@ -44,16 +44,24 @@ export function NewShowWizard({
 
   const [formatId, setFormatId] = useState<string | null>(renewing?.formatId ?? original?.formatId ?? null);
   const [topicId, setTopicId] = useState<string | null>(renewing?.topicId ?? original?.topicId ?? null);
-  const [team, setTeam] = useState<Record<PersonKind, string | null>>({ writer: null, crew: null, talent: null });
-  const [points, setPoints] = useState<Record<Area, number>>(zeroPoints);
+  // A new season starts from last season's team and settings when those people are still around.
+  const last = renewing?.lastPlan ?? null;
+  const has = (id: string | null | undefined) => !!id && state.people.some((p) => p.id === id && (p.house || p.uses > 0));
+  const [team, setTeam] = useState<Record<PersonKind, string | null>>({
+    writer: has(last?.writerId) ? last!.writerId : null,
+    crew: has(last?.crewId) ? last!.crewId : null,
+    talent: has(last?.talentId) ? last!.talentId : null,
+  });
+  const [points, setPoints] = useState<Record<Area, number>>(() => (last ? { ...last.points } : zeroPoints()));
   const [name, setName] = useState('');
   const [twist, setTwist] = useState(false);
-  const [scriptTime, setScriptTime] = useState<ScriptTime>('standard');
-  const [level, setLevel] = useState<ProductionLevel>('basic');
+  const [scriptTime, setScriptTime] = useState<ScriptTime>(last?.scriptTime ?? 'standard');
+  const [level, setLevel] = useState<ProductionLevel>(last && levelsFor(state.tier).includes(last.level) ? last.level : 'basic');
   const [topic2Id, setTopic2Id] = useState<string | null>(renewing?.topic2Id ?? null);
-  const [writer2Id, setWriter2Id] = useState<string | null>(null);
-  const [writer3Id, setWriter3Id] = useState<string | null>(null);
-  const [specialists, setSpecialists] = useState<Partial<Record<Area, string>>>({});
+  const [writer2Id, setWriter2Id] = useState<string | null>(has(last?.writer2Id) ? last!.writer2Id : null);
+  const [writer3Id, setWriter3Id] = useState<string | null>(has(last?.writer3Id) ? last!.writer3Id : null);
+  const [specialists, setSpecialists] = useState<Partial<Record<Area, string>>>(() =>
+    Object.fromEntries(Object.entries(last?.specialists ?? {}).filter(([, id]) => has(id))));
   const L = LEVELS[level];
   const advanced = level !== 'basic';
   const aaa = level === 'aaa';
@@ -73,10 +81,15 @@ export function NewShowWizard({
     }
     : null;
 
-  const preview = useMemo(() => {
-    if (!plan || left !== 0) return null;
-    try { return previewPlan(state, plan); } catch { return null; }
-  }, [state, plan, left]);
+  const planKey = plan ? JSON.stringify(plan) : '';
+  const { preview, previewError } = useMemo(() => {
+    if (!plan || left !== 0) return { preview: null, previewError: null };
+    try { return { preview: previewPlan(state, plan), previewError: null }; } catch (e) {
+      return { preview: null, previewError: e instanceof Error ? e.message : 'This plan can’t start.' };
+    }
+    // planKey stands in for plan, which is a new object each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, planKey, left]);
 
   const booked = (p: Person) => state.projects.find((pr) => projectPeople(pr).includes(p.id));
 
@@ -129,7 +142,7 @@ export function NewShowWizard({
         <div className="stack">
           {levelsFor(state.tier).map((lv: ProductionLevel) => (
             <button key={lv} className={cx('panel todo', level === lv && 'selected')} style={{ borderLeftColor: level === lv ? 'var(--accent)' : 'var(--line)' }}
-              onClick={() => { setLevel(lv); setPoints(zeroPoints()); }}>
+              onClick={() => { if (lv !== level) setPoints(zeroPoints()); setLevel(lv); }}>
               <span>
                 <b>{LEVELS[lv].label}</b> {level === lv && <span className="chip good">Selected</span>}
                 <div className="small muted">{LEVELS[lv].blurb}</div>
@@ -206,6 +219,7 @@ export function NewShowWizard({
                           onClick={() => {
                             setTeam({ ...team, [kind]: p.id });
                             if (kind === 'writer' && writer2Id === p.id) setWriter2Id(null);
+                            if (kind === 'writer' && writer3Id === p.id) setWriter3Id(null);
                             if (kind === 'crew') setSpecialists(Object.fromEntries(Object.entries(specialists).filter(([, id]) => id !== p.id)));
                           }} />
                       </div>
@@ -345,6 +359,7 @@ export function NewShowWizard({
             </button>
           )}
           {preview && state.cash < preview.cost && <p className="neg small">Not enough cash for this production.</p>}
+          {previewError && <p className="neg small">⚠️ {previewError}</p>}
         </div>
       )}
     </Sheet>

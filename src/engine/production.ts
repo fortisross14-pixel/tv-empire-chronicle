@@ -288,9 +288,11 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
   if (renewal) {
     const show = state.shows.find((s) => s.id === plan.showId);
     if (!show) throw new GameError('Show not found.');
+    if (show.formatId !== plan.formatId || show.topicId !== plan.topicId) throw new GameError('A new season keeps the show\'s format and topic.');
     if (show.episodesLeft > 0) throw new GameError('Finish the current season first.');
     if (state.projects.some((p) => p.showId === show.id)) throw new GameError('A new season is already in production.');
   }
+  if (plan.twist && !renewal) throw new GameError('Twists are for new seasons of a show.');
   if (plan.twist && !(state.twists[plan.topicId] > 0)) throw new GameError('No Twist token for this topic.');
   const time = plan.scriptTime ?? 'standard';
   const cost = productionCost(format, team.crew, renewal, level);
@@ -432,6 +434,7 @@ function finishProject(state: GameState, project: Project): Show {
       reviews: null,
       awards: [],
       premieredAt: null,
+      lastPlan: null,
     };
     state.shows.push(show);
   }
@@ -449,8 +452,11 @@ function finishProject(state: GameState, project: Project): Show {
     premiered: false,
     level: project.level ?? 'basic',
     hype: Math.min(100, show.hype + project.hype + (project.spinoffOf ? SPINOFF.hype : 0)),
-    reviews: null,
-    premieredAt: null,
+    lastPlan: {
+      level: project.level ?? 'basic', writerId: project.writerId, writer2Id: project.writer2Id ?? null, writer3Id: project.writer3Id ?? null,
+      crewId: project.crewId, talentId: project.talentId, specialists: { ...(project.specialists ?? {}) }, points: { ...project.points },
+      scriptTime: project.scriptTime,
+    },
   });
   state.newlyFinished.push(show.id);
   return show;

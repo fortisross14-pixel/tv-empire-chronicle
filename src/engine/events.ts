@@ -4,12 +4,15 @@ import { newId, overall } from './people';
 import { NETWORK_CARDS } from './data/network';
 import { GameError } from './errors';
 import { projectPeople } from './production';
+import { onSportsTeam } from './rights';
 import { makeRivalShow } from './rivals';
 import { slotsOf } from './schedule';
 
 /** Chance of an event in a week once the cooldown is over. Kept low on purpose. */
 export const EVENT_CHANCE = 0.3;
 export const EVENT_COOLDOWN = 3;
+/** Transfer fee when a rival poaches someone. */
+export const POACH_FEE = 5;
 
 interface EventDef {
   id: string;
@@ -149,7 +152,7 @@ const EVENTS: EventDef[] = [
   {
     id: 'poach', weight: 2,
     find: (s) => {
-      const stars = packPeople(s).filter((p) => p.rarity !== 'common' && !booked(s, p.id));
+      const stars = packPeople(s).filter((p) => p.rarity !== 'common' && !booked(s, p.id) && !onSportsTeam(s, p.id));
       return stars.length ? pick(s, stars).id : null;
     },
     make: (s, id) => {
@@ -161,7 +164,7 @@ const EVENTS: EventDef[] = [
         amount,
         choices: [
           { label: `Counter-offer · $${amount}K`, detail: '+2 uses' },
-          { label: 'Let them go', detail: 'Lose the card, get $5K' },
+          { label: 'Let them go', detail: `Lose the card, get $${POACH_FEE}K` },
         ],
       };
     },
@@ -173,7 +176,7 @@ const EVENTS: EventDef[] = [
         return `${p.name} stays with ${s.stationName}.`;
       }
       s.people = s.people.filter((x) => x.id !== p.id);
-      s.cash += 5;
+      s.cash = Math.round((s.cash + POACH_FEE) * 10) / 10;
       return `${p.name} leaves for ${s.rivals[0]?.short ?? 'a rival'}.`;
     },
   },
@@ -253,7 +256,10 @@ export function resolvePendingEvent(s: GameState, choice: number): string {
   const ev = s.pendingEvent;
   if (!ev) throw new GameError('No event to answer.');
   if (choice < 0 || choice >= ev.choices.length) throw new GameError('Pick one of the options.');
-  const line = BY_ID[ev.defId].resolve(s, ev, choice);
+  // The event's subject may be gone (e.g. a save from before events blocked other actions).
+  const gone = ev.targetId && !s.people.some((p) => p.id === ev.targetId)
+    && !s.shows.some((x) => x.id === ev.targetId) && !s.projects.some((x) => x.id === ev.targetId);
+  const line = gone ? 'The situation sorted itself out.' : BY_ID[ev.defId].resolve(s, ev, choice);
   s.pendingEvent = null;
   return line;
 }

@@ -15,7 +15,14 @@ export function TargetPicker({ state, cardId, onPick, onClose }: {
       ...state.shows.filter((s) => !s.premiered).map((s) => ({ id: s.id, name: s.name, note: `Before premiere · hype ${s.hype}` })),
     ]
     : state.shows.filter((s) => !state.sponsorDeals.some((d) => d.showId === s.id))
-      .map((s) => ({ id: s.id, name: s.name, note: s.history.length ? `Last share ${(s.history[s.history.length - 1].share * 100).toFixed(0)}%` : 'Not aired yet' }));
+      .map((s) => {
+        const last = s.history[s.history.length - 1]?.share;
+        const need = def.sponsor?.minShare ?? 0;
+        const note = last === undefined ? 'Not aired yet'
+          : last < need ? `⚠️ Last share ${(last * 100).toFixed(0)}% — below the ${Math.round(need * 100)}% this deal needs`
+          : `Last share ${(last * 100).toFixed(0)}% ✓`;
+        return { id: s.id, name: s.name, note };
+      });
   return (
     <Sheet title={`Use ${def.name}`} onClose={onClose}>
       <div style={{ maxWidth: 240, margin: '0 auto 14px' }}><NetworkCardView defId={def.id} /></div>

@@ -49,6 +49,12 @@ export function isFallPremiere(week: number): boolean {
   return week >= 36 && week <= 40;
 }
 
+/** First week of a month (0-based). */
+function firstSweepsWeek(month: number): number {
+  for (let w = 1; w <= 52; w++) if (monthOf(w) === month) return w;
+  return 1;
+}
+
 export function dateLabel(week: number, year: number): string {
   return `${MONTHS[monthOf(week)]} · Week ${weekOfMonth(week)} · Year ${year}`;
 }
@@ -61,12 +67,12 @@ export interface CalendarMarker {
 /** Upcoming notable dates for the calendar strip. */
 export function upcomingMarkers(week: number, count = 3): CalendarMarker[] {
   const marks: CalendarMarker[] = [
-    { week: 5, label: 'Feb sweeps' },
+    { week: firstSweepsWeek(1), label: 'Feb sweeps' },
     { week: 14, label: 'Spring' },
-    { week: 18, label: 'May sweeps' },
+    { week: firstSweepsWeek(4), label: 'May sweeps' },
     { week: 23, label: 'Summer slump' },
     { week: 36, label: 'Fall premieres' },
-    { week: 44, label: 'Nov sweeps' },
+    { week: firstSweepsWeek(10), label: 'Nov sweeps' },
     { week: 49, label: 'Holidays' },
     { week: 12, label: '🏆 Indie Awards' },
     { week: 10, label: '📜 Rights Market' },

@@ -47,7 +47,8 @@ h1, h2, h3, h4 { font-family: var(--display); font-weight: 600; margin: 0; lette
 p { margin: 0; }
 
 /* ---------- App shell ---------- */
-.app { min-height: 100vh; padding-bottom: calc(var(--tabbar) + 24px + env(safe-area-inset-bottom)); }
+.app { min-height: 100vh; padding-bottom: calc(var(--tabbar) + 96px + env(safe-area-inset-bottom)); }
+.btn.danger-solid { background: var(--bad); box-shadow: 0 3px 0 #a3262d; }
 .main { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .main > *, .stack > *, .sheet > * { min-width: 0; }
 

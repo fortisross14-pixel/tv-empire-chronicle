@@ -7,6 +7,7 @@ import { PersonCard, ShowCard, Stars } from '../components/Cards';
 import { RightsCard, seasonLabel } from '../components/RightsCard';
 import { Sheet } from '../components/Sheet';
 import { RivalsView } from './RivalsView';
+import { useConfirm } from '../components/Confirm';
 import { cx, gradeClass } from '../util';
 
 export function ScheduleScreen({
@@ -22,6 +23,7 @@ export function ScheduleScreen({
   const [picking, setPicking] = useState<SlotId | null>(null);
   const [teamFor, setTeamFor] = useState<OwnedRights | null>(null);
   const [view, setView] = useState<'ours' | 'rivals'>('ours');
+  const ask = useConfirm();
   const showIn = (slot: SlotId) => state.shows.find((s) => s.id === state.schedule[slot]);
   const filmIn = (slot: SlotId) => state.rights.find((r) => r.id === state.schedule[slot]);
   const sportsFor = (slot: SlotId) => state.rights.find((r) => tierSlot(rightsById(r.defId).slot!, state.tier) === slot);
@@ -120,7 +122,8 @@ export function ScheduleScreen({
                     )}
                     {canSpinOff(show) && <button className="btn ghost small" onClick={() => onSpinoff(show.id)}>✨ Spin-off</button>}
                     <button className="btn danger small" onClick={() => {
-                      if (confirm(`Cancel "${show.name}" for good?`)) onCancelShow(show.id);
+                      void ask({ title: `Cancel "${show.name}"?`, text: 'The show is gone for good. Its sponsor deal ends too.', confirm: 'Cancel show', danger: true })
+                        .then((ok) => ok && onCancelShow(show.id));
                     }}>Cancel show</button>
                   </div>
                 } />

@@ -1,9 +1,11 @@
 import { projectPeople, type GameState } from '../../engine';
 import { PersonCard, ProjectCard } from '../components/Cards';
+import { useConfirm } from '../components/Confirm';
 
 export function StudioScreen({
   state, onNewShow, onCancelProject,
 }: { state: GameState; onNewShow: () => void; onCancelProject: (id: string) => void }) {
+  const ask = useConfirm();
   const booked = (id: string) => state.projects.find((pr) => projectPeople(pr).includes(id));
   const free = state.people.filter((p) => (p.house || p.uses > 0) && !booked(p.id));
   return (
@@ -25,7 +27,8 @@ export function StudioScreen({
           ? <div className="empty"><div className="big">🎞️</div>Nothing in the works. Start a new show.</div>
           : <div className="grid-wide">{state.projects.map((p) => (
             <ProjectCard key={p.id} project={p} state={state}
-              onCancel={() => { if (confirm(`Scrap "${p.name}"? You get half the budget back.`)) onCancelProject(p.id); }} />
+              onCancel={() => void ask({ title: `Scrap "${p.name}"?`, text: 'You get half the budget back, and the team gets their season back.', confirm: 'Scrap it', danger: true })
+                .then((ok) => ok && onCancelProject(p.id))} />
           ))}</div>}
         <p className="tiny muted" style={{ marginTop: 8 }}>
           People can work on one stage at a time. If someone is booked on two shows, the second waits its turn.

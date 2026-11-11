@@ -7,7 +7,7 @@ import { money, signedMoney } from '../util';
 
 const PERIOD_EMOJI = { winter: '❄️', spring: '🌷', summer: '☀️', fall: '🍂', holidays: '🎄' } as const;
 
-export interface Todo { emoji: string; title: string; detail: string; onClick: () => void }
+export interface Todo { id: string; emoji: string; title: string; detail: string; onClick: () => void }
 
 export function WeekScreen({
   state, todos, onNewGame, onExpand, onAffiliate,
@@ -46,7 +46,7 @@ export function WeekScreen({
         <section className="stack-sm">
           <div className="section-title"><h2>To do</h2><span className="sub">{todos.length}</span></div>
           {todos.map((t) => (
-            <button key={t.title} className="todo" onClick={t.onClick}>
+            <button key={t.id} className="todo" onClick={t.onClick}>
               <span className="emoji">{t.emoji}</span>
               <span><b>{t.title}</b><div className="small muted">{t.detail}</div></span>
               <span className="go">›</span>

@@ -28,13 +28,13 @@ export function maybeOpenMarket(s: GameState): string | null {
     const sport = rightsById(id);
     if (allowed(sport) && !owned(s, sport.id)) lots.push(makeLot(s, sport, false));
   }
-  const films = shuffle(s, RIGHTS.filter((d) => d.kind === 'film' && allowed(d) && !owned(s, d.id)))
+  const films = shuffle(s, RIGHTS.filter((d) => d.kind === 'film' && allowed(d) && !owned(s, d.id) && (!d.markets || d.markets.includes(s.week))))
     .sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier]).slice(0, s.tier === 'local' ? 2 : 3);
   films.forEach((d) => lots.push(makeLot(s, d, false)));
   // One big lot you can see but not bid on yet.
   const bigger = RIGHTS.filter((d) => TIER_RANK[d.tier] > rank);
   if (bigger.length) lots.push(makeLot(s, pick(s, bigger), true));
-  s.rightsMarket = { closesWeek: s.week + MARKET_OPEN_WEEKS, lots };
+  s.rightsMarket = { closesWeek: ((s.week + MARKET_OPEN_WEEKS - 1) % 52) + 1, closesAt: absWeek(s) + MARKET_OPEN_WEEKS, lots };
   return `The Rights Market is open for ${MARKET_OPEN_WEEKS} weeks: ${lots.filter((l) => !l.locked).map((l) => rightsById(l.defId).name).join(', ')}.`;
 }
 
@@ -51,6 +51,8 @@ export function placeBid(s: GameState, lotId: string, amount: number | null): vo
     return;
   }
   if (amount < lot.minBid) throw new GameError(`The minimum bid is $${lot.minBid}K.`);
+  const clash = sportsClash(s, rightsById(lot.defId));
+  if (clash) throw new GameError(`${clash} already plays in that slot during the same weeks.`);
   const committed = s.rightsMarket!.lots.reduce((sum, l) => sum + (l.id !== lotId && l.bid ? l.bid : 0), 0);
   if (amount + committed > s.cash) throw new GameError('Your bids add up to more cash than you have.');
   lot.bid = Math.round(amount);
@@ -59,7 +61,7 @@ export function placeBid(s: GameState, lotId: string, amount: number | null): vo
 /** Close the market: sealed bids against the rival. Returns news lines. */
 export function maybeCloseMarket(s: GameState): string[] {
   const m = s.rightsMarket;
-  if (!m || s.week < m.closesWeek) return [];
+  if (!m || absWeek(s) < m.closesAt) return [];
   const news: string[] = [];
   for (const lot of m.lots.filter((l) => !l.locked)) {
     const def = rightsById(lot.defId);
@@ -97,6 +99,37 @@ function acquire(s: GameState, def: RightsDef): OwnedRights {
   };
 }
 
+/** Weeks of the year a sport is in season. */
+function seasonWeeks(def: RightsDef): Set<number> {
+  const out = new Set<number>();
+  for (let w = 1; w <= 52; w++) if (inSeason(def, w)) out.add(w);
+  return out;
+}
+
+const overlaps = (a: RightsDef, b: RightsDef) => {
+  const wa = seasonWeeks(a);
+  return [...seasonWeeks(b)].some((w) => wa.has(w));
+};
+
+/** Name of an owned sport that would play in the same slot at the same time, if any. */
+export function sportsClash(s: GameState, def: RightsDef): string | null {
+  if (def.kind !== 'sports') return null;
+  const mine = tierSlot(def.slot!, s.tier);
+  const other = s.rights.map((r) => rightsById(r.defId))
+    .find((d) => d.kind === 'sports' && d.id !== def.id && tierSlot(d.slot!, s.tier) === mine && overlaps(d, def));
+  return other?.name ?? null;
+}
+
+/** Is this person calling games for one of our sports rights? */
+export const onSportsTeam = (s: GameState, personId: string) =>
+  s.rights.some((r) => r.crewId === personId || r.talentId === personId);
+
+/** After a tier change, lots in an open market unlock for the new tier. */
+export function refreshMarketLocks(s: GameState): void {
+  if (!s.rightsMarket) return;
+  for (const lot of s.rightsMarket.lots) lot.locked = TIER_RANK[rightsById(lot.defId).tier] > TIER_RANK[s.tier];
+}
+
 /** Change the sports broadcast team. Pack cards spend 1 use for the season. */
 export function assignTeam(s: GameState, rightsId: string, crewId: string, talentId: string): void {
   const r = s.rights.find((x) => x.id === rightsId);
@@ -104,6 +137,11 @@ export function assignTeam(s: GameState, rightsId: string, crewId: string, talen
   const crew = s.people.find((p) => p.id === crewId && p.kind === 'crew');
   const talent = s.people.find((p) => p.id === talentId && p.kind === 'talent');
   if (!crew || !talent) throw new GameError('Pick a crew member and an on-screen commentator.');
+  const def = rightsById(r.defId);
+  for (const p of [crew, talent]) {
+    const busy = s.rights.find((x) => x.id !== r.id && (x.crewId === p.id || x.talentId === p.id) && overlaps(rightsById(x.defId), def));
+    if (busy) throw new GameError(`${p.name} already calls ${rightsById(busy.defId).name} games in the same weeks.`);
+  }
   for (const p of [crew, talent]) {
     const isNew = p.id !== r.crewId && p.id !== r.talentId;
     if (isNew && !p.house) {

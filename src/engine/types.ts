@@ -138,8 +138,22 @@ export interface Show {
   reviews: Reviews | null;
   /** Award wins, e.g. "Indie Awards Y1 · Best Writing". */
   awards: string[];
-  /** Week + year of the current season's premiere, for award eligibility. */
+  /** Week + year of the latest premiere, for award eligibility. Kept until the next season premieres. */
   premieredAt: { week: number; year: number } | null;
+  /** The last team and settings used, to pre-fill a renewal. */
+  lastPlan: LastPlan | null;
+}
+
+export interface LastPlan {
+  level: ProductionLevel;
+  writerId: string;
+  writer2Id: string | null;
+  writer3Id: string | null;
+  crewId: string;
+  talentId: string;
+  specialists: Partial<Record<Area, string>>;
+  points: Record<Area, number>;
+  scriptTime: ScriptTime;
 }
 
 export interface Reviews {
@@ -184,6 +198,8 @@ export interface RightsLot {
 
 export interface RightsMarket {
   closesWeek: number;
+  /** Absolute week (year * 52 + week) the market closes. */
+  closesAt: number;
   lots: RightsLot[];
 }
 
@@ -233,7 +249,7 @@ export type AwardLevel = 'indie' | 'state' | 'glimmy';
 
 export interface AwardCategoryResult {
   category: string;
-  nominees: { name: string; station: string; score: number; ours: boolean }[];
+  nominees: { name: string; station: string; score: number; ours: boolean; showId?: string }[];
   winner: string;
   weWon: boolean;
 }
