@@ -68,7 +68,23 @@
    "front-anchor",
    "front-weather",
    "front-reporter",
-   "front-microphone"
+   "front-microphone",
+   "front-talk-couch",
+   "front-late-host",
+   "front-quiz-host",
+   "front-buzzers",
+   "front-trophy",
+   "front-money",
+   "front-castaways",
+   "front-campfire",
+   "front-date-bench",
+   "front-doctor",
+   "front-medical-team",
+   "front-detective",
+   "front-cops",
+   "front-crime-tape",
+   "front-family-sofa",
+   "front-coworkers"
   ]
  },
  "frameWindows": {
