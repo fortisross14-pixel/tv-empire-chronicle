@@ -9,8 +9,9 @@ import { rightsById } from './data/rights';
 import { ipDefById } from './data/ips';
 import { licenseIp } from './ip';
 import { addNews } from './news';
-import { clamp, randInt } from './rng';
-import { topicById } from './data/topics';
+import { clamp, randInt, shuffle } from './rng';
+import { TOPICS } from './data/topics';
+import { FORMATS } from './data/formats';
 import { suggestTitle } from './production';
 
 const absWeek = (s: Pick<GameState, 'week' | 'year'>) => s.year * 52 + s.week;
@@ -88,7 +89,10 @@ export function applyMission(s: GameState, def: MissionDef): void {
   for (const p of x.shows ?? []) presetShow(s, p);
   if (x.fillLineup) {
     const f = x.fillLineup;
-    const combos = s.formats.flatMap((fid) => s.topics.filter((t) => topicById(t).fits[fid]).map((t) => [fid, t] as const));
+    // A varied lineup: every format and topic pair once, so the shows don't wear each other out.
+    const pairs = FORMATS.filter((f) => f.id !== 'sports' && f.episodes > 1)
+      .flatMap((f) => TOPICS.filter((t) => (t.fits[f.id] ?? 0) >= 2).map((t) => [f.id, t.id] as const));
+    const combos = shuffle(s, pairs);
     let i = 0;
     for (const slot of slotsOf(s)) {
       if (s.schedule[slot] || !combos.length) continue;
@@ -141,6 +145,16 @@ export function goalsOf(run: MissionRun): { goals: Goal[]; bonus: Goal | null; t
 }
 
 // ---------- Checking goals ----------
+
+/** Last week's average prime-time share: ours and each rival's. */
+export function primeShares(s: GameState): { ours: number; rivals: { id: string; short: string; color: string; share: number }[] } {
+  const slots = s.lastResult?.slots.filter((x) => x.slot.endsWith('-prime')) ?? [];
+  const n = Math.max(1, slots.length);
+  return {
+    ours: slots.reduce((a, x) => a + x.share, 0) / n,
+    rivals: s.rivals.map((r) => ({ id: r.id, short: r.short, color: r.color, share: slots.reduce((a, x) => a + (x.rivals.find((y) => y.id === r.id)?.share ?? 0), 0) / n })),
+  };
+}
 
 /** Our place among the networks last week: by average share, or prime-time share only. */
 export function rankOf(s: GameState, prime = false): number {

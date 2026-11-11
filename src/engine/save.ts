@@ -44,6 +44,8 @@ const MIGRATIONS: Record<number, (s: RawSave) => RawSave> = {
   },
   // 12 → 13: missions; existing games are Sandbox games.
   12: (s) => ({ ...s, mission: null, version: 13 }),
+  // 13 → 14: the #1-network crown is won in prime time.
+  13: (s) => ({ ...s, primeStreak: 0, version: 14 }),
 };
 
 export interface LoadResult {

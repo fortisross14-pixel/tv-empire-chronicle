@@ -92,7 +92,7 @@ export const MISSIONS: MissionDef[] = [
   m({ id: 'b5-no-filler', group: 'beginner', icon: '📅', title: 'No Filler', weeks: 30,
     brief: 'Fill all six slots with your own shows or movies for 4 weeks in a row.',
     goals: [{ kind: 'fullSchedule', weeks: 4 }], bonus: { kind: 'avgShare', min: 0.12 }, setup: { cash: 160, shopUnlocked: true } }),
-  m({ id: 'b6-back-for-more', group: 'beginner', icon: '🔁', title: 'Back for More', weeks: 40,
+  m({ id: 'b6-back-for-more', group: 'beginner', icon: '🔁', title: 'Back for More', weeks: 44,
     brief: 'Viewers want more. Make season 2 of a show and put it on air.',
     goals: [{ kind: 'season', n: 2 }], bonus: { kind: 'ownIp', rating: 1 }, setup: {} }),
 
@@ -109,10 +109,10 @@ export const MISSIONS: MissionDef[] = [
     brief: 'Port Ellison loves its teams. Win the rights to all three local sports: Pelicans baseball, Friday Night Football and Ice Hawks hockey.',
     goals: [{ kind: 'rights', ids: ['pelicans', 'friday-football', 'ice-hawks'] }], bonus: { kind: 'reputation', min: 30 },
     setup: { week: 8, cash: 260, shopUnlocked: true, skipStarterPacks: true } }),
-  m({ id: 'l4-critics-darling', group: 'local', icon: '🎭', title: "Critics' Darling", weeks: 60,
+  m({ id: 'l4-critics-darling', group: 'local', icon: '🎭', title: "Critics' Darling", weeks: 80,
     brief: 'Win at the Indie Awards. Quality and reviews matter more than ratings here.',
     goals: [{ kind: 'award', level: 'indie' }], bonus: { kind: 'award', level: 'indie', n: 2 },
-    setup: { cash: 180, skipStarterPacks: true, shopUnlocked: true, people: [['writer', 'rare']] } }),
+    setup: { week: 40, cash: 180, skipStarterPacks: true, shopUnlocked: true, people: [['writer', 'rare'], ['crew', 'rare']] } }),
   m({ id: 'l5-comeback', group: 'local', icon: '🥱', title: 'The Comeback', weeks: 30,
     brief: 'Four tired old shows fill the schedule and viewers are bored. Freshen the lineup and win them back.',
     goals: [{ kind: 'freshLineup', novelty: 60 }, { kind: 'avgShare', min: 0.12 }], bonus: { kind: 'ownIp', rating: 1 },
@@ -134,7 +134,7 @@ export const MISSIONS: MissionDef[] = [
     brief: 'A State network with great rights and licenses, but almost no cash and losing money every month. Make it profitable.',
     goals: [{ kind: 'positiveMonths', n: 3, inARow: true }], bonus: { kind: 'cash', min: 400 },
     setup: {
-      tier: 'state', week: 20, cash: 90, reputation: 40, loan: { balance: 400, payment: 14 }, skipStarterPacks: true, shopUnlocked: true,
+      tier: 'state', week: 20, cash: 90, reputation: 40, loan: { balance: 300, payment: 9 }, skipStarterPacks: true, shopUnlocked: true,
       formats: ['news', 'talk', 'series', 'contest'], topics: ['local-news', 'police', 'sports', 'celebrity', 'trivia'],
       rights: ['state-college'], ips: ['chef-blaze'], people: [['crew', 'rare'], ['writer', 'rare'], ['talent', 'rare']],
       shows: [
@@ -151,8 +151,8 @@ export const MISSIONS: MissionDef[] = [
   m({ id: 's3-rights-rush', group: 'state', icon: '🏈', title: 'Rights Rush', weeks: 30,
     brief: 'State College Football goes on the market in a few weeks. Win it and broadcast 6 games.',
     goals: [{ kind: 'rights', ids: ['state-college'] }, { kind: 'sportsGames', n: 6 }], bonus: { kind: 'reputation', min: 50 },
-    setup: { tier: 'state', week: 27, cash: 650, reputation: 40, skipStarterPacks: true, shopUnlocked: true } }),
-  m({ id: 's4-house-rules', group: 'state', icon: '🏠', title: 'House Rules', weeks: 78,
+    setup: { tier: 'state', week: 27, cash: 800, reputation: 40, skipStarterPacks: true, shopUnlocked: true } }),
+  m({ id: 's4-house-rules', group: 'state', icon: '🏠', title: 'House Rules', weeks: 90,
     brief: 'No stars, just the house staff and whatever packs you buy. Make a Show for the Ages.',
     goals: [{ kind: 'classic' }], bonus: { kind: 'award', level: 'state' },
     setup: { tier: 'state', cash: 400, reputation: 40, houseOnly: true, shopUnlocked: true, formats: ['series', 'documentary'], topics: ['history', 'nature', 'police'] } }),
@@ -192,9 +192,9 @@ export const MISSIONS: MissionDef[] = [
       people: [['writer', 'epic'], ['crew', 'epic'], ['talent', 'rare'], ['writer', 'rare']],
       fillLineup: { quality: [62, 72], novelty: [40, 70], season: [1, 4] } } }),
   m({ id: 'n3-coast-to-coast', group: 'national', icon: '📡', title: 'Coast to Coast', weeks: 78,
-    brief: 'A national license but a thin map. Sign 10 affiliate stations.',
-    goals: [{ kind: 'affiliates', n: 10 }], bonus: { kind: 'rank', place: 2, weeks: 4, prime: true },
-    setup: { tier: 'national', cash: 1500, reputation: 62, skipStarterPacks: true, shopUnlocked: true,
+    brief: 'A national license but a thin map. Sign 4 affiliate stations to reach more of the country.',
+    goals: [{ kind: 'affiliates', n: 4 }], bonus: { kind: 'rank', place: 2, weeks: 4, prime: true },
+    setup: { tier: 'national', cash: 2500, reputation: 62, skipStarterPacks: true, shopUnlocked: true,
       formats: ['news', 'talk', 'contest'], topics: ['political-news', 'celebrity', 'trivia'],
       fillLineup: { quality: [58, 68], novelty: [40, 70], season: [1, 4] } } }),
   m({ id: 'n4-big-gamble', group: 'national', icon: '🎰', title: 'The Big Gamble', weeks: 104,
@@ -210,7 +210,7 @@ export const MISSIONS: MissionDef[] = [
     setup: { tier: 'national', cash: 1500, reputation: 60, skipStarterPacks: true, shopUnlocked: true,
       formats: ['reality', 'contest', 'sitcom'], topics: ['survival', 'dating', 'trivia', 'workplace'],
       people: [['writer', 'rare'], ['crew', 'rare'], ['talent', 'rare']],
-      fillLineup: { quality: [58, 68], novelty: [35, 65], season: [1, 4] } } }),
+      fillLineup: { quality: [50, 60], novelty: [30, 55], season: [2, 5] } } }),
   m({ id: 'n6-empire', group: 'national', icon: '👑', title: 'Empire', weeks: 156,
     brief: 'The final test: hold three IPs rated 70+ and be the #1 network in prime time.',
     goals: [{ kind: 'ips', n: 3, rating: 70 }, { kind: 'rank', place: 1, weeks: 4, prime: true }], bonus: { kind: 'award', level: 'glimmy', n: 2 },
@@ -224,7 +224,7 @@ export const MISSIONS: MissionDef[] = [
 export const SANDBOX_DIFFICULTY = {
   easy: { label: 'Relaxed', cash: 220, rivals: 0.9, text: 'More cash, softer rivals.' },
   normal: { label: 'Normal', cash: 120, rivals: 1, text: 'The standard start.' },
-  hard: { label: 'Tough', cash: 70, rivals: 1.12, text: 'Little cash, sharper rivals.' },
+  hard: { label: 'Tough', cash: 90, rivals: 1.08, text: 'Less cash, sharper rivals.' },
 } as const;
 
 /** Goals a Sandbox player can pick (any number, no deadline). */

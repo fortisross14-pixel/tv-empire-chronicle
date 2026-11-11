@@ -28,7 +28,7 @@ interface LevelDef {
 
 export const AWARD_LEVELS: Record<AwardLevel, LevelDef> = {
   indie: {
-    title: 'Indie TV Awards', field: [44, 70], rep: { nominated: 1, won: 4 }, prize: 'people', cashPrize: 0,
+    title: 'Indie TV Awards', field: [40, 63], rep: { nominated: 1, won: 4 }, prize: 'people', cashPrize: 0,
     stations: ['Ellison Public TV', 'Harbor Cable 22', 'Lakeside 3', 'U of Ellison TV', 'KPEL 5'],
     categories: [
       { name: 'Best Indie Show', score: entry },
@@ -39,7 +39,7 @@ export const AWARD_LEVELS: Record<AwardLevel, LevelDef> = {
     ],
   },
   state: {
-    title: 'State TV Awards', field: [60, 82], rep: { nominated: 2, won: 7 }, prize: 'program', cashPrize: 10,
+    title: 'State TV Awards', field: [54, 76], rep: { nominated: 2, won: 7 }, prize: 'program', cashPrize: 10,
     stations: ['Capital 7', 'StateNet', 'Riverside 10', 'Northlake 4', 'KPEL 5'],
     categories: [
       { name: 'Best Show', score: entry },
@@ -49,7 +49,7 @@ export const AWARD_LEVELS: Record<AwardLevel, LevelDef> = {
   },
   glimmy: {
     // Local stations can only enter Best Indie Production. The big categories are for national networks.
-    title: 'The Glimmy Awards', field: [70, 88], rep: { nominated: 4, won: 15 }, prize: 'network', cashPrize: 25,
+    title: 'The Glimmy Awards', field: [64, 82], rep: { nominated: 4, won: 15 }, prize: 'network', cashPrize: 25,
     stations: ['Lone Pine Studios', 'Big Sky Indie', 'Desert Bloom TV', 'Harbor Cable 22'],
     categories: [{ name: 'Best Indie Production', score: entry }],
   },
@@ -87,11 +87,11 @@ export function holdCeremony(state: GameState, level: AwardLevel): Ceremony | nu
   const def = AWARD_LEVELS[level];
   const shows = eligibleShows(state);
   if (!shows.length) return null;
-  const grow = (state.year - 1) * 2;
+  const grow = Math.min(6, (state.year - 1) * 2);
   const national = level === 'glimmy' && state.tier === 'national';
   const cats: (Category & { only?: (s: Show) => boolean })[] = national ? GLIMMY_NATIONAL : def.categories;
   const stations = national ? ['Atlas One', 'Nova', 'Fizz', 'Lone Pine Studios'] : def.stations;
-  const field = national ? [74, 92] as [number, number] : def.field;
+  const field = national ? [72, 90] as [number, number] : def.field;
   const categories: AwardCategoryResult[] = cats.map((cat) => {
     const rivalsField = Array.from({ length: 4 }, () => ({
       name: fieldName(state), station: pick(state, stations), score: clamp(randInt(state, ...field) + grow, 1, 99), ours: false,

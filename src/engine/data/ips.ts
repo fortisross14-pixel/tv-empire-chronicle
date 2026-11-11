@@ -61,17 +61,17 @@ export const IPS: IpDef[] = [
     text: 'The fastest blue mascot in gaming. Kids know every level.', fits: { animation: 3, contest: 2, movie: 2 } }),
 
   // National: only the giants can afford these.
-  ip({ id: 'galaxy-wars-ip', name: 'Galaxy Wars', icon: '🌌', kind: 'film', tier: 'national', rating: 95, value: 900, weeks: 4 * Y, topicId: 'scifi',
+  ip({ id: 'galaxy-wars-ip', name: 'Galaxy Wars', icon: '🌌', kind: 'film', tier: 'national', rating: 95, value: 2700, weeks: 4 * Y, topicId: 'scifi',
     text: 'The biggest film saga ever made. Fans will watch anything set in it.', fits: { series: 3, animation: 3, movie: 3, documentary: 2, talk: 2 } }),
-  ip({ id: 'crown-of-thorns', name: 'Crown of Thorns', icon: '🐉', kind: 'book', tier: 'national', rating: 90, value: 800, weeks: 4 * Y, topicId: 'medieval',
+  ip({ id: 'crown-of-thorns', name: 'Crown of Thorns', icon: '🐉', kind: 'book', tier: 'national', rating: 90, value: 2400, weeks: 4 * Y, topicId: 'medieval',
     text: 'Dragons, betrayals and seven noble houses. The fantasy books everyone is reading.', fits: { series: 3, movie: 2, documentary: 2, talk: 2 } }),
-  ip({ id: 'daisy-doll', name: 'Daisy Doll', icon: '👱‍♀️', kind: 'toy', tier: 'national', rating: 88, value: 700, weeks: 4 * Y, topicId: 'fashion',
+  ip({ id: 'daisy-doll', name: 'Daisy Doll', icon: '👱‍♀️', kind: 'toy', tier: 'national', rating: 88, value: 2100, weeks: 4 * Y, topicId: 'fashion',
     text: 'The doll with a thousand careers and a pink dream house.', fits: { animation: 3, movie: 3, documentary: 2, reality: 2 } }),
-  ip({ id: 'titan-man', name: 'Titan-Man', icon: '💪', kind: 'toy', tier: 'national', rating: 78, value: 500, weeks: 4 * Y, topicId: 'medieval',
+  ip({ id: 'titan-man', name: 'Titan-Man', icon: '💪', kind: 'toy', tier: 'national', rating: 78, value: 1500, weeks: 4 * Y, topicId: 'medieval',
     text: 'The barbarian action figure who holds up his sword and shouts. Very loudly.', fits: { animation: 3, movie: 2, sitcom: 1 } }),
-  ip({ id: 'world-games', name: 'The World Games', icon: '🏅', kind: 'sport', tier: 'national', rating: 92, value: 850, weeks: 4 * Y, topicId: 'sports',
+  ip({ id: 'world-games', name: 'The World Games', icon: '🏅', kind: 'sport', tier: 'national', rating: 92, value: 2550, weeks: 4 * Y, topicId: 'sports',
     text: 'Every four years the whole planet watches. The road there is the story.', fits: { documentary: 3, reality: 3, news: 2, magazine: 2 } }),
-  ip({ id: 'midnight-carnival', name: 'Midnight Carnival', icon: '🎪', kind: 'film', tier: 'national', rating: 74, value: 450, weeks: 4 * Y, topicId: 'true-crime',
+  ip({ id: 'midnight-carnival', name: 'Midnight Carnival', icon: '🎪', kind: 'film', tier: 'national', rating: 74, value: 1350, weeks: 4 * Y, topicId: 'true-crime',
     text: 'A horror film series with a creepy clown. Every Halloween, a new one.', fits: { series: 3, movie: 3, documentary: 2 } }),
 ];
 

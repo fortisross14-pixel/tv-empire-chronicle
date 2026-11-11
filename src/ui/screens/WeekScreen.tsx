@@ -2,7 +2,7 @@ import { MissionCard } from '../components/MissionCard';
 import { Fragment, useState } from 'react';
 import {
   AFFILIATE_MAX, CHAMPION_WEEKS, DAYPART_LABEL, TIERS, affiliateCost, dateLabel, formatById, grade, isSweeps, licenseGaps,
-  nextLicense, overall, rightsById, periodOf, reachOf, slotLabel, slotsOf, upcomingMarkers, type GameState, type Show, type SlotId,
+  nextLicense, overall, rightsById, primeShares, periodOf, reachOf, slotLabel, slotsOf, upcomingMarkers, type GameState, type Show, type SlotId,
 } from '../../engine';
 import { CastTile, Poster, artStyle, projectPoster, showPoster } from '../components/Poster';
 import { PosterArt } from '../posters/PosterArt';
@@ -34,7 +34,6 @@ export function WeekScreen({
 }) {
   const [allNews, setAllNews] = useState(false);
   const lic = nextLicense(state);
-  const avg = (xs: number[]) => (xs.length ? xs.slice(-CHAMPION_WEEKS).reduce((a, b) => a + b, 0) / Math.min(CHAMPION_WEEKS, xs.length) : 0);
   const SLOTS = slotsOf(state);
   const period = periodOf(state.week);
   const last = state.lastResult;
@@ -178,7 +177,7 @@ export function WeekScreen({
           <p className="small muted">
             {lic.tier === 'state'
               ? `A State license brings 15 slots (afternoon and late night too), ${TIERS.state.households / 1000}M households, Advanced productions with specialists and 2 topics, State rights and new formats. Running costs rise to $${TIERS.state.overhead}K/week.`
-              : `Going national brings 20 slots, up to ${TIERS.national.households / 1000}M households (grow reach with affiliates), AAA productions, Galaxy Wars and the Gridiron League, and the full Glimmys. Running costs rise to $${TIERS.national.overhead}K/week.`}
+              : `Going national brings 20 slots, up to ${TIERS.national.households / 1000}M households (grow reach with affiliates), AAA productions, Galaxy Wars and the Gridiron League, and the full Glimmys. Running costs start at $${Math.round(TIERS.national.overhead / 2)}K/week and grow with your reach.`}
           </p>
           <div className="req">
             <span>Reputation {Math.floor(state.reputation)} / {lic.reputation}</span><span>{state.reputation >= lic.reputation ? '✅' : '⏳'}</span>
@@ -194,16 +193,21 @@ export function WeekScreen({
       {state.tier === 'national' && (
         <section className="panel stack-sm">
           <div className="section-title"><h2>{state.champion ? '👑 #1 network' : '👑 Goal: #1 network'}</h2></div>
-          <p className="small muted">Beat every rival on average share over {CHAMPION_WEEKS} weeks.</p>
-          <div className="req">
-            <span>You</span><b>{(avg(state.shareHistory) * 100).toFixed(1)}%</b>
-            {state.rivals.map((r) => <Fragment key={r.id}><span style={{ color: r.color }}>{r.short}</span><b>{(avg(r.history) * 100).toFixed(1)}%</b></Fragment>)}
-          </div>
+          <p className="small muted">Be #1 in prime time for {CHAMPION_WEEKS} weeks in a row. {!state.champion && `Streak: ${state.primeStreak ?? 0}/${CHAMPION_WEEKS}.`}</p>
+          {(() => {
+            const p = primeShares(state);
+            return (
+              <div className="req">
+                <span>You · prime time</span><b>{(p.ours * 100).toFixed(1)}%</b>
+                {p.rivals.map((r) => <Fragment key={r.id}><span style={{ color: r.color }}>{r.short}</span><b>{(r.share * 100).toFixed(1)}%</b></Fragment>)}
+              </div>
+            );
+          })()}
           <div className="section-title" style={{ marginTop: 8 }}><h3>📡 Affiliates</h3><span className="sub">Reach {Math.round(reachOf(state) * 100)}%</span></div>
           <div className="affiliates">{Array.from({ length: AFFILIATE_MAX }, (_, i) => <i key={i} className={i < state.affiliates ? 'on' : ''} />)}</div>
           {state.affiliates < AFFILIATE_MAX && (
             <button className="btn ghost" disabled={state.cash < affiliateCost(state.affiliates)} onClick={onAffiliate}>
-              Sign an affiliate · ${affiliateCost(state.affiliates)}K (+5% reach)
+              Sign an affiliate · ${affiliateCost(state.affiliates)}K (+5% reach and running costs)
             </button>
           )}
         </section>

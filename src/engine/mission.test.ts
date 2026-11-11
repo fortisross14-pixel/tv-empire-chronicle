@@ -1,6 +1,6 @@
 // Wave 12: missions, the roadmap's unlock rules, and save version 13.
 import { airWeek, answerEvent, newMissionGame, SAVE_VERSION } from './game';
-import { MISSIONS, missionById, BEGINNER_TO_UNLOCK } from './data/missions';
+import { MISSIONS, missionById, BEGINNER_TO_UNLOCK, SANDBOX_DIFFICULTY } from './data/missions';
 import { campaignOpen, emptyProfile, lockReason, sandboxLockReason, trackMission } from './mission';
 import { formatById } from './data/formats';
 import { topicById } from './data/topics';
@@ -102,7 +102,7 @@ test('version 12 saves upgrade to sandbox games', () => {
 
 test('a sandbox can have a difficulty and its own goals, with no deadline', () => {
   const easy = newMissionGame(5, 'T', null, { difficulty: 'easy', goals: ['state', 'classic'] });
-  expect(easy.cash).toBe(220);
+  expect(easy.cash).toBe(SANDBOX_DIFFICULTY.easy.cash);
   expect(easy.mission).toMatchObject({ id: 'sandbox', deadlineAt: 0 });
   expect(easy.mission!.custom!.goals).toHaveLength(2);
   let s = easy;
@@ -117,7 +117,17 @@ test('a sandbox can have a difficulty and its own goals, with no deadline', () =
   const plain = newMissionGame(5, 'T', null, { difficulty: 'normal', goals: [] });
   expect(plain.mission).toBeNull();
   const hard = newMissionGame(5, 'T', null, { difficulty: 'hard', goals: [] });
-  expect(hard.cash).toBe(70);
+  expect(hard.cash).toBe(SANDBOX_DIFFICULTY.hard.cash);
   expect(week(hard).mission!.status).toBe('playing');
   void s;
+});
+
+test('version 13 saves upgrade with an empty prime-time streak', () => {
+  const s = newMissionGame(4, 'T', null) as unknown as Record<string, unknown> & { version: number };
+  const old = structuredClone(s);
+  old.version = 13;
+  delete old.primeStreak;
+  const up = migrate(old)!;
+  expect(up.version).toBe(SAVE_VERSION);
+  expect(up.primeStreak).toBe(0);
 });

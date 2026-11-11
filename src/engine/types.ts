@@ -434,6 +434,8 @@ export interface GameState {
   shareHistory: number[];
   /** Has the station been the #1 national network? */
   champion: boolean;
+  /** Weeks in a row as #1 in prime time (national), towards the crown. */
+  primeStreak: number;
   week: number;
   year: number;
   cash: number;

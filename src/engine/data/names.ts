@@ -90,7 +90,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'atlas', name: 'Atlas One Network', short: 'Atlas One', color: '#d4362c',
     blurb: 'The biggest network in the country. Owns prime time and wants to keep it.',
-    quality: [58, 80], aggression: 0.65, appetite: 1.3, sportsLove: 1.3, launchWeek: 0, tier: 'national',
+    quality: [52, 75], aggression: 0.65, appetite: 1.3, sportsLove: 1.3, launchWeek: 0, tier: 'national',
     formats: {
       morning: ['news', 'talk'], afternoon: ['talk', 'contest', 'magazine'], evening: ['news', 'contest', 'sitcom'],
       prime: ['series', 'reality', 'movie', 'contest'], late: ['late-show', 'talk'],
@@ -99,7 +99,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'nova', name: 'Nova Broadcasting', short: 'Nova', color: '#5b3fd1',
     blurb: 'Prestige television. Award-winning dramas and documentaries.',
-    quality: [55, 78], aggression: 0.4, appetite: 1.1, sportsLove: 0.8, launchWeek: 0, tier: 'national',
+    quality: [50, 72], aggression: 0.4, appetite: 1.1, sportsLove: 0.8, launchWeek: 0, tier: 'national',
     formats: {
       morning: ['news', 'magazine'], afternoon: ['documentary', 'magazine'], evening: ['news', 'documentary', 'sitcom'],
       prime: ['series', 'documentary', 'movie'], late: ['late-show', 'movie'],
@@ -108,7 +108,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'fizz', name: 'Fizz TV', short: 'Fizz', color: '#ff7a1a',
     blurb: 'Loud, young and everywhere. Reality, animation and contests around the clock.',
-    quality: [50, 72], aggression: 0.5, appetite: 0.9, sportsLove: 0.9, launchWeek: 0, tier: 'national',
+    quality: [46, 68], aggression: 0.5, appetite: 0.9, sportsLove: 0.9, launchWeek: 0, tier: 'national',
     formats: {
       morning: ['animation', 'talk'], afternoon: ['animation', 'contest', 'reality'], evening: ['contest', 'sitcom', 'reality'],
       prime: ['reality', 'contest', 'sitcom', 'animation'], late: ['sitcom', 'late-show'],

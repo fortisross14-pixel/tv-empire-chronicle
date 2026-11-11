@@ -17,11 +17,11 @@ import {
   SPORTS_AIRINGS, SPORTS_CPM_BONUS,
 } from './rights';
 import {
-  AIRINGS, CPM, FILLER_APPEAL, FILLER_NAME, HUT, OTHER_APPEAL, TIERS, reachOf, slotsOf,
+  AIRINGS, CPM, FILLER_APPEAL, FILLER_NAME, HUT, OTHER_APPEAL, TIERS, overheadOf, reachOf, slotsOf,
 } from './schedule';
 import { addNews, round1 } from './news';
 import { expireIps, settleSeasonIp } from './ip';
-import { trackMission } from './mission';
+import { rankOf, trackMission } from './mission';
 import { MOVIE_NOVELTY } from './rights';
 
 const TIER_ORDER = ['local', 'state', 'national'] as const;
@@ -56,9 +56,12 @@ export const REPUTATION = {
   criticsPerPoint: 1 / 8,
   /** Fraction of reputation lost each week. */
   decay: 0.02,
+  /** Reputation from airing is scaled to a schedule of this many slots. */
+  referenceSlots: 6,
 };
 export const SWEEPS_RATE = { base: 0.75, perShare: 2.2, min: 0.75, max: 1.6 };
-export const CHAMPION_WEEKS = 13;
+/** Weeks in a row at #1 in prime time to be crowned the #1 network. */
+export const CHAMPION_WEEKS = 26;
 export const SHARE_HISTORY_CAP = 26;
 export const SHOW_HISTORY_CAP = 26;
 export const LOAN = { amount: 100, total: 125, payment: 2.5 };
@@ -79,6 +82,8 @@ export function airSlots(s: GameState): WeekContext {
   const viewerMod = s.modifiers.reduce((m, x) => m * x.mult, 1);
   const fall = isFallPremiere(s.week);
   const tier = TIERS[s.tier];
+  // Reputation per slot is scaled so 20 national slots don't earn 3x what 6 local ones do.
+  const slotWeight = REPUTATION.referenceSlots / (tier.blocks.length * tier.dayparts.length);
   for (const block of tier.blocks) {
     let prevShare = 0.1;
     for (const part of tier.dayparts) {
@@ -158,7 +163,7 @@ export function airSlots(s: GameState): WeekContext {
       }
       if (kind) {
         if (show) ctx.aired.add(show.id);
-        const weight = part === 'prime' ? REPUTATION.primeWeight : 1;
+        const weight = (part === 'prime' ? REPUTATION.primeWeight : 1) * slotWeight;
         ctx.reputationDelta += ((share - REPUTATION.baseline) + (won ? REPUTATION.winBonus : 0)) * weight;
       }
     }
@@ -267,7 +272,7 @@ export function settleWeek(s: GameState, ctx: WeekContext, sponsors: number): vo
       addNews(s, 'The bank loan is paid off.', 'good');
     }
   }
-  const overhead = TIERS[s.tier].overhead;
+  const overhead = overheadOf(s);
   const net = round1(revenue + sponsors - overhead - loanPayment);
   s.cash = round1(s.cash + net);
   ctx.reputationDelta -= s.reputation * REPUTATION.decay;
@@ -283,10 +288,10 @@ export function trackShares(s: GameState, ctx: WeekContext): void {
   recordRivalShares(s, ctx.slots);
   s.shareHistory.push(avgShare(ctx.slots));
   if (s.shareHistory.length > SHARE_HISTORY_CAP) s.shareHistory.shift();
-  if (s.tier === 'national' && !s.champion && s.shareHistory.length >= CHAMPION_WEEKS) {
-    const avg = (xs: number[]) => xs.slice(-CHAMPION_WEEKS).reduce((a, b) => a + b, 0) / Math.min(CHAMPION_WEEKS, xs.length);
-    const ours = avg(s.shareHistory);
-    if (s.rivals.every((r) => r.history.length >= CHAMPION_WEEKS && avg(r.history) < ours)) {
+  // The crown: #1 in prime time, the hours that decide a network, for CHAMPION_WEEKS weeks in a row.
+  if (s.tier === 'national' && !s.champion) {
+    s.primeStreak = rankOf(s, true) === 1 ? (s.primeStreak ?? 0) + 1 : 0;
+    if (s.primeStreak >= CHAMPION_WEEKS) {
       s.champion = true;
       s.milestone = 'champion';
       addNews(s, `👑 ${s.stationName} is the #1 network in the country!`, 'good');

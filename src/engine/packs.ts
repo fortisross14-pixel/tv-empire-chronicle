@@ -10,7 +10,7 @@ import { networkById } from './data/network';
 
 export const PRICES = { program: 40, people: 25, network: 30, business: 8 } as const;
 /** Movie packs cost more as the station grows (bigger films). */
-export const MOVIE_PACK_PRICE: Record<GameState['tier'], number> = { local: 15, state: 45, national: 140 };
+export const MOVIE_PACK_PRICE: Record<GameState['tier'], number> = { local: 15, state: 45, national: 250 };
 export const MOVIE_PACK_SIZE = 4;
 const MOVIE_RARITY: Record<Rarity, number> = { common: 62, rare: 26, epic: 10, legend: 2 };
 

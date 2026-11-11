@@ -14,18 +14,20 @@ export const TIERS: Record<Tier, TierConfig> = {
   local: { label: 'Local station', blocks: ['weekday', 'weekend'], dayparts: ['morning', 'evening', 'prime'], households: 420, overhead: 7 },
   state: {
     label: 'State network', blocks: ['monwed', 'thufri', 'weekend'], dayparts: ['morning', 'afternoon', 'evening', 'prime', 'late'],
-    households: 2400, overhead: 30,
+    households: 2400, overhead: 38,
   },
   national: {
     label: 'National network', blocks: ['montue', 'wedthu', 'fri', 'weekend'], dayparts: ['morning', 'afternoon', 'evening', 'prime', 'late'],
-    households: 12000, overhead: 120,
+    households: 10000, overhead: 160,
   },
 };
 
 /** National: reach grows with affiliates (50% with none, 100% with 10). */
 export const AFFILIATE_MAX = 10;
 export const reachOf = (s: Pick<GameState, 'tier' | 'affiliates'>) => (s.tier === 'national' ? 0.5 + 0.05 * Math.min(AFFILIATE_MAX, s.affiliates) : 1);
-export const affiliateCost = (signed: number) => 150 + signed * 50;
+export const affiliateCost = (signed: number) => 500 + signed * 250;
+/** Weekly running costs. A national network pays for the reach it has (affiliates add both). */
+export const overheadOf = (s: Pick<GameState, 'tier' | 'affiliates'>) => Math.round(TIERS[s.tier].overhead * reachOf(s));
 
 export const slotsFor = (tier: Tier): SlotId[] =>
   TIERS[tier].blocks.flatMap((d) => TIERS[tier].dayparts.map((p) => `${d}-${p}` as SlotId));

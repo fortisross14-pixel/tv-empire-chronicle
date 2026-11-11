@@ -267,6 +267,11 @@ lineup, shares, trend, rights owned and slots won against you.
   milestones (first slot win, first sweeps, awards).
 - **Bankruptcy:** the first time cash goes negative the bank lends $100K
   (repaid at $2.5K/week). The second time, the game is over.
+- **Scaling (balance pass):** running costs Local $7K, State $38K, National $160K × reach;
+  production ×1.8 at State, ×2.5 at National; affiliates $500K + $250K each; licenses
+  State $250K/rep 35 (fee $200K), National $4M/rep 60 (fee $2.5M), each with a free movie
+  pack. Reputation from airing is scaled per slot. The #1 crown: 26 weeks in a row at #1
+  in prime time. Numbers and measurements: docs/audits/2026-11-11-balance.md.
 
 ## 9. Start and unlock order
 
@@ -478,6 +483,7 @@ Next (planned):
 
 14. **Best practices** ✅ — playtest tool, invariant and save tests, error boundary.
 15. **Visual and navigation polish** ✅ — see docs/audits/2026-11-11-polish.md.
+16. **Balancing** ✅ — casual target; see docs/audits/2026-11-11-balance.md.
 
 The last three waves are always:
 

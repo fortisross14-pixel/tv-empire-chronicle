@@ -1,4 +1,4 @@
-import { networkById, projectPeople, rightsById, type GameState } from '../engine';
+import { freshIdeas, networkById, projectPeople, rightsById, type GameState } from '../engine';
 import type { Todo } from './screens/WeekScreen';
 
 type TabId = 'schedule' | 'studio' | 'cards' | 'shop';
@@ -30,6 +30,13 @@ export function buildTodos(
       title: state.shows.length === 0 && state.projects.length === 0 ? 'Create your first show' : 'Your team is free',
       detail: 'Pick a format and topic, build the team, split the focus points.',
       onClick: act.newShow,
+    });
+  }
+  if (state.shopUnlocked && state.formats.length > 0 && freshIdeas(state) === 0 && state.unopened.length === 0) {
+    todos.push({
+      id: 'no-ideas', emoji: '🃏', title: 'Every show idea is taken',
+      detail: 'All your format + topic pairs are in use. A Program pack brings new formats and topics.',
+      onClick: () => act.goTab('shop'),
     });
   }
   const promoTargets = state.projects.length + state.shows.filter((x) => !x.premiered).length;

@@ -20,7 +20,7 @@ export function makeRivalShow(state: GameState, slot: SlotId, rival: Pick<Rival,
   const { part } = slotParts(slot);
   const fid = formatId ?? pick(state, def.formats[part]);
   const topic = pick(state, topicsForFormat(fid));
-  const yearBoost = (state.year - 1) * 3;
+  const yearBoost = Math.min(8, (state.year - 1) * 2);
   const name = pick(state, TITLE_TEMPLATES[fid])
     .replace('{w}', pick(state, topic.words)).replace('{c}', CITY).replace('{h}', pick(state, HOSTS));
   return {
@@ -28,7 +28,7 @@ export function makeRivalShow(state: GameState, slot: SlotId, rival: Pick<Rival,
     formatId: fid,
     topicId: topic.id,
     quality: clamp(Math.round(randInt(state, ...def.quality) * rival.strength + yearBoost + bonus), 10, 95),
-    novelty: randInt(state, 60, 100),
+    novelty: randInt(state, 35, 90),
     fame: randInt(state, 0, 25),
     weeksLeft: formatById(fid).episodes > 1 ? randInt(state, 8, 13) : randInt(state, 2, 4),
   };

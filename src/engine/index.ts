@@ -7,7 +7,7 @@ export * from './people';
 export * from './packs';
 export {
   computeScores, previewPlan, suggestTitle, grade, focusMatch, STAGE_LABEL, MAX_POINTS_PER_AREA, LEVELS, projectPeople, stagePeople, levelsFor, canSpinOff, SPINOFF,
-  SCRIPT_TIME, CLASSIC_QUALITY, scriptStars, teamBonus,
+  SCRIPT_TIME, CLASSIC_QUALITY, scriptStars, teamBonus, freshIdeas,
   type ShowPlan, type ScoreBreakdown,
 } from './production';
 export * from './data/formats';
@@ -25,6 +25,6 @@ export { IP_FIT, ipBonus, ipFit, usableIps, seasonScore, OWN_IP_MIN } from './ip
 export { MOVIE_PACK_PRICE, MOVIE_PACK_SIZE } from './packs';
 export * from './data/missions';
 export {
-  campaignOpen, sandboxOpen, lockReason, goalsOf, sandboxLockReason, goalLabel, goalProgress, goalReached, missionWeeksLeft, emptyProfile,
+  campaignOpen, sandboxOpen, lockReason, goalsOf, primeShares, rankOf, sandboxLockReason, goalLabel, goalProgress, goalReached, missionWeeksLeft, emptyProfile,
   type Profile,
 } from './mission';

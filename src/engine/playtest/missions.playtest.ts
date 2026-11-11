@@ -7,11 +7,11 @@
 import { test } from 'vitest';
 import {
   airWeek, answerEvent, bidOnRights, buyPack, createShow, dismissReveal, expandToNational, expandToState, licenseGaps, newMissionGame,
-  openPack, scheduleShow, signAffiliate, usePromo, useSponsor, cancelShow, ackMission,
+  openPack, scheduleShow, signAffiliate, usePromo, useSponsor, cancelShow, ackMission, nextLicense,
 } from '../game';
 import { formatById, AREAS } from '../data/formats';
 import { topicById } from '../data/topics';
-import { LEVELS, levelsFor, previewPlan, projectPeople, type ShowPlan } from '../production';
+import { LEVELS, TIER_COST, freshIdeas, levelsFor, previewPlan, projectPeople, type ShowPlan } from '../production';
 import { appeal } from '../appeal';
 import { slotParts, slotsOf, AIRINGS, CPM, HUT, affiliateCost, AFFILIATE_MAX } from '../schedule';
 import { networkById } from '../data/network';
@@ -40,7 +40,9 @@ const bookedSet = (s: GameState) => new Set(s.projects.flatMap((p) => projectPeo
 
 function bestPlan(s: GameState, renewId: string | null): ShowPlan | null {
   const booked = bookedSet(s);
-  const level: ProductionLevel = levelsFor(s.tier).slice(-1)[0];
+  // Like a player: the best production level whose typical budget is affordable.
+  const typical = (l: ProductionLevel) => 40 * LEVELS[l].costMult * TIER_COST[s.tier];
+  const level: ProductionLevel = [...levelsFor(s.tier)].reverse().find((l) => typical(l) <= s.cash * 0.3) ?? 'basic';
   const L = LEVELS[level];
   const people = s.people.filter(avail);
   const free = (p: Person) => !booked.has(p.id);
@@ -131,15 +133,23 @@ function play(missionId: string, seed: number): { status: string; stars: number;
 /** Play a mission with the bot (optionally only for a few weeks) and return the final state. */
 export function playMission(missionId: string, seed: number, maxWeeks = Infinity): { s: GameState; start: number } {
   const def = missionById(missionId);
-  const goals = [...def.goals, def.bonus];
-  let s = newMissionGame(seed, 'Bot', missionId);
-  const start = s.mission!.startAt;
-  const projects = () => (s.tier === 'local' ? 2 : s.tier === 'state' ? Math.min(6, 3 + Math.floor(s.cash / 800)) : Math.min(10, 4 + Math.floor(s.cash / 1500)));
+  return playState(newMissionGame(seed, 'Bot', missionId), [...def.goals, def.bonus], Math.min(maxWeeks, def.weeks + 2));
+}
+
+/**
+ * The bot itself: plays any state for some weeks, with extra moves for the given goals.
+ * `onWeek` sees the state after every aired week (for reports).
+ */
+export function playState(start0: GameState, goals: Goal[], weeks: number, onWeek?: (s: GameState) => void): { s: GameState; start: number } {
+  let s = start0;
+  const start = s.year * 52 + s.week;
+  const playing = () => !s.mission || s.mission.status === 'playing' || !!s.mission.custom;
+  const projects = () => (s.tier === 'local' ? 2 : s.tier === 'state' ? Math.min(6, 3 + Math.floor(s.cash / 600)) : Math.min(10, 5 + Math.floor(s.cash / 1000)));
   const sportsIds = goals.flatMap((g) => (g.kind === 'rights' ? g.ids : []));
   const wantSports = wants(goals, 'sportsGames') || sportsIds.length > 0;
   const wantIp = wants(goals, 'ownIp') || wants(goals, 'ips');
   const wantTier = goals.find((g) => g.kind === 'tier');
-  for (let w = 0; w < Math.min(maxWeeks, def.weeks + 2) && s.mission!.status === 'playing' && !s.gameOver; w++) {
+  for (let w = 0; w < weeks && playing() && !s.gameOver; w++) {
     while (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
     while (s.unopened.length) { s = openPack(s, s.unopened[0].id); s = dismissReveal(s); }
     if (s.reveal) s = dismissReveal(s);
@@ -150,8 +160,13 @@ export function playMission(missionId: string, seed: number, maxWeeks = Infinity
     }
     const upgrade = !!wantTier || s.tier === 'local' && false;
     if (upgrade && s.tier !== 'national' && licenseGaps(s).length === 0) s = s.tier === 'local' ? expandToState(s) : expandToNational(s);
-    const buffer = s.tier === 'local' ? 30 : s.tier === 'state' ? 150 : 600;
-    const spend = () => s.cash - buffer;
+    // Keep a reserve for the auctions when the goals need rights.
+    const buffer = (s.tier === 'local' ? 30 : s.tier === 'state' ? 150 : 600) + (wantSports ? 120 : 0);
+    const lic = nextLicense(s);
+    const saving = !!wantTier && !!lic && s.reputation >= lic.reputation * 0.7;
+    // Save up for what the goals need: the next license, or the next affiliate.
+    const affiliateGoal = goals.some((g) => g.kind === 'affiliates' && s.affiliates < g.n) && s.tier === 'national';
+    const spend = () => s.cash - buffer - (saving ? lic!.cash : 0) - (affiliateGoal ? affiliateCost(s.affiliates) : 0);
     // Renew ended shows, then start new ones.
     for (const show of s.shows.filter((x) => x.episodesLeft <= 0 && !s.projects.some((p) => p.showId === x.id)).sort((a, b) => b.quality - a.quality)) {
       if (s.projects.length >= projects()) break;
@@ -198,32 +213,34 @@ export function playMission(missionId: string, seed: number, maxWeeks = Infinity
         if (lot.locked || lot.bid) { committed += lot.bid ?? 0; continue; }
         const value = lot.ip ? ipDefById(lot.defId)!.value : rightsById(lot.defId).value;
         const keen = lot.ip ? wantIp : (wantSports && (!sportsIds.length || sportsIds.includes(lot.defId)));
-        const bid = Math.round(value * (keen ? 1.6 : 1.05));
+        const bid = Math.round(value * (keen ? 2.2 : 1.05));
         if ((keen || !lot.ip) && spend() - committed - bid > (keen ? -buffer * 0.8 : 0)) { try { s = bidOnRights(s, lot.id, bid); committed += bid; } catch { /* */ } }
       }
     }
     if (s.shopUnlocked) {
       const committed = s.rightsMarket?.lots.reduce((a, l) => a + (l.bid ?? 0), 0) ?? 0;
       const films = s.rights.filter((r) => rightsById(r.defId).kind === 'film').length;
-      const emptySlots = slotsOf(s).length - s.shows.filter((x) => x.episodesLeft > 0 || x.novelty >= 25).length;
-      const moviesWanted = wants(goals, 'movies') || wants(goals, 'movieWin') || wants(goals, 'fullSchedule') || (emptySlots > 2 && s.tier !== 'local');
-      if (moviesWanted && films < 3 && spend() - committed > MOVIE_PACK_PRICE[s.tier]) { s = buyPack(s, 'movies'); s = dismissReveal(s); }
-      const kinds = ['people', 'program', 'people', 'network'] as const;
-      const k = kinds[s.nextId % 4];
+      const emptySlots = slotsOf(s).length - s.shows.filter((x) => x.episodesLeft > 0 || x.novelty >= 25).length - films;
+      const moviesWanted = wants(goals, 'movies') || wants(goals, 'movieWin') || wants(goals, 'fullSchedule') || (emptySlots > 1 && s.tier !== 'local');
+      if (moviesWanted && (films < 3 || emptySlots > 1) && spend() - committed > MOVIE_PACK_PRICE[s.tier]) { s = buyPack(s, 'movies'); s = dismissReveal(s); }
+      // Out of show ideas: new formats and topics first; otherwise people and network cards.
+      const kinds = ['people', 'program', 'network'] as const;
+      const k = freshIdeas(s) < 2 ? 'program' : kinds[(s.week + s.year) % 3];
       if (spend() - committed - (wantTier ? 0 : 0) > PRICES[k] + 20) { s = buyPack(s, k); s = dismissReveal(s); }
     }
     if (s.tier === 'national' && s.affiliates < AFFILIATE_MAX && s.cash > affiliateCost(s.affiliates) + (wants(goals, 'affiliates') ? 300 : 800)) s = signAffiliate(s);
     s = schedule(s, wants(goals, 'movies') || wants(goals, 'movieWin'));
     while (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
     s = airWeek(s);
-    if (ENV.DIAG && seed === 1) {
+    onWeek?.(s);
+    if (ENV.DIAG) {
       const ours = s.shareHistory.at(-1) ?? 0;
       const rank = 1 + s.rivals.filter((r) => (r.history.at(-1) ?? 0) > ours).length;
       if (w % 4 === 0) console.log(`w${w} ${s.tier} rank${rank} ours=${(ours * 100).toFixed(1)} rivals=${s.rivals.map((r) => r.short + ':' + ((r.history.at(-1) ?? 0) * 100).toFixed(1)).join(' ')} cash=${Math.round(s.cash)} net=${s.lastResult!.net} shows=${s.shows.map((x) => x.quality + '/' + Math.round(x.novelty)).join(',')} proj=${s.projects.length}`);
       if (s.ceremony) console.log('ceremony', s.ceremony.level, s.ceremony.categories.map((c) => c.category + ':' + (c.weWon ? 'WON' : c.nominees.find((n) => n.ours)?.score + ' vs ' + Math.max(...c.nominees.filter((n) => !n.ours).map((n) => n.score)))).join(' | '));
     }
   }
-  if (s.mission!.status === 'won') s = ackMission(s);
+  if (s.mission?.status === 'won') s = ackMission(s);
   return { s, start };
 }
 
@@ -231,6 +248,7 @@ const ENV = (globalThis as { process?: { env: Record<string, string | undefined>
 const SEEDS = (ENV.SEEDS ?? '1,2,3,4,5,6').split(',').map(Number);
 
 test('missions', () => {
+  if (ENV.ECON && !ENV.MISSIONS) return; // economy-only runs skip this
   const only = (ENV.MISSIONS ?? '').split(',').filter(Boolean);
   for (const m of MISSIONS.filter((x) => !only.length || only.some((o: string) => x.id.startsWith(o)))) {
     const runs = SEEDS.map((seed) => play(m.id, seed));

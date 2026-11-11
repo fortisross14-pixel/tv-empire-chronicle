@@ -26,12 +26,12 @@ export function newMissionGame(
   return s;
 }
 
-export const SAVE_VERSION = 13;
+export const SAVE_VERSION = 14;
 
 /** What it takes to become a State network. */
 export const STATE_LICENSE = { reputation: 35, cash: 250, fee: 200 };
 /** What it takes to go National. */
-export const NATIONAL_LICENSE = { reputation: 60, cash: 1500, fee: 1000 };
+export const NATIONAL_LICENSE = { reputation: 60, cash: 4000, fee: 2500 };
 export const START_CASH = 120;
 export { CHAMPION_WEEKS, LOAN };
 
@@ -47,6 +47,7 @@ export function newGame(seed: number, stationName: string): GameState {
     affiliates: 0,
     shareHistory: [],
     champion: false,
+    primeStreak: 0,
     week: 27,
     year: 1,
     cash: START_CASH,
@@ -264,6 +265,8 @@ function moveUp(s: GameState) {
   refreshMarketLocks(s);
   s.sweeps = { shareSum: 0, samples: 0 };
   s.milestone = lic.tier;
+  // A welcome gift: movies of the new tier, so the bigger schedule isn't empty on day one.
+  s.unopened.push(makePack(s, 'movies'));
   return lic.tier;
 }
 

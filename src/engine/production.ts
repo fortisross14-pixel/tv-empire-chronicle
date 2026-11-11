@@ -39,11 +39,24 @@ export const levelsFor = (tier: Tier) =>
   (Object.keys(LEVELS) as ProductionLevel[]).filter((l) => TIER_ORDER.indexOf(LEVEL_TIER[l]) <= TIER_ORDER.indexOf(tier));
 /** Spin-offs start with this much hype and fame from the original. */
 export const SPINOFF = { hype: 30, fame: 10 };
+/** Novelty a new season brings back (a Twist brings more). */
+export const RENEWAL_NOVELTY = 40;
 
 /** A hit can be spun off: a Show for the Ages, an award winner, 3+ seasons, or an IP. */
 export const canSpinOff = (show: Show) => show.classic || show.awards.length > 0 || show.season >= 3 || !!show.ipId;
 
 const renewalShow = (state: GameState, plan: ShowPlan) => (plan.showId ? state.shows.find((x) => x.id === plan.showId) : undefined);
+
+/** Format + topic pairs you own that no show or production uses yet: your fresh show ideas. */
+export function freshIdeas(state: GameState): number {
+  let n = 0;
+  for (const f of state.formats) for (const t of state.topics) {
+    if (!topicById(t)?.fits[f]) continue;
+    if (state.shows.some((x) => x.formatId === f && x.topicId === t) || state.projects.some((x) => x.formatId === f && x.topicId === t)) continue;
+    n++;
+  }
+  return n;
+}
 
 export interface ShowPlan {
   name: string;
@@ -206,8 +219,11 @@ export function stageDurations(
   };
 }
 
-export function productionCost(format: Format, crew: CrewCard, renewal: boolean, level: ProductionLevel = 'basic'): number {
-  const raw = format.costPerEpisode * format.episodes * (1 - crew.skills.production / 500) * (renewal ? 0.9 : 1) * LEVELS[level].costMult;
+/** Bigger networks pay bigger rates: crews, stars and sets cost more. */
+export const TIER_COST: Record<Tier, number> = { local: 1, state: 1.8, national: 2.5 };
+
+export function productionCost(format: Format, crew: CrewCard, renewal: boolean, level: ProductionLevel = 'basic', tier: Tier = 'local'): number {
+  const raw = format.costPerEpisode * format.episodes * (1 - crew.skills.production / 500) * (renewal ? 0.9 : 1) * LEVELS[level].costMult * TIER_COST[tier];
   return Math.round(raw * 10) / 10;
 }
 
@@ -304,7 +320,7 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
   if (plan.twist && !renewal) throw new GameError('Twists are for new seasons of a show.');
   if (plan.twist && !(state.twists[plan.topicId] > 0)) throw new GameError('No Twist token for this topic.');
   const time = plan.scriptTime ?? 'standard';
-  const cost = productionCost(format, team.crew, renewal, level);
+  const cost = productionCost(format, team.crew, renewal, level, state.tier);
   const durations = stageDurations(format, team, renewal, time, level);
   const breakdown = computeTeamScores(plan.formatId, [plan.topicId, topic2Id], boosted(state, team), plan.points, level, undefined, time);
   breakdown.teamBonus = teamBonus(people);
@@ -419,8 +435,8 @@ function finishProject(state: GameState, project: Project): Show {
   let show = project.showId ? state.shows.find((s) => s.id === project.showId) : undefined;
   if (show) {
     show.season = project.season;
-    show.noveltyCap = project.twist ? 100 : Math.max(40, 100 - 12 * (project.season - 1));
-    show.novelty = Math.min(show.noveltyCap, show.novelty + (project.twist ? 55 : 25));
+    show.noveltyCap = project.twist ? 100 : Math.max(45, 100 - 8 * (project.season - 1));
+    show.novelty = Math.min(show.noveltyCap, show.novelty + (project.twist ? 60 : RENEWAL_NOVELTY));
   } else {
     show = {
       id: newId(state, 's'),

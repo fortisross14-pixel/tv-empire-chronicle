@@ -1,4 +1,4 @@
-import { airWeek, answerEvent, bidOnRights, buyPack, expandToNational, expandToState, signAffiliate, stateLicenseGaps, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
+import { CHAMPION_WEEKS, airWeek, answerEvent, bidOnRights, buyPack, expandToNational, expandToState, signAffiliate, stateLicenseGaps, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
 import { startEvent } from './events';
 import { holdCeremony } from './awards';
 import { makeReviews } from './reviews';
@@ -7,6 +7,7 @@ import { topicsForFormat } from './data/topics';
 import { CLASSIC_QUALITY, computeScores, previewPlan, scriptStars, teamBonus, type ShowPlan } from './production';
 import type { GameState, SlotId } from './types';
 import { rightsById } from './data/rights';
+import { TIERS, affiliateCost } from './schedule';
 
 const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
 
@@ -370,7 +371,7 @@ describe('State network', () => {
     expect(s.rivals.map((r) => r.id)).toEqual(['capital', 'statenet']);
     s = airWeek(s);
     expect(s.lastResult!.slots).toHaveLength(15);
-    expect(s.lastResult!.overhead).toBe(30);
+    expect(s.lastResult!.overhead).toBe(TIERS.state.overhead);
   });
 
   test('advanced production: specialists and a second topic', () => {
@@ -431,7 +432,8 @@ describe('National network', () => {
     s = signAffiliate(s);
     s = signAffiliate(s);
     expect(s.affiliates).toBe(2);
-    expect(before - s.cash).toBe(150 + 200);
+    expect(before - s.cash).toBe(affiliateCost(0) + affiliateCost(1));
+    expect(affiliateCost(1)).toBeGreaterThan(affiliateCost(0));
   });
 
   test('AAA production takes three writers and 20 points; spin-offs need a hit', () => {
@@ -460,11 +462,16 @@ describe('National network', () => {
     show.premieredAt = { week: s.week, year: s.year };
     const c = holdCeremony(s, 'glimmy')!;
     expect(c.categories.length).toBeGreaterThan(1);
-    // Crown: we beat every rival on average share.
-    s.shareHistory = Array(13).fill(0.5);
-    for (const r of s.rivals) r.history = Array(13).fill(0.05);
+    // Crown: #1 in prime time, CHAMPION_WEEKS weeks in a row. One more #1 week wins it.
+    s.primeStreak = CHAMPION_WEEKS - 1;
+    for (const r of s.rivals) for (const slot of Object.keys(r.schedule)) if (slot.endsWith('-prime')) Object.assign(r.schedule[slot as SlotId], { quality: 5, novelty: 0, fame: 0 });
     s.pendingEvent = null;
     s = airWeek(s);
     expect(s.champion).toBe(true);
+    // A week not at #1 resets the streak.
+    const t = nationalGame(9);
+    t.primeStreak = 5;
+    t.pendingEvent = null;
+    expect(airWeek(t).primeStreak === 0 || airWeek(t).primeStreak === 6).toBe(true);
   });
 });
