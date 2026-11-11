@@ -20,6 +20,8 @@ import {
   AIRINGS, CPM, FILLER_APPEAL, FILLER_NAME, HUT, OTHER_APPEAL, TIERS, reachOf, slotsOf,
 } from './schedule';
 import { addNews, round1 } from './news';
+import { expireIps, settleSeasonIp } from './ip';
+import { MOVIE_NOVELTY } from './rights';
 
 const TIER_ORDER = ['local', 'state', 'national'] as const;
 
@@ -105,6 +107,8 @@ export function airSlots(s: GameState): WeekContext {
         const def = rightsById(film.defId);
         entryName = def.name;
         ours = appeal({ quality: def.quality, novelty: film.novelty, fame: def.fame, formatId: 'movie', block, part });
+        // A new release's first TV airing is an event, like a premiere.
+        if (def.isNew && film.airingsLeft === def.airings) ours *= APPEAL.premiere;
         if (def.boostWeeks && s.week >= def.boostWeeks[0] && s.week <= def.boostWeeks[1]) ours *= APPEAL.holidayFilmBoost;
       } else if (sports) {
         kind = 'sports';
@@ -147,7 +151,9 @@ export function airSlots(s: GameState): WeekContext {
       prevShare = share;
       if (film) {
         film.airingsLeft -= 1;
-        film.novelty = Math.max(0, film.novelty - (rightsById(film.defId).decay ?? 6));
+        const fdef = rightsById(film.defId);
+        // Pack movies: a new release drops to classic novelty after its premiere; classics stay put.
+        film.novelty = fdef.rarity ? (fdef.isNew ? MOVIE_NOVELTY.classic : film.novelty) : Math.max(0, film.novelty - (fdef.decay ?? 6));
       }
       if (kind) {
         if (show) ctx.aired.add(show.id);
@@ -203,6 +209,7 @@ export function ageShows(s: GameState, ctx: WeekContext): void {
     if (!res.rerun) {
       show.episodesLeft -= 1;
       if (show.episodesLeft === 0) {
+        settleSeasonIp(s, show);
         addNews(s, `"${show.name}" airs its ${show.episodesTotal > 1 ? 'season finale' : 'premiere night'}. Renew it, rerun it or rest it.`, 'neutral');
       }
     }
@@ -332,6 +339,7 @@ export function nextWeek(s: GameState, ctx: WeekContext): void {
   const opened = maybeOpenMarket(s);
   if (opened) addNews(s, opened, 'good');
   for (const line of expireRights(s)) addNews(s, line, 'neutral');
+  for (const line of expireIps(s)) addNews(s, line, 'neutral');
   if (s.week === 36) addNews(s, 'Fall premiere season starts! New shows get a big boost for the next 5 weeks.', 'neutral');
 }
 

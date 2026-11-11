@@ -19,4 +19,7 @@ export { NETWORK_PACK_SIZE, HYPE_POWER } from './network';
 export { AWARD_LEVELS, AWARD_WEEKS, eligibleShows } from './awards';
 export { startEvent } from './events';
 export * from './data/rights';
-export { absWeek, sportsInSlot, sportsQuality } from './rights';
+export { absWeek, sportsInSlot, sportsQuality, lotInfo } from './rights';
+export * from './data/ips';
+export { IP_FIT, ipBonus, ipFit, usableIps, seasonScore, OWN_IP_MIN } from './ip';
+export { MOVIE_PACK_PRICE, MOVIE_PACK_SIZE } from './packs';

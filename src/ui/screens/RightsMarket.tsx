@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { MARKET_WEEKS, MONTHS, monthOf, rightsById, type GameState, type RightsLot } from '../../engine';
+import { MARKET_WEEKS, MONTHS, ipDefById, lotInfo, monthOf, type GameState, type RightsLot } from '../../engine';
 import { RightsCard } from '../components/RightsCard';
+import { IpCard } from '../components/IpCard';
 import { money } from '../util';
 
 function LotBid({ lot, onBid }: { lot: RightsLot; onBid: (amount: number | null) => void }) {
-  const def = rightsById(lot.defId);
+  const def = lotInfo(lot);
   const [amount, setAmount] = useState(lot.bid ?? lot.minBid);
   return (
     <div className="stack-sm">
@@ -35,7 +36,7 @@ export function RightsMarket({ state, onBid }: { state: GameState; onBid: (lotId
       <div className="panel locked-panel">
         <div className="big">📜</div>
         <h2>Rights Market</h2>
-        <p className="muted">Opens in {next.d} week{next.d !== 1 && 's'} ({MONTHS[monthOf(next.w)]}). Three times a year: films and local sports.</p>
+        <p className="muted">Opens in {next.d} week{next.d !== 1 && 's'} ({MONTHS[monthOf(next.w)]}). Three times a year: sports rights and IP licenses (books, games, toys, chefs…). Movies are in the card packs.</p>
       </div>
     );
   }
@@ -47,13 +48,21 @@ export function RightsMarket({ state, onBid }: { state: GameState; onBid: (lotId
         <b>Sealed bids close in {left} week{left !== 1 && 's'}.</b> The highest bid wins; {state.rivals[0]?.short} is bidding too.
         You only pay if you win. Bids committed: {money(committed)} of {money(state.cash)}.
       </div>
-      {m.lots.map((lot) => (
-        <RightsCard key={lot.id} defId={lot.defId} state={state} locked={lot.locked}>
-          {lot.locked
-            ? <p className="tiny muted">Grow your network to bid on this.</p>
-            : <LotBid lot={lot} onBid={(a) => onBid(lot.id, a)} />}
-        </RightsCard>
-      ))}
+      {m.lots.map((lot) => {
+        const body = lot.locked
+          ? <p className="tiny muted">Grow your network to bid on this.</p>
+          : <LotBid lot={lot} onBid={(a) => onBid(lot.id, a)} />;
+        if (lot.ip) {
+          const d = ipDefById(lot.defId)!;
+          return (
+            <IpCard key={lot.id} ip={d} locked={lot.locked} chips={<span className="chip">{Math.round(d.weeks / 52)}-year license</span>}>
+              {!lot.locked && <p className="tiny muted">License it, then base any show on it: the better it suits the format, the bigger the boost.</p>}
+              {body}
+            </IpCard>
+          );
+        }
+        return <RightsCard key={lot.id} defId={lot.defId} state={state} locked={lot.locked}>{body}</RightsCard>;
+      })}
     </div>
   );
 }

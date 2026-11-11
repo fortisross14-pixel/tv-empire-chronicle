@@ -1,7 +1,7 @@
 import type { GameState, Pack, PackKind, PosterSpec, SlotId } from './types';
 import { CITY } from './data/names';
 import { addHouseCards } from './people';
-import { applyPack, makePack, PRICES } from './packs';
+import { applyPack, makePack, MOVIE_PACK_PRICE, PRICES } from './packs';
 import { GameError, projectPeople, startProject, type ShowPlan } from './production';
 import { makeRivals } from './rivals';
 import { applyPromo, applySponsor } from './network';
@@ -12,7 +12,7 @@ import { AFFILIATE_MAX, affiliateCost, emptySchedule, reachOf, slotsOf, tierSlot
 import { addNews, round1 } from './news';
 import { simulateWeek, CHAMPION_WEEKS, LOAN } from './sim';
 
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 
 /** What it takes to become a State network. */
 export const STATE_LICENSE = { reputation: 35, cash: 250, fee: 200 };
@@ -66,6 +66,8 @@ export function newGame(seed: number, stationName: string): GameState {
     rightsMarket: null,
     rights: [],
     rivalRights: [],
+    ips: [],
+    rivalIps: [],
     newlyFinished: [],
     gameOver: null,
     nextId: 0,
@@ -103,10 +105,13 @@ export const openPack = (state: GameState, packId: string) =>
 
 export const dismissReveal = (state: GameState) => produce(state, (s) => void (s.reveal = null), { duringEvent: true });
 
-export const buyPack = (state: GameState, kind: Extract<PackKind, 'program' | 'people' | 'network'>) =>
+export const packPrice = (s: Pick<GameState, 'tier'>, kind: Extract<PackKind, 'program' | 'people' | 'network' | 'movies'>) =>
+  kind === 'movies' ? MOVIE_PACK_PRICE[s.tier] : PRICES[kind];
+
+export const buyPack = (state: GameState, kind: Extract<PackKind, 'program' | 'people' | 'network' | 'movies'>) =>
   produce(state, (s) => {
     if (!s.shopUnlocked) throw new GameError('The shop opens after your first show airs.');
-    const price = PRICES[kind];
+    const price = packPrice(s, kind);
     if (s.cash < price) throw new GameError('Not enough cash.');
     s.cash = round1(s.cash - price);
     const pack: Pack = makePack(s, kind);

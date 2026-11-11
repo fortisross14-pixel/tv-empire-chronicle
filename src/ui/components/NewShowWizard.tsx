@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   AREAS, AREA_LABEL, FOCUS_POINTS, LEVELS, SCRIPT_TIME, levelsFor, formatById, topicById, topicsForFormat, previewPlan, projectPeople,
-  suggestTitle, grade, keyAreas, scriptStars, type Area, type Format, type GameState, type Person, type PersonKind,
+  suggestTitle, grade, keyAreas, scriptStars, ipBonus, ipWorth, usableIps, type Area, type Format, type GameState, type Person, type PersonKind,
   type ProductionLevel, type ScriptTime, type ShowPlan,
 } from '../../engine';
 import { FormatCard, PersonCard, ScriptStars, Stars, TopicCard } from './Cards';
@@ -44,6 +44,7 @@ export function NewShowWizard({
 
   const [formatId, setFormatId] = useState<string | null>(renewing?.formatId ?? original?.formatId ?? null);
   const [topicId, setTopicId] = useState<string | null>(renewing?.topicId ?? original?.topicId ?? null);
+  const [ipId, setIpId] = useState<string | null>(original?.ipId ?? null);
   // A new season starts from last season's team and settings when those people are still around.
   const last = renewing?.lastPlan ?? null;
   const has = (id: string | null | undefined) => !!id && state.people.some((p) => p.id === id && (p.house || p.uses > 0));
@@ -77,7 +78,7 @@ export function NewShowWizard({
     ? {
       name, formatId, topicId, writerId: team.writer, crewId: team.crew, talentId: team.talent, points, showId: renewShowId ?? null, twist, scriptTime,
       level, topic2Id: advanced ? topic2Id : null, writer2Id: advanced ? writer2Id : null, writer3Id: aaa ? writer3Id : null,
-      specialists: advanced ? specialists : {}, spinoffOf: spinoffOf ?? null,
+      specialists: advanced ? specialists : {}, spinoffOf: spinoffOf ?? null, ipId: renewing ? null : ipId,
     }
     : null;
 
@@ -172,6 +173,26 @@ export function NewShowWizard({
           )
       )}
 
+      {step === 'topic' && format && !renewing && !original?.ipId && usableIps(state).length > 0 && (
+        <div className="stack-sm" style={{ marginBottom: 16 }}>
+          <div className="section-title"><h3 style={{ fontSize: 16 }}>Based on an IP (optional)</h3>
+            <span className="sub">Fans bring fame and hype; a good fit makes a better show</span></div>
+          <div className="ip-picks">
+            <button className={cx('ip-pick', !ipId && 'on')} onClick={() => setIpId(null)}><span className="ip-pick-icon">✏️</span><b>Original idea</b><span className="tiny muted">No IP</span></button>
+            {usableIps(state).map((x) => {
+              const b = ipBonus(x, format.id);
+              return (
+                <button key={x.id} className={cx('ip-pick', ipId === x.id && 'on')} onClick={() => setIpId(x.id)} aria-pressed={ipId === x.id}>
+                  <span className="ip-pick-icon">{x.icon}</span><b>{x.name}</b>
+                  <span className={cx('tiny', b.fit === 3 ? 'pos' : b.fit === 1 ? 'neg' : 'muted')}>{b.label} as {format.name}</span>
+                  <span className="tiny muted">Rating {x.rating} · +{b.fame} fame · +{b.hype} hype</span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="section-title"><h3 style={{ fontSize: 16 }}>Topic</h3></div>
+        </div>
+      )}
       {step === 'topic' && format && (
         <div className="grid-cards">
           {state.topics.filter((t) => topicById(t).fits[format.id]).map((id) => (
@@ -331,6 +352,13 @@ export function NewShowWizard({
           </div>
           <div className="panel stack-sm">
             {original && <div className="spread small"><span>Spin-off</span><b className="pos">+30 hype, +10 fame from “{original.name}”</b></div>}
+            {(() => {
+              const x = state.ips.find((i) => i.id === (renewing ? renewing.ipId : ipId));
+              if (!x) return null;
+              const b = ipBonus(x, format.id);
+              return <div className="spread small"><span>{x.icon} Based on {x.name} <span className="tiny muted">(worth ${ipWorth(x.rating)}K)</span></span>
+                <b className={b.fit === 1 ? 'neg' : 'pos'}>{b.label}: +{b.fame} fame, +{b.hype} hype, {b.quality >= 0 ? '+' : ''}{b.quality} quality</b></div>;
+            })()}
             {advanced && <div className="spread small"><span>Production</span><b>{L.label}{topic2Id && ` · + ${topicById(topic2Id).icon} ${topicById(topic2Id).name}`}</b></div>}
             <div className="spread"><span>{format.icon} {format.name} · {topicById(topicId).icon} {topicById(topicId).name}</span><Stars n={topicById(topicId).fits[format.id] ?? 0} /></div>
             {preview && <>

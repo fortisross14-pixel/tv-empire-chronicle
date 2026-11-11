@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { BUSINESS_CARD_USES, FORMATS, NETWORK_CARDS, TOPICS, networkById, type GameState, type Person } from '../../engine';
 import { FormatCard, PersonCard, TopicCard } from '../components/Cards';
 import { NetworkCardView } from '../components/NetworkCard';
+import { IpCard } from '../components/IpCard';
 import { Sheet } from '../components/Sheet';
 import { useConfirm } from '../components/Confirm';
 
-type Tab = 'people' | 'network' | 'formats' | 'topics';
+type Tab = 'people' | 'network' | 'formats' | 'topics' | 'ip';
 
 export function CardsScreen({
   state, onUseBusinessCard, onRelease, onUseNetworkCard,
@@ -35,6 +36,7 @@ export function CardsScreen({
           <button className={tab === 'network' ? 'on' : ''} onClick={() => setTab('network')}>Network {state.networkCards.length}</button>
           <button className={tab === 'formats' ? 'on' : ''} onClick={() => setTab('formats')}>Formats {state.formats.length}</button>
           <button className={tab === 'topics' ? 'on' : ''} onClick={() => setTab('topics')}>Topics {state.topics.length}</button>
+          <button className={tab === 'ip' ? 'on' : ''} onClick={() => setTab('ip')}>IP {state.ips.length}</button>
         </div>
       </section>
 
@@ -86,6 +88,21 @@ export function CardsScreen({
             ))}
           </div>
         </>
+      )}
+
+      {tab === 'ip' && (
+        <div className="stack">
+          <p className="small muted">IP is what new shows can be based on: licenses from the Rights Market (books, games, toys, chefs…) and your own hits.
+            A season scoring 55+ turns a show into an IP; every season made from an IP moves its rating.</p>
+          {state.ips.length === 0
+            ? <div className="empty"><div className="big">💡</div>No IP yet. Make a hit, or license one at the Rights Market.</div>
+            : [...state.ips].sort((a, b) => b.rating - a.rating).map((x) => (
+              <IpCard key={x.id} ip={x} chips={<>
+                <span className="chip">{x.shows} show{x.shows !== 1 && 's'} made</span>
+                <span className="chip">{x.expires === null ? 'Yours forever' : `License: ${x.expires - (state.year * 52 + state.week)} weeks left`}</span>
+              </>} />
+            ))}
+        </div>
       )}
 
       {live && (

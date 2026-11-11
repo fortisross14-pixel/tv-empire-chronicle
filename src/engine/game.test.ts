@@ -6,6 +6,7 @@ import { FORMATS } from './data/formats';
 import { topicsForFormat } from './data/topics';
 import { CLASSIC_QUALITY, computeScores, previewPlan, scriptStars, teamBonus, type ShowPlan } from './production';
 import type { GameState, SlotId } from './types';
+import { rightsById } from './data/rights';
 
 const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
 
@@ -286,14 +287,13 @@ describe('rights', () => {
     expect(game.viewers).toBeGreaterThan(s.lastResult!.slots.find((r) => r.slot === 'weekday-morning')!.viewers);
   });
 
-  test('film packages can be scheduled and run out of airings', () => {
+  test('movies from a pack can be scheduled and run out of airings', () => {
     let s = newGame(6, 'X');
     s = advanceTo(s, 30);
+    s.shopUnlocked = true;
     s.cash = 500;
-    const lot = s.rightsMarket!.lots.find((l) => !l.locked && l.defId !== 'friday-football')!;
-    s = bidOnRights(s, lot.id, 300);
-    s = advanceTo(s, 33);
-    const film = s.rights.find((r) => r.defId === lot.defId)!;
+    s = buyPack(s, 'movies');
+    const film = s.rights.find((r) => rightsById(r.defId).kind === 'film')!;
     s = scheduleShow(s, 'weekday-evening', film.id);
     s = airWeek(s.pendingEvent ? answerEvent(s, s.pendingEvent.choices.length - 1) : s);
     expect(s.lastResult!.slots.find((r) => r.slot === 'weekday-evening')!.kind).toBe('film');

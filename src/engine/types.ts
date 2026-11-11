@@ -93,6 +93,8 @@ export interface Project {
   scriptBonus: number;
   /** Week the project was waiting on someone busy (for UI). */
   waitingOn: string | null;
+  /** The IP this show is based on (licensed or one of ours), if any. */
+  ipId: string | null;
 }
 
 export type ShowStatus = 'ready' | 'ended';
@@ -144,6 +146,29 @@ export interface Show {
   lastPlan: LastPlan | null;
   /** The player's poster design; null uses the automatic poster. */
   poster: PosterSpec | null;
+  /** The IP it is based on, or its own IP once it has a hit season. */
+  ipId: string | null;
+}
+
+/** An IP we can make shows from: a licensed one, or one of our own hit shows. */
+export interface OwnedIp {
+  id: string;
+  /** Licensed IP: its definition. Null for our own shows. */
+  defId: string | null;
+  name: string;
+  icon: string;
+  kind: import('./data/ips').IpKind;
+  /** 0–100. Grows with every hit made from it, drops with flops. */
+  rating: number;
+  topicId: string;
+  /** Format id → 1 stretch, 2 works, 3 made for it. Missing formats are a stretch. */
+  fits: Partial<Record<string, 1 | 2 | 3>>;
+  /** Absolute week the license ends. Null: ours forever. */
+  expires: number | null;
+  /** Shows made from it so far. */
+  shows: number;
+  /** Our own IP: the show it came from. */
+  originShowId: string | null;
 }
 
 /** A show poster: stacked art layers plus a title. Ids refer to the poster art library. */
@@ -215,6 +240,8 @@ export interface RightsLot {
   bid: number | null;
   /** Visible but only for bigger networks. */
   locked: boolean;
+  /** An IP license instead of a rights deal; defId is then an IP id. */
+  ip?: boolean;
 }
 
 export interface RightsMarket {
@@ -344,13 +371,15 @@ export interface WeekResult {
   reputationDelta: number;
 }
 
-export type PackKind = 'program' | 'people' | 'network' | 'starter' | 'starter-people';
+export type PackKind = 'program' | 'people' | 'network' | 'movies' | 'starter' | 'starter-people';
 
 export type PackCard =
   | { type: 'format'; id: string; duplicate: boolean }
   | { type: 'topic'; id: string; duplicate: boolean }
   | { type: 'person'; person: Person }
-  | { type: 'network'; card: NetworkCard; duplicate: boolean };
+  | { type: 'network'; card: NetworkCard; duplicate: boolean }
+  /** A movie: added to your rights, ready to schedule. A duplicate adds airings. */
+  | { type: 'movie'; defId: string; duplicate: boolean };
 
 export interface Pack {
   id: string;
@@ -424,6 +453,10 @@ export interface GameState {
   rightsMarket: RightsMarket | null;
   rights: OwnedRights[];
   rivalRights: RivalRights[];
+  /** Licensed IP and our own hit shows: what new shows can be based on. */
+  ips: OwnedIp[];
+  /** IP licenses rivals hold (not on the market until they end). */
+  rivalIps: { defId: string; rivalId: string; expires: number }[];
   /** Shows that finished production this week, for the reveal screen. */
   newlyFinished: string[];
   gameOver: string | null;

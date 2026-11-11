@@ -128,7 +128,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   const week = state.year * 52 + state.week;
   for (const pack of state.unopened) {
     const people = pack.kind === 'starter-people' || pack.kind === 'people';
-    const label = { starter: 'program', 'starter-people': 'people', program: 'program', people: 'people', network: 'network' }[pack.kind];
+    const label = { starter: 'program', 'starter-people': 'people', program: 'program', people: 'people', network: 'network', movies: 'movie' }[pack.kind];
     todos.push({
       id: `pack-${pack.id}`,
       emoji: people ? '👥' : pack.kind === 'network' ? '📡' : '🎁',
@@ -153,7 +153,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
     todos.push({ id: 'promo', emoji: '📣', title: 'Build hype before the premiere', detail: 'You have promo cards. Use them in Cards → Network.', onClick: () => setTab('cards') });
   }
   if (state.rightsMarket && state.rightsMarket.lots.every((l) => !l.bid)) {
-    todos.push({ id: 'market', emoji: '📜', title: 'The Rights Market is open', detail: `Films and sports. Bids close in ${state.rightsMarket.closesAt - week} weeks.`, onClick: () => setTab('shop') });
+    todos.push({ id: 'market', emoji: '📜', title: 'The Rights Market is open', detail: `Sports and IP licenses. Bids close in ${state.rightsMarket.closesAt - week} weeks.`, onClick: () => setTab('shop') });
   }
   for (const r of state.rights) {
     const def = rightsById(r.defId);

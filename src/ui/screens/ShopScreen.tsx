@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BUSINESS_CARD_USES, PRICES, type GameState } from '../../engine';
+import { BUSINESS_CARD_USES, MOVIE_PACK_SIZE, PRICES, packPrice, type GameState } from '../../engine';
 import { RightsMarket } from './RightsMarket';
 import { money } from '../util';
 
@@ -7,12 +7,13 @@ const ITEMS = [
   { kind: 'program' as const, title: 'Program pack', art: '🃏', color: 'linear-gradient(160deg,#ff8a3c,#e0464f)', text: '1 format + 2 topics. Permanent cards for your album.' },
   { kind: 'people' as const, title: 'People pack', art: '👥', color: 'linear-gradient(160deg,#2f7de1,#9b51e0)', text: '3 people: crew, writers or on-screen talent. Rare cards can appear.' },
   { kind: 'network' as const, title: 'Network pack', art: '📡', color: 'linear-gradient(160deg,#18a36b,#2f6fde)', text: '2 network cards: promos for hype, sponsors for cash, or permanent studio upgrades.' },
+  { kind: 'movies' as const, title: 'Movie pack', art: '🎞️', color: 'linear-gradient(160deg,#5a4fcf,#ff4d6d)', text: `${MOVIE_PACK_SIZE} movies to air straight away. Classics bring steady viewers; a rare new release premieres big. Bigger networks get bigger films.` },
 ];
 
 export function ShopScreen({
   state, onBuyPack, onBuyBusinessCard, onBid,
 }: {
-  state: GameState; onBuyPack: (kind: 'program' | 'people' | 'network') => void; onBuyBusinessCard: () => void;
+  state: GameState; onBuyPack: (kind: 'program' | 'people' | 'network' | 'movies') => void; onBuyBusinessCard: () => void;
   onBid: (lotId: string, amount: number | null) => void;
 }) {
   const [tab, setTab] = useState<'packs' | 'rights'>(state.rightsMarket ? 'rights' : 'packs');
@@ -38,8 +39,8 @@ export function ShopScreen({
             <div className="stack-sm">
               <h3>{it.title}</h3>
               <p className="small muted">{it.text}</p>
-              <button className="btn primary" disabled={state.cash < PRICES[it.kind]} onClick={() => onBuyPack(it.kind)}>
-                Buy · {money(PRICES[it.kind])}
+              <button className="btn primary" disabled={state.cash < packPrice(state, it.kind)} onClick={() => onBuyPack(it.kind)}>
+                Buy · {money(packPrice(state, it.kind))}
               </button>
             </div>
           </div>

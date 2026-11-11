@@ -8,6 +8,7 @@ import { clamp, pick, randInt } from './rng';
 import { grantXp, newId, RARITY_POINTS } from './people';
 import { withFacilities } from './network';
 import { sportsWorkers } from './rights';
+import { ipBonus, usableIps } from './ip';
 
 import { GameError } from './errors';
 export { GameError };
@@ -39,8 +40,10 @@ export const levelsFor = (tier: Tier) =>
 /** Spin-offs start with this much hype and fame from the original. */
 export const SPINOFF = { hype: 30, fame: 10 };
 
-/** A hit can be spun off: a Show for the Ages, an award winner, or 3+ seasons. */
-export const canSpinOff = (show: Show) => show.classic || show.awards.length > 0 || show.season >= 3;
+/** A hit can be spun off: a Show for the Ages, an award winner, 3+ seasons, or an IP. */
+export const canSpinOff = (show: Show) => show.classic || show.awards.length > 0 || show.season >= 3 || !!show.ipId;
+
+const renewalShow = (state: GameState, plan: ShowPlan) => (plan.showId ? state.shows.find((x) => x.id === plan.showId) : undefined);
 
 export interface ShowPlan {
   name: string;
@@ -60,6 +63,8 @@ export interface ShowPlan {
   specialists?: Partial<Record<Area, string>>;
   topic2Id?: string | null;
   spinoffOf?: string | null;
+  /** Base the show on this IP (licensed or our own). */
+  ipId?: string | null;
 }
 
 export interface Team {
@@ -275,6 +280,10 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
     const orig = state.shows.find((x) => x.id === plan.spinoffOf);
     if (!orig || !canSpinOff(orig)) throw new GameError('Only hits can be spun off.');
   }
+  // Renewals stay with their show's IP; spin-offs inherit the original's.
+  const spinOrig = plan.spinoffOf ? state.shows.find((x) => x.id === plan.spinoffOf) : undefined;
+  const ipId = renewalShow(state, plan)?.ipId ?? plan.ipId ?? spinOrig?.ipId ?? null;
+  if (plan.ipId && !plan.showId && !usableIps(state).some((x) => x.id === plan.ipId)) throw new GameError('You do not hold that IP.');
   const crewIds = [team.crew.id, ...Object.values(team.specialists).map((c) => c.id)];
   if (new Set(crewIds).size !== crewIds.length) throw new GameError('Each crew card can only fill one role.');
   const people = teamPeople(team);
@@ -299,11 +308,11 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
   const durations = stageDurations(format, team, renewal, time, level);
   const breakdown = computeTeamScores(plan.formatId, [plan.topicId, topic2Id], boosted(state, team), plan.points, level, undefined, time);
   breakdown.teamBonus = teamBonus(people);
-  return { format, topic, team, people, writer: team.writer, crew: team.crew, talent: team.talent, cost, durations, breakdown, renewal, level, topic2Id };
+  return { format, topic, team, people, writer: team.writer, crew: team.crew, talent: team.talent, cost, durations, breakdown, renewal, level, topic2Id, ipId };
 }
 
 export function startProject(state: GameState, plan: ShowPlan): void {
-  const { cost, durations, team, people, renewal, level, topic2Id } = previewPlan(state, plan);
+  const { cost, durations, team, people, renewal, level, topic2Id, ipId } = previewPlan(state, plan);
   if (state.cash < cost) throw new GameError('Not enough cash for this production.');
   const show = renewal ? state.shows.find((s) => s.id === plan.showId)! : null;
   state.cash = Math.round((state.cash - cost) * 10) / 10;
@@ -326,6 +335,7 @@ export function startProject(state: GameState, plan: ShowPlan): void {
     writer2Id: team.writer2?.id ?? null,
     writer3Id: team.writer3?.id ?? null,
     spinoffOf: plan.spinoffOf ?? null,
+    ipId,
     specialists: Object.fromEntries(Object.entries(team.specialists).map(([a, c]) => [a, c.id])),
     topic2Id,
     points: { ...plan.points },
@@ -338,6 +348,8 @@ export function startProject(state: GameState, plan: ShowPlan): void {
     waitingOn: null,
   };
   state.projects.push(project);
+  const basedOn = ipId && !renewal ? state.ips.find((x) => x.id === ipId) : undefined;
+  if (basedOn) basedOn.shows += 1;
 }
 
 /** Who works each stage. */
@@ -396,8 +408,11 @@ function finishProject(state: GameState, project: Project): Show {
     project.formatId, [project.topicId, project.topic2Id], boosted(state, team), project.points, project.level ?? 'basic',
     project.script?.score, project.scriptTime,
   );
+  // An IP brings fans (fame, hype) and, if it suits the format, a better show.
+  const ip = project.ipId ? state.ips.find((x) => x.id === project.ipId) : undefined;
+  const ipB = ip ? ipBonus(ip, project.formatId) : null;
   // A little production luck.
-  const quality = clamp(result.quality + randInt(state, -3, 3), 1, 99);
+  const quality = clamp(result.quality + randInt(state, -3, 3) + (ipB?.quality ?? 0), 1, 99);
   teamPeople(team).forEach((p) => grantXp(state, p));
   if (!state.knownFormats.includes(project.formatId)) state.knownFormats.push(project.formatId);
 
@@ -436,6 +451,7 @@ function finishProject(state: GameState, project: Project): Show {
       premieredAt: null,
       lastPlan: null,
       poster: null,
+      ipId: project.ipId ?? null,
     };
     state.shows.push(show);
   }
@@ -446,13 +462,13 @@ function finishProject(state: GameState, project: Project): Show {
     scriptStars: project.script?.stars ?? scriptStars(result.scores.script),
     teamBonus: result.teamBonus,
     classic: quality >= CLASSIC_QUALITY,
-    fame: talent.skills.fame + (project.spinoffOf ? SPINOFF.fame : 0),
+    fame: talent.skills.fame + (project.spinoffOf ? SPINOFF.fame : 0) + (ipB?.fame ?? 0),
     talentName: talent.name,
     episodesTotal: format.episodes,
     episodesLeft: format.episodes,
     premiered: false,
     level: project.level ?? 'basic',
-    hype: Math.min(100, show.hype + project.hype + (project.spinoffOf ? SPINOFF.hype : 0)),
+    hype: Math.min(100, show.hype + project.hype + (project.spinoffOf ? SPINOFF.hype : 0) + (ipB?.hype ?? 0)),
     lastPlan: {
       level: project.level ?? 'basic', writerId: project.writerId, writer2Id: project.writer2Id ?? null, writer3Id: project.writer3Id ?? null,
       crewId: project.crewId, talentId: project.talentId, specialists: { ...(project.specialists ?? {}) }, points: { ...project.points },

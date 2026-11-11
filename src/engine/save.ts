@@ -25,6 +25,19 @@ const MIGRATIONS: Record<number, (s: RawSave) => RawSave> = {
   },
   // 10 → 11: shows can have a custom poster.
   10: (s) => ({ ...s, shows: (s.shows as Record<string, unknown>[]).map((sh) => ({ poster: null, ...sh })), version: 11 }),
+  // 11 → 12: IP (licensed and our own); the market sells IP instead of film packages (those are Shop packs now).
+  11: (s) => {
+    const m = s.rightsMarket as { lots: { defId: string }[] } | null;
+    const films = new Set(['monster-matinee', 'kungfu-theater', 'holiday-bundle', 'rom-com', 'westerns', 'cult-scifi', 'noir-library', 'galaxy-wars', 'prestige-vault']);
+    return {
+      ...s,
+      shows: (s.shows as Record<string, unknown>[]).map((sh) => ({ ipId: null, ...sh })),
+      projects: (s.projects as Record<string, unknown>[]).map((p) => ({ ipId: null, ...p })),
+      ips: [], rivalIps: [],
+      rightsMarket: m ? { ...m, lots: m.lots.filter((l) => !films.has(l.defId)) } : null,
+      version: 12,
+    };
+  },
 };
 
 export interface LoadResult {

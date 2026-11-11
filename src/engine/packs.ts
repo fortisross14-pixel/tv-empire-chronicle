@@ -1,4 +1,6 @@
-import type { GameState, Pack, PackCard, PackKind } from './types';
+import type { GameState, Pack, PackCard, PackKind, Rarity } from './types';
+import { RIGHTS, TIER_RANK, rightsById } from './data/rights';
+import { acquireMovie } from './rights';
 import { pick, shuffle, weighted } from './rng';
 import { FORMATS, STARTER_FORMATS } from './data/formats';
 import { topicsForFormat } from './data/topics';
@@ -7,6 +9,23 @@ import { FACILITY_REFUND, rollNetworkCards } from './network';
 import { networkById } from './data/network';
 
 export const PRICES = { program: 40, people: 25, network: 30, business: 8 } as const;
+/** Movie packs cost more as the station grows (bigger films). */
+export const MOVIE_PACK_PRICE: Record<GameState['tier'], number> = { local: 15, state: 45, national: 140 };
+export const MOVIE_PACK_SIZE = 4;
+const MOVIE_RARITY: Record<Rarity, number> = { common: 62, rare: 26, epic: 10, legend: 2 };
+
+/** Movies for this tier (and a few from the tier below). */
+function movieCards(state: GameState): PackCard[] {
+  const rank = TIER_RANK[state.tier];
+  const pool = RIGHTS.filter((d) => d.kind === 'film' && d.rarity && !d.retired && TIER_RANK[d.tier] <= rank);
+  const cards: PackCard[] = [];
+  for (let i = 0; i < MOVIE_PACK_SIZE; i++) {
+    const weights = Object.fromEntries(pool.map((d) => [d.id, MOVIE_RARITY[d.rarity!] * (TIER_RANK[d.tier] === rank ? 3 : 1)]));
+    const id = weighted(state, weights);
+    cards.push({ type: 'movie', defId: id, duplicate: false });
+  }
+  return cards;
+}
 /** Cash back for a duplicate format card. */
 export const FORMAT_REFUND = 10;
 
@@ -32,6 +51,7 @@ export function makePack(state: GameState, kind: PackKind): Pack {
   let cards: PackCard[];
   if (kind === 'people' || kind === 'starter-people') cards = rollPeoplePack(state).map((person) => ({ type: 'person' as const, person }));
   else if (kind === 'network') cards = rollNetworkCards(state).map((card) => ({ type: 'network' as const, card, duplicate: false }));
+  else if (kind === 'movies') cards = movieCards(state);
   else cards = programCards(state, kind === 'starter');
   return { id: newId(state, 'pk'), kind, cards };
 }
@@ -50,6 +70,13 @@ export function applyPack(state: GameState, pack: Pack): Pack {
       if (duplicate) state.twists[card.id] = (state.twists[card.id] ?? 0) + 1;
       else state.topics.push(card.id);
       return { ...card, duplicate };
+    }
+    if (card.type === 'movie') {
+      const def = rightsById(card.defId);
+      const have = state.rights.find((r) => r.defId === card.defId);
+      if (have) { have.airingsLeft += def.airings ?? 3; return { ...card, duplicate: true }; }
+      acquireMovie(state, def);
+      return card;
     }
     if (card.type === 'network') {
       const def = networkById(card.card.defId);

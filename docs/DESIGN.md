@@ -91,32 +91,30 @@ items (these replace research). Hype from promos boosts appeal (100 hype =
 ### 3.4 Rights cards (licensed content and IP)
 Content you buy instead of produce. It **expires**, unlike program cards.
 
-- **Film / series packages** — e.g. "Galaxy Wars Trilogy: 6 airings in 2 years".
-  Ready to air with fixed quality; each rerun loses novelty.
+- **Movies** — from Shop movie packs (see §16), not the market.
+- **IP licenses** — books, games, toys, chefs… to base shows on (see §15).
 - **Live sports / event rights** — e.g. "Port Ellison Pelicans (minor league
   baseball) 2027 season". Tied to the calendar: the games take over a slot on
   game weeks, and each broadcast needs a crew card plus an on-screen commentator.
 - **How you get them:** the **Rights Market** fills up at set calendar moments
-  (sports rights in summer before the season, film packages each quarter).
+  (sports rights in summer before the season, IP licenses at every market).
   Each lot gets one sealed bid; rivals bid too. Big IP (Galaxy Wars,
   Gridiron League) is shown **locked** until State/National — something to aim for.
-- **Later:** your own hits become **Franchise cards** (spin-offs, syndication sales).
+- Your own hits become **IP** (see §15). No buying or selling your own IP.
 
 ### 3.5 Rights Market (built)
 - Opens in weeks **10, 30 and 42** for 2 weeks: the sports rights for the
-  coming season, 2 film packages, and 1 big locked lot as a teaser.
+  coming season, 2–3 IP licenses, and 1 big locked lot as a teaser.
 - **Sealed bids** (minimum 60% of the typical price). The rival bids too (or
   skips). Highest bid wins; you only pay if you win.
-- **Film packages** (Monster Matinee, Kung Fu Theater, Holiday Bundle…):
-  scheduled like shows, a set number of airings, a license that expires.
 - **Local sports** (Pelicans baseball Apr–Sep on Weekend Evening, Friday Night
   Football Sep–Nov on Weekday Prime, Ice Hawks hockey Nov–Mar on Weekend Prime):
   games take over their slot in season. A crew card and a commentator are
   assigned (house staff by default); on game weeks they can't work in the
   studio. Broadcasts count as 2.5 airings at a 20% ad premium; the last 2 weeks
   are playoffs. Rival-owned sports compete in their slot.
-- Locked IP: Detective Noir Library, State College Football (State);
-  Galaxy Wars Saga, National Gridiron League (National).
+- Locked lots: State College Football and State IP (State); National Gridiron
+  League, Galaxy Wars and the other national IP (National).
 
 ## 4. Making a show (studio pipeline)
 
@@ -287,7 +285,7 @@ Unlocks:
 
 - **Local** (Port Ellison): 6 slots, 1–2 rivals, basic formats.
 - **State**: license fee + reputation. More slots, a bigger audience, stronger
-  rivals, more formats, film packages and college sports.
+  rivals, more formats, bigger movie packs, State IP and college sports.
 - **National**: affiliate stations, the big IP (Galaxy Wars, Gridiron League),
   prime-time wars, the Glimmys at full scale.
 
@@ -392,36 +390,48 @@ Today's game: a new station from scratch, Local → State → National. Pick a
 difficulty (cash, rival strength, event rate) and optional goals from the scenario
 goal list, or none. Existing saves become Sandbox saves.
 
-## 15. Your shows become IP (planned)
+## 15. IP: licensed and your own (built)
 
-Every show you make is an **IP**. Its **IP value** ($K, same scale as bought IP)
-grows with each successful season (share, reviews, awards, Show for the Ages) and
-fades slowly while nothing new is made from it. A hit like a Friends-type sitcom can
-end up worth as much as Galaxy Wars (900) or more.
+**IP** is anything famous a show can be built around. You can't buy or sell your own
+IP; you license other people's at the Rights Market and grow your own by making hits.
 
-What an IP opens (cost and hype scale with IP value):
-- **New season** (as today).
-- **Spin-off** — same world, new show; starts with fame and hype from the IP.
-- **Adaptation** into a matching format: Series/Sitcom → TV Movie, Animation;
-  News → Documentary, Magazine; Talk → Late Show special; Contest → Celebrity
-  edition; Reality → Documentary; Movie → Series.
-- **Prequel / sequel** — Series, Sitcom and TV Movie.
-- Each new show feeds value back into the IP; a flop costs the IP value.
-- **Bought IP works the same**: some rights lots include **production rights** (e.g.
-  make a Galaxy Wars series), not only airings.
-- Later: sell **syndication** of a big IP to rivals for cash.
+**Licensed IP** (Rights Market, sealed bids, a 2–4 year production license):
+books, video games, board games, toy lines, film franchises, celebrity chefs, sports
+events, comic books. Each has a **rating** (0–100), a topic and the formats it suits
+(★ made for it, works, a stretch). Big names are locked to big networks.
+- Local: The Lighthouse Mysteries (book), Mama Rosa's Kitchen (chef), Pixel Pup
+  (indie game), Harbor Hustle (board game), Gull Girl (web comic), Port Ellison Marathon.
+- State: Moonlit Fangs (vampire romance books), Crypt Runner (tomb-raiding games),
+  Landlord Tycoon (board game), Chef Rory Blaze, Captain Thunderbolt (comic),
+  Zip the Hedgehog (game mascot).
+- National: Galaxy Wars, Crown of Thorns (fantasy books), Daisy Doll, Titan-Man (toys),
+  The World Games, Midnight Carnival (horror films).
 
-## 16. Movie packs (planned)
+**Making a show from an IP:** in the new-show wizard, pick "Based on an IP" (optional).
+The show gets fame and hype from the IP's rating, and a quality bonus when the IP suits
+the format (made for it +4, works +1, a stretch −2). You can make as many shows from an
+IP as you like while you hold it: a cooking contest from Chef Rory Blaze, a documentary
+on the history of Landlord Tycoon, a Galaxy Wars series. When a license ends, shows
+already made keep airing.
 
-Cheap content you buy and air straight away, no production.
-- **Movie packs in the Shop** (Local / State / National packs), like card packs:
-  each pack gives 3–5 **movie cards** (title, topic, quality, 2–4 airings, rarity).
-- **Classics** (most cards): no novelty and no premiere buzz, but a steady,
-  easy audience — good filler that beats Filler.
-- **New releases** (rare/epic cards): a premiere boost and real novelty for their
-  first airing, then like a classic.
-- Duplicates add airings. Cards expire once their airings are used.
-- The big film libraries (Galaxy Wars, Prestige Vault) stay in the Rights Market.
+**Your own IP:** a season that scores 55+ (reviews and share, plus awards and Shows
+for the Ages) makes the show an IP of yours, forever. Its own format fits best, then its
+natural adaptations (sitcom → TV movie or animation, news → documentary or magazine,
+talk → late show…). Spin-offs and adaptations use it.
+
+**Growth:** every season made from an IP (licensed or your own) moves its rating:
+good seasons push it up, flops (under 40) cost 5 points. A small book or game you
+license can grow; a Friends-type hit of yours can end up worth as much as Galaxy Wars.
+IP worth in $K = rating² / 10 (rating 95 ≈ $900K).
+
+## 16. Movie packs (built)
+
+Movies are cheap content you air without producing: **Shop → Movie pack**
+($15K Local, $45K State, $140K National), 4 movie cards per pack, ready to schedule.
+- **Classics** (most cards): little novelty and no buzz, but a steady, easy audience.
+- **New releases** (epic/legend): the first airing is a premiere, then like a classic.
+- Duplicates add airings. A movie leaves once its airings are used (or after a year).
+- The Rights Market sells only **sports rights and IP licenses**.
 
 ## 13. Build waves
 
@@ -451,8 +461,8 @@ Cheap content you buy and air straight away, no production.
 
 Next (planned):
 
-11. **Movie packs + IP** — movie cards in the Shop, IP value, adaptations,
-    prequels/sequels, production rights on bought IP.
+11. **Movie packs + IP** ✅ — movie packs in the Shop, licensed IP in the Rights
+    Market, shows based on IP, own hits become IP, IP ratings grow and shrink.
 12. **Scenario engine + Beginner** — main menu, profile, preset starts, goals,
     deadlines, stars, the 6 Beginner scenarios.
 13. **Campaign + Sandbox** — the 18 campaign scenarios, unlock rules, Sandbox setup.
