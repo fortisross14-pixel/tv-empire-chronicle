@@ -1,5 +1,5 @@
 {
-  "cell": { "sheetWidth": 1536, "sheetHeight": 1024, "cols": 4, "rows": 4, "outWidth": 96, "outHeight": 64 },
+  "cell": { "sheetWidth": 1536, "sheetHeight": 1024, "cols": 4, "rows": 4, "outWidth": 384, "outHeight": 256 },
   "sheets": [
     {
       "file": "sheet-1-frames.png", "group": "frames", "transparent": true,

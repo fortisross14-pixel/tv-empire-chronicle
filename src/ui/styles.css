@@ -161,7 +161,7 @@ p { margin: 0; }
 .poster.wide { width: 236px; }
 .poster.fill { width: 100%; }
 .poster .art { position: relative; width: 100%; aspect-ratio: 3 / 2; background: linear-gradient(150deg, var(--c1), var(--c2)); overflow: hidden; }
-.poster .art img { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.poster .art img { position: absolute; inset: 0; width: 100%; height: 100%; }
 .poster .glyph { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); font-size: 52px; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3)); }
 .poster .info { position: relative; padding: 9px 10px 11px; display: grid; gap: 3px; }
 .poster .ttl { font-weight: 900; font-size: 15px; line-height: 1.1; }
@@ -463,8 +463,12 @@ select.input option { background: var(--surface); }
 /* ---------- Poster art (layers) ----------
    Every layer fills the 3:2 box. Sizes use container units so a poster looks the
    same as a small tile, a billboard or the editor preview. */
-.pa { position: absolute; inset: 0; overflow: hidden; container-type: size; }
-.pa-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.pa { position: absolute; inset: 0; overflow: hidden; }
+/* The picture area: the whole poster, or the frame's window when framed. */
+.pa-window { position: absolute; inset: 0; overflow: hidden; container-type: size; }
+.pa.framed { background: #14091f; }
+.pa-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pa-frame { object-fit: fill; z-index: 2; pointer-events: none; }
 .pa-front { position: absolute; inset: 0; }
 .pa-front.left { transform: translateX(-22%) scale(0.92); }
 .pa-front.right { transform: translateX(22%) scale(0.92); }
