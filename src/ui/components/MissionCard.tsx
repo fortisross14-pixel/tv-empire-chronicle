@@ -1,5 +1,6 @@
 import { SANDBOX_DIFFICULTY, goalLabel, goalProgress, goalsOf, missionWeeksLeft, type GameState } from '../../engine';
 import { Sheet } from './Sheet';
+import { Confetti } from './Confetti';
 import { cx } from '../util';
 
 /** The mission's goals and time left, at the top of Home. */
@@ -47,6 +48,7 @@ export function MissionResult({ state, onContinue, onRetry, onMenu }: { state: G
         {!won && <button className="btn primary" onClick={onRetry}>Try again</button>}
         {won && <button className="btn primary" onClick={onContinue}>Keep playing</button>}
       </>}>
+      {won && <Confetti />}
       <div className="milestone">
         <div className="big">{won ? '🏆' : '📉'}</div>
         <p><b>{def.icon} {def.title}</b></p>

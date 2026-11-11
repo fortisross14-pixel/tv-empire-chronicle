@@ -601,3 +601,115 @@ select.input option { background: var(--surface); }
 .movie-info { display: grid; flex: 1; min-width: 0; }
 .movie-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .movie-row .grade { min-width: 32px; height: 32px; font-size: 15px; }
+
+
+/* ================= Feel: input, layout, motion (Wave 15b) ================= */
+
+/* Touch: no grey tap flash, no double-tap zoom delay. */
+html { -webkit-tap-highlight-color: transparent; }
+button, a, .card, .poster, .todo, .m-node, .menu-option, .save-row, .tab { touch-action: manipulation; }
+
+/* Press feedback everywhere (touch and mouse). */
+button.card, button.poster, .todo, .m-node, .menu-option, .save-row.pick, .tab, .pe-opt, .pe-icon, .ip-pick, .cast {
+  transition: transform .14s ease, box-shadow .14s ease, background-color .14s ease;
+}
+button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disabled), .m-node:active, .menu-option:active:not(:disabled),
+.save-row.pick:active, .pe-opt:active, .pe-icon:active, .ip-pick:active, button.cast:active { transform: scale(.97); }
+.tab:active { transform: scale(.94); }
+
+/* Mouse only: lift on hover. Touch screens keep no sticky hover state. */
+@media (hover: hover) and (pointer: fine) {
+  button.card:hover:not(:disabled), .menu-option:hover:not(:disabled), .save-row.pick:hover { transform: translateY(-2px); }
+  button.poster:hover { transform: translateY(-3px) scale(1.02); }
+  .m-node:hover:not(.locked) { transform: translateY(-2px); }
+  .btn:hover:not(:disabled) { filter: brightness(1.08); }
+  .air-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(0, 0, 0, .45), 0 0 0 4px rgba(255, 255, 255, .12); }
+}
+@media (hover: none) {
+  button.poster:hover, button.card:hover, .todo:hover, .m-node:hover, .menu-option:hover, .save-row.pick:hover,
+  .slot:hover, button.cast:hover .face, .pe-icon:hover, .ip-pick:hover { box-shadow: none; transform: none; }
+  .slot:focus-visible, button.card:focus-visible, .todo:focus-visible { box-shadow: 0 0 0 3px var(--focus); }
+}
+
+/* Fingers need bigger targets than a mouse pointer. */
+@media (pointer: coarse) {
+  .btn.small { min-height: 40px; }
+  .segmented button { min-height: 40px; }
+  .sheet-head .close { min-width: 44px; min-height: 44px; }
+  .stepper button { min-width: 44px; min-height: 44px; }
+}
+
+/* Tabs slide in. */
+.tab-enter { animation: tabIn .26s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes tabIn { from { opacity: 0; transform: translateY(10px); } }
+
+/* Money ticks, and the change floats up. */
+.ticker { position: relative; display: inline-block; font-variant-numeric: tabular-nums; }
+.tick-pop { position: absolute; right: 0; top: -2px; font-size: 12px; font-weight: 900; padding: 1px 7px; border-radius: 999px; pointer-events: none; white-space: nowrap;
+  animation: tickPop 1.4s cubic-bezier(.2, .8, .2, 1) both; }
+.tick-pop.up { background: var(--good); color: #0b2b1d; }
+.tick-pop.down { background: var(--bad); color: #fff; }
+@keyframes tickPop { 0% { opacity: 0; transform: translateY(6px) scale(.8); } 15% { opacity: 1; transform: translateY(18px) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(30px); } }
+
+/* The featured show drifts slowly, like a channel promo. */
+.billboard .art .pa { animation: kenburns 22s ease-in-out infinite alternate; transform-origin: 70% 40%; }
+@keyframes kenburns { from { transform: scale(1.02); } to { transform: scale(1.12) translate(-2%, 1%); } }
+
+/* WIN badges pop in with the ratings. */
+.result-row .win { animation: pop .45s .25s both; }
+.big-net .value { font-variant-numeric: tabular-nums; }
+
+/* The Air week button breathes when the week is ready to go. */
+.air-fab { animation: fabIn .4s cubic-bezier(.2, .9, .3, 1.2) both; }
+@keyframes fabIn { from { opacity: 0; transform: translateY(20px) scale(.9); } }
+
+/* Confetti. */
+.confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 90; }
+.confetti i { position: absolute; top: -12px; width: 9px; height: 14px; border-radius: 2px; opacity: 0;
+  animation-name: confetti; animation-timing-function: cubic-bezier(.2, .6, .4, 1); animation-fill-mode: both; }
+@keyframes confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate(var(--drift), 105vh) rotate(var(--spin)); }
+}
+
+/* ---- Layouts ---- */
+/* Phones and narrow tablets: one column, in reading order. */
+.home-cols, .home-main, .home-side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-content: start; }
+.home-main > *, .home-side > * { min-width: 0; }
+
+/* Tablet landscape and laptops: act on the left, the station at a glance on the right. */
+@media (min-width: 1000px) {
+  .home-cols { grid-template-columns: minmax(0, 1.55fr) minmax(320px, 1fr); align-items: start; }
+  .home-side { position: sticky; top: 76px; }
+  .billboard { min-height: 280px; }
+  .billboard h2 { font-size: 36px; }
+}
+
+/* Wide tablets: sheets get more room. */
+@media (min-width: 700px) and (max-width: 999px) {
+  .sheet { max-width: 640px; }
+}
+
+/* Phone held sideways: little height, so slim bars and taller sheets. */
+@media (orientation: landscape) and (max-height: 520px) {
+  :root { --tabbar: 50px; }
+  .hud-inner { padding-top: 6px; padding-bottom: 6px; }
+  .hud-station h1 { font-size: 17px; }
+  .tab { grid-auto-flow: column; gap: 6px; align-items: center; font-size: 12px; padding: 6px; }
+  .tab .tab-icon { font-size: 16px; }
+  .air-fab { bottom: calc(var(--tabbar) + 12px); padding-top: 10px; padding-bottom: 10px; }
+  .sheet { max-height: 94vh; }
+  .billboard { min-height: 180px; }
+  .menu-head .tv { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .billboard .art .pa, .confetti, .tick-pop { animation: none !important; display: none; }
+  .billboard .art .pa { display: block; }
+}
+@media (min-width: 1240px) {
+  .main, .hud-inner { max-width: 1180px; }
+  .air-fab { right: calc(50% - 574px); }
+}
+
+@media (min-width: 1000px) { .home-side .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

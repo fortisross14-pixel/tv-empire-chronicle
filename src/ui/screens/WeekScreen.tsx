@@ -46,7 +46,8 @@ export function WeekScreen({
   const topShowResult = last?.slots.filter((r) => r.showId).sort((a, b) => b.viewers - a.viewers)[0];
 
   return (
-    <>
+    <div className="home-cols">
+    <div className="home-main">
       <MissionCard state={state} />
       {feat ? (
         <section className="billboard" style={artStyle(feat.show.formatId)}>
@@ -113,7 +114,9 @@ export function WeekScreen({
           <div className="rail">{state.projects.map((p) => <Poster key={p.id} {...projectPoster(p)} onClick={() => goTab('studio')} />)}</div>
         </section>
       )}
+    </div>
 
+    <div className="home-side">
       {last && (
         <section className="panel stack-sm">
           <div className="section-title"><h2>Last week's ratings</h2><span className="sub">{dateLabel(last.week, last.year)}</span></div>
@@ -258,6 +261,7 @@ export function WeekScreen({
       <div style={{ textAlign: 'center' }}>
         <button className="btn ghost small" onClick={onMenu}>🏠 Main menu</button>
       </div>
-    </>
+    </div>
+    </div>
   );
 }

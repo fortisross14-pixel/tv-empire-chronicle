@@ -23,6 +23,7 @@ import { CardsScreen } from './screens/CardsScreen';
 import { ShopScreen } from './screens/ShopScreen';
 import { MenuScreen } from './screens/MenuScreen';
 import { buildTodos } from './todos';
+import { Ticker } from './components/Ticker';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { MissionResult } from './components/MissionCard';
 import { cx, money } from './util';
@@ -161,13 +162,13 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
             <div className="hud-date">{dateLabel(state.week, state.year)}</div>
           </div>
           <div className="hud-stats">
-            <span className={cx('hud-stat', state.cash < 0 && 'neg')}><small>Cash</small>{money(state.cash)}</span>
+            <span className={cx('hud-stat', state.cash < 0 && 'neg')}><small>Cash</small><Ticker value={state.cash} format={money} delta /></span>
             <span className="hud-stat"><small>Rep</small>{state.reputation.toFixed(0)}</span>
           </div>
         </div>
       </header>
 
-      <main className="main">
+      <main className="main tab-enter" key={tab}>
         {tab === 'week' && (
           <WeekScreen state={state} todos={todos} onMenu={onMenu}
             onExpand={() => {

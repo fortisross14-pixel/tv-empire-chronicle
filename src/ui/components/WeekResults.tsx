@@ -1,5 +1,6 @@
 import { slotLabel, type GameState, type WeekResult } from '../../engine';
 import { Sheet } from './Sheet';
+import { Ticker } from './Ticker';
 import { money, pct, signedMoney, viewers } from '../util';
 
 export function WeekResults({ result, state, onClose }: { result: WeekResult; state: GameState; onClose: () => void }) {
@@ -42,7 +43,7 @@ export function WeekResults({ result, state, onClose }: { result: WeekResult; st
         ))}
         <div className="panel big-net" style={delay(ordered.length)}>
           <div className="muted small">Week result</div>
-          <div className={`value ${result.net >= 0 ? 'pos' : 'neg'}`}>{signedMoney(result.net)}</div>
+          <div className={`value ${result.net >= 0 ? 'pos' : 'neg'}`}><Ticker value={result.net} format={signedMoney} from={0} /></div>
           <div className="small muted">
             Ads {money(result.revenue)}{result.sponsors > 0 && ` · Sponsors ${money(result.sponsors)}`} · Running costs −{money(result.overhead)}
             {result.loanPayment > 0 && ` · Loan −${money(result.loanPayment)}`}
