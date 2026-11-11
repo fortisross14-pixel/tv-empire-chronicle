@@ -57,6 +57,19 @@ export const AWARD_LEVELS: Record<AwardLevel, LevelDef> = {
 
 const absWeek = (week: number, year: number) => year * 52 + week;
 
+const inFormats = (ids: string[]) => (s: Show) => ids.includes(s.formatId);
+
+/** The big Glimmy categories, open once you are a national network. */
+const GLIMMY_NATIONAL: (Category & { only?: (s: Show) => boolean })[] = [
+  { name: 'Best Show', score: entry },
+  { name: 'Best Drama', score: entry, only: inFormats(['series', 'movie']) },
+  { name: 'Best Comedy', score: entry, only: inFormats(['sitcom', 'animation', 'late-show']) },
+  { name: 'Best Unscripted', score: entry, only: inFormats(['reality', 'contest', 'talk']) },
+  { name: 'Best News & Factual', score: entry, only: inFormats(['news', 'magazine', 'documentary']) },
+  { name: 'Best Writing', score: (s) => s.scores.script * 0.7 + s.reviews!.critics * 0.3 },
+  { name: 'Best Performance', score: (s) => s.scores.screen * 0.7 + s.reviews!.audience * 0.3 },
+];
+
 /** Shows whose current season premiered in the past year and has reviews. */
 export function eligibleShows(state: GameState): Show[] {
   const now = absWeek(state.week, state.year);
@@ -75,16 +88,22 @@ export function holdCeremony(state: GameState, level: AwardLevel): Ceremony | nu
   const shows = eligibleShows(state);
   if (!shows.length) return null;
   const grow = (state.year - 1) * 2;
-  const categories: AwardCategoryResult[] = def.categories.map((cat) => {
-    const field = Array.from({ length: 4 }, () => ({
-      name: fieldName(state), station: pick(state, def.stations), score: clamp(randInt(state, ...def.field) + grow, 1, 99), ours: false,
+  const national = level === 'glimmy' && state.tier === 'national';
+  const cats: (Category & { only?: (s: Show) => boolean })[] = national ? GLIMMY_NATIONAL : def.categories;
+  const stations = national ? ['Atlas One', 'Nova', 'Fizz', 'Lone Pine Studios'] : def.stations;
+  const field = national ? [74, 92] as [number, number] : def.field;
+  const categories: AwardCategoryResult[] = cats.map((cat) => {
+    const rivalsField = Array.from({ length: 4 }, () => ({
+      name: fieldName(state), station: pick(state, stations), score: clamp(randInt(state, ...field) + grow, 1, 99), ours: false,
     })).sort((a, b) => b.score - a.score);
-    const best = [...shows].sort((a, b) => cat.score(b) - cat.score(a))[0];
+    const pool = cat.only ? shows.filter(cat.only) : shows;
+    if (!pool.length) return { category: cat.name, nominees: rivalsField, winner: rivalsField[0].name, weWon: false };
+    const best = [...pool].sort((a, b) => cat.score(b) - cat.score(a))[0];
     // A little luck on the night.
     const ourScore = clamp(Math.round(cat.score(best) + randInt(state, -3, 3)), 1, 99);
-    let nominees = field;
-    if (ourScore > field[field.length - 1].score) {
-      nominees = [...field.slice(0, -1), { name: best.name, station: state.stationName, score: ourScore, ours: true }]
+    let nominees = rivalsField;
+    if (ourScore > rivalsField[rivalsField.length - 1].score) {
+      nominees = [...rivalsField.slice(0, -1), { name: best.name, station: state.stationName, score: ourScore, ours: true }]
         .sort((a, b) => b.score - a.score);
     }
     const winner = nominees[0];
@@ -104,12 +123,13 @@ export function holdCeremony(state: GameState, level: AwardLevel): Ceremony | nu
       state.trophies.push({ title: c.category, showName: ours.name, year: state.year, level });
     }
   }
+  const title = national ? 'The Glimmy Awards' : def.title;
   let prize: string | null = null;
   if (wins > 0) {
     state.unopened.push(makePack(state, def.prize));
     state.cash += def.cashPrize;
     prize = `A free ${def.prize} pack${def.cashPrize ? ` and $${def.cashPrize}K` : ''}`;
   }
-  return { level, title: def.title, year: state.year, categories, prize };
+  return { level, title, year: state.year, categories, prize };
 }
 

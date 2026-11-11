@@ -254,6 +254,11 @@ button.card:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(
 }
 .slot:hover { border-color: var(--line); }
 .sched.cols-3 { gap: 6px; }
+.sched-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; }
+.sched-scroll > .sched { min-width: 600px; }
+.affiliates { display: flex; gap: 4px; }
+.affiliates i { flex: 1; height: 14px; border-radius: 4px; background: var(--paper-2); }
+.affiliates i.on { background: var(--info); }
 .sched.cols-3 .slot { padding: 8px 7px; min-height: 100px; }
 .sched.cols-3 .slot-show { font-size: 13px; }
 .sched.cols-3 .slot-vs, .sched.cols-3 .slot-part { font-size: 10px; }

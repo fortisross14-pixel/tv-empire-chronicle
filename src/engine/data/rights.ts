@@ -48,6 +48,7 @@ export const RIGHTS: RightsDef[] = [
   r({ id: 'noir-library', kind: 'film', tier: 'state', name: 'Detective Noir Library', icon: '🕵️', text: 'Smoky classics. State networks only.', value: 60, quality: 68, fame: 20, topicId: 'police', airings: 10, weeks: 40, decay: 5 }),
   r({ id: 'state-college', kind: 'sports', tier: 'state', name: 'State College Football', short: 'State U', icon: '🏟️', text: 'Saturday college football. State networks only.', value: 120, quality: 72, fame: 35, season: [36, 48], slot: 'weekend-prime', opponents: ['Tech', 'A&M'] }),
   r({ id: 'galaxy-wars', kind: 'film', tier: 'national', name: 'Galaxy Wars Saga', icon: '🌌', text: 'The biggest film saga ever made. National networks only.', value: 900, quality: 94, fame: 80, topicId: 'scifi', airings: 9, weeks: 104, decay: 4 }),
+  r({ id: 'prestige-vault', kind: 'film', tier: 'national', name: 'Prestige Drama Vault', icon: '🏛️', text: 'Award-winning films. National networks only.', value: 450, quality: 82, fame: 50, topicId: 'history', airings: 10, weeks: 52, decay: 4 }),
   r({ id: 'gridiron', kind: 'sports', tier: 'national', name: 'National Gridiron League', short: 'NGL', icon: '🏆', text: 'Pro football. The crown jewel of TV. National networks only.', value: 5000, quality: 90, fame: 90, season: [36, 5], slot: 'weekend-prime', opponents: ['Kings', 'Titans'] }),
 ];
 
@@ -58,7 +59,7 @@ export const rightsById = (id: string) => RIGHTS_BY_ID[id];
 export const MARKET_WEEKS = [10, 30, 42];
 export const MARKET_OPEN_WEEKS = 2;
 /** Which sports rights are sold at which market. */
-export const SPORTS_AT_MARKET: Record<number, string[]> = { 10: ['pelicans'], 30: ['friday-football', 'state-college'], 42: ['ice-hawks'] };
+export const SPORTS_AT_MARKET: Record<number, string[]> = { 10: ['pelicans'], 30: ['friday-football', 'state-college', 'gridiron'], 42: ['ice-hawks'] };
 
 export const TIER_RANK: Record<RightsTier, number> = { local: 0, state: 1, national: 2 };
 

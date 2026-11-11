@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  AREAS, AREA_LABEL, FOCUS_POINTS, LEVELS, SCRIPT_TIME, formatById, topicById, topicsForFormat, previewPlan, projectPeople,
+  AREAS, AREA_LABEL, FOCUS_POINTS, LEVELS, SCRIPT_TIME, levelsFor, formatById, topicById, topicsForFormat, previewPlan, projectPeople,
   suggestTitle, grade, keyAreas, scriptStars, type Area, type Format, type GameState, type Person, type PersonKind,
   type ProductionLevel, type ScriptTime, type ShowPlan,
 } from '../../engine';
@@ -29,20 +29,21 @@ function scaledIdeal(format: Format, total: number): Record<Area, number> {
 }
 
 export function NewShowWizard({
-  state, renewShowId, onCreate, onClose,
-}: { state: GameState; renewShowId?: string; onCreate: (plan: ShowPlan) => boolean; onClose: () => void }) {
+  state, renewShowId, spinoffOf, onCreate, onClose,
+}: { state: GameState; renewShowId?: string; spinoffOf?: string; onCreate: (plan: ShowPlan) => boolean; onClose: () => void }) {
   const renewing = renewShowId ? state.shows.find((s) => s.id === renewShowId) : undefined;
+  const original = spinoffOf ? state.shows.find((s) => s.id === spinoffOf) : undefined;
   const canAdvanced = state.tier !== 'local';
   const steps: Step[] = [
     ...(canAdvanced ? ['level' as Step] : []),
-    ...(renewing ? [] : ['format', 'topic'] as Step[]),
+    ...(renewing ? [] : original ? ['topic'] as Step[] : ['format', 'topic'] as Step[]),
     'team', 'focus', 'confirm',
   ];
   const [stepIdx, setStepIdx] = useState(0);
   const step = steps[stepIdx];
 
-  const [formatId, setFormatId] = useState<string | null>(renewing?.formatId ?? null);
-  const [topicId, setTopicId] = useState<string | null>(renewing?.topicId ?? null);
+  const [formatId, setFormatId] = useState<string | null>(renewing?.formatId ?? original?.formatId ?? null);
+  const [topicId, setTopicId] = useState<string | null>(renewing?.topicId ?? original?.topicId ?? null);
   const [team, setTeam] = useState<Record<PersonKind, string | null>>({ writer: null, crew: null, talent: null });
   const [points, setPoints] = useState<Record<Area, number>>(zeroPoints);
   const [name, setName] = useState('');
@@ -51,9 +52,11 @@ export function NewShowWizard({
   const [level, setLevel] = useState<ProductionLevel>('basic');
   const [topic2Id, setTopic2Id] = useState<string | null>(renewing?.topic2Id ?? null);
   const [writer2Id, setWriter2Id] = useState<string | null>(null);
+  const [writer3Id, setWriter3Id] = useState<string | null>(null);
   const [specialists, setSpecialists] = useState<Partial<Record<Area, string>>>({});
   const L = LEVELS[level];
-  const advanced = level === 'advanced';
+  const advanced = level !== 'basic';
+  const aaa = level === 'aaa';
 
   const format = formatId ? formatById(formatId) : null;
   const known = !!formatId && state.knownFormats.includes(formatId);
@@ -65,7 +68,8 @@ export function NewShowWizard({
   const plan: ShowPlan | null = formatId && topicId && team.writer && team.crew && team.talent
     ? {
       name, formatId, topicId, writerId: team.writer, crewId: team.crew, talentId: team.talent, points, showId: renewShowId ?? null, twist, scriptTime,
-      level, topic2Id: advanced ? topic2Id : null, writer2Id: advanced ? writer2Id : null, specialists: advanced ? specialists : {},
+      level, topic2Id: advanced ? topic2Id : null, writer2Id: advanced ? writer2Id : null, writer3Id: aaa ? writer3Id : null,
+      specialists: advanced ? specialists : {}, spinoffOf: spinoffOf ?? null,
     }
     : null;
 
@@ -87,7 +91,8 @@ export function NewShowWizard({
   const next = () => {
     if (step === 'focus' && !name && formatId && topicId) {
       const host = state.people.find((p) => p.id === team.talent)?.name ?? 'Host';
-      setName(renewing?.name ?? suggestTitle({ rng: (Math.random() * 2 ** 31) | 0 }, formatId, topicId, host));
+      const suffixes = ['The Next Generation', 'Legacy', 'Reloaded', 'After Dark', 'New Blood'];
+      setName(renewing?.name ?? (original ? `${original.name}: ${suffixes[Math.floor(Math.random() * suffixes.length)]}` : suggestTitle({ rng: (Math.random() * 2 ** 31) | 0 }, formatId, topicId, host)));
     }
     if (step === 'confirm') {
       if (plan && onCreate(plan)) onClose();
@@ -107,7 +112,7 @@ export function NewShowWizard({
 
   return (
     <Sheet
-      title={renewing ? `${renewing.name} · Season ${renewing.season + 1}` : STEP_TITLE[step]}
+      title={renewing ? `${renewing.name} · Season ${renewing.season + 1}` : original ? `Spin-off of ${original.name}` : STEP_TITLE[step]}
       onClose={onClose}
       wide
       footer={<>
@@ -122,7 +127,7 @@ export function NewShowWizard({
 
       {step === 'level' && (
         <div className="stack">
-          {(Object.keys(LEVELS) as ProductionLevel[]).map((lv) => (
+          {levelsFor(state.tier).map((lv: ProductionLevel) => (
             <button key={lv} className={cx('panel todo', level === lv && 'selected')} style={{ borderLeftColor: level === lv ? 'var(--accent)' : 'var(--line)' }}
               onClick={() => { setLevel(lv); setPoints(zeroPoints()); }}>
               <span>
@@ -215,13 +220,25 @@ export function NewShowWizard({
               <div className="section-title"><h3 style={{ fontSize: 16 }}>✍️ Second writer (optional)</h3><span className="sub">Adds a quarter of their skill</span></div>
               <div className="hscroll">
                 <button className={cx('card person', !writer2Id && 'selected')} style={{ width: 120, display: 'grid', placeItems: 'center' }} onClick={() => setWriter2Id(null)}>None</button>
-                {state.people.filter((p) => p.kind === 'writer' && p.id !== team.writer).map((p) => (
+                {state.people.filter((p) => p.kind === 'writer' && p.id !== team.writer && p.id !== writer3Id).map((p) => (
                   <div key={p.id} style={{ width: 190 }}>
                     <PersonCard person={p} selected={writer2Id === p.id} disabled={!p.house && p.uses <= 0}
                       highlight={[format.genre]} onClick={() => setWriter2Id(p.id)} />
                   </div>
                 ))}
               </div>
+              {aaa && <>
+                <div className="section-title"><h3 style={{ fontSize: 16 }}>✍️ Third writer (optional)</h3><span className="sub">AAA writers' room</span></div>
+                <div className="hscroll">
+                  <button className={cx('card person', !writer3Id && 'selected')} style={{ width: 120, display: 'grid', placeItems: 'center' }} onClick={() => setWriter3Id(null)}>None</button>
+                  {state.people.filter((p) => p.kind === 'writer' && p.id !== team.writer && p.id !== writer2Id).map((p) => (
+                    <div key={p.id} style={{ width: 190 }}>
+                      <PersonCard person={p} selected={writer3Id === p.id} disabled={!p.house && p.uses <= 0}
+                        highlight={[format.genre]} onClick={() => setWriter3Id(p.id)} />
+                    </div>
+                  ))}
+                </div>
+              </>}
               <div className="section-title" style={{ marginTop: 12 }}><h3 style={{ fontSize: 16 }}>🎛️ Specialists (optional)</h3><span className="sub">Each area uses its specialist's skill</span></div>
               <div className="stack-sm">
                 {AREAS.map((a) => (
@@ -299,7 +316,8 @@ export function NewShowWizard({
             <p className="tiny muted">{SCRIPT_TIME[scriptTime].blurb}. The final script also depends on the writer and a bit of luck.</p>
           </div>
           <div className="panel stack-sm">
-            {advanced && <div className="spread small"><span>Production</span><b>Advanced{topic2Id && ` · + ${topicById(topic2Id).icon} ${topicById(topic2Id).name}`}</b></div>}
+            {original && <div className="spread small"><span>Spin-off</span><b className="pos">+30 hype, +10 fame from “{original.name}”</b></div>}
+            {advanced && <div className="spread small"><span>Production</span><b>{L.label}{topic2Id && ` · + ${topicById(topic2Id).icon} ${topicById(topic2Id).name}`}</b></div>}
             <div className="spread"><span>{format.icon} {format.name} · {topicById(topicId).icon} {topicById(topicId).name}</span><Stars n={topicById(topicId).fits[format.id] ?? 0} /></div>
             {preview && <>
               <div className="spread small"><span>Schedule</span><b>Script {preview.durations.script}w → Production {preview.durations.production}w → Post {preview.durations.post}w</b></div>

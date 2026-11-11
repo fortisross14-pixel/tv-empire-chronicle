@@ -49,6 +49,7 @@ export function RivalsView({ state }: { state: GameState }) {
                 {rights.map((r) => <span key={r.defId} className="chip">{rightsById(r.defId).icon} {rightsById(r.defId).name}</span>)}
               </div>
             )}
+            <div className={cx(TIERS[state.tier].blocks.length > 3 && 'sched-scroll')}>
             <div className={cx('sched', TIERS[state.tier].blocks.length > 2 && 'cols-3')} style={{ gridTemplateColumns: `repeat(${TIERS[state.tier].blocks.length}, minmax(0, 1fr))` }}>
               {TIERS[state.tier].blocks.map((b) => <div key={b} className="sched-head">{DAY_BLOCK_LABEL[b]}</div>)}
               {TIERS[state.tier].dayparts.flatMap((part) => TIERS[state.tier].blocks.map((block) => {
@@ -72,6 +73,7 @@ export function RivalsView({ state }: { state: GameState }) {
                   </div>
                 );
               }))}
+            </div>
             </div>
           </section>
         );

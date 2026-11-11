@@ -306,6 +306,25 @@ Unlocks:
 - **New formats in packs:** Animation, Late Show.
 - **Rights:** State lots open (Detective Noir Library, State College Football).
 
+## 10c. National network (built)
+
+- **License:** State network, reputation 60 and $1.5M cash, then a $1M fee.
+- **Schedule:** Mon–Tue (2 airings), Wed–Thu (2), Friday (1), Weekend (2) ×
+  5 dayparts = 20 slots (scrolls sideways on phones).
+- **Reach:** 12M households × reach. Reach starts at 50% and each **affiliate**
+  adds 5% (max 10 affiliates, $150K + $50K per affiliate already signed).
+  Running costs $120K/week.
+- **Rivals:** Atlas One (the giant), Nova (prestige drama), Fizz (young, loud).
+- **AAA productions:** up to 3 writers, a full crew of specialists, 20 focus
+  points (max 8 per area), 2 topics, cost ×2.6, +2 weeks.
+- **Big IP:** Galaxy Wars Saga, Prestige Drama Vault, National Gridiron League.
+- **Full Glimmys:** Best Show, Drama, Comedy, Unscripted, News & Factual,
+  Writing, Performance.
+- **Spin-offs:** a Show for the Ages, an award winner or a 3+ season show can
+  be spun off: same format, new team, +30 hype and +10 fame.
+- **#1 network:** beat every rival on average share over 13 weeks for a
+  crown screen. The game continues afterwards.
+
 ## 11. Screens (mobile-first, bottom tab bar)
 
 1. **Week** — calendar strip, cash, alerts, big *Air Week* button, results reveal
@@ -346,7 +365,8 @@ Unlocks:
    bids, Rivals view.
 6. **State tier** ✅ — license, 15 slots, state rivals, Advanced productions,
    2 topics, new formats, State rights.
-7. **National + payoff** — national tier, Glimmy Awards, franchises.
+7. **National + payoff** ✅ — national tier, affiliates, AAA, big IP, full
+   Glimmys, spin-offs, #1 crown.
 
 The last three waves are always:
 

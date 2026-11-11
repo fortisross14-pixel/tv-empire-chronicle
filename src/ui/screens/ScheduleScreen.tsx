@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   DAYPARTS, DAYPART_ICON, DAYPART_LABEL, DAY_BLOCKS, DAY_BLOCK_LABEL, FILLER_NAME, fitStars, formatById, grade, slotLabel,
-  rightsById, inSeason, TIERS, tierSlot, type GameState, type OwnedRights, type Show, type SlotId,
+  rightsById, inSeason, TIERS, tierSlot, canSpinOff, type GameState, type OwnedRights, type Show, type SlotId,
 } from '../../engine';
 import { PersonCard, ShowCard, Stars } from '../components/Cards';
 import { RightsCard, seasonLabel } from '../components/RightsCard';
@@ -10,11 +10,12 @@ import { RivalsView } from './RivalsView';
 import { cx, gradeClass } from '../util';
 
 export function ScheduleScreen({
-  state, onSchedule, onRenew, onCancelShow, onAssignTeam,
+  state, onSchedule, onRenew, onSpinoff, onCancelShow, onAssignTeam,
 }: {
   state: GameState;
   onSchedule: (slot: SlotId, id: string | null) => void;
   onRenew: (showId: string) => void;
+  onSpinoff: (showId: string) => void;
   onCancelShow: (showId: string) => void;
   onAssignTeam: (rightsId: string, crewId: string, talentId: string) => boolean;
 }) {
@@ -36,6 +37,7 @@ export function ScheduleScreen({
       {view === 'ours' && <>
       <section>
         <div className="section-title"><h2>Next week's schedule</h2><span className="sub">Tap a slot</span></div>
+        <div className={cx(tier.blocks.length > 3 && 'sched-scroll')}>
         <div className={cx('sched', tier.blocks.length > 2 && 'cols-3')} style={{ gridTemplateColumns: `repeat(${tier.blocks.length}, minmax(0, 1fr))` }}>
           {tier.blocks.map((b) => <div key={b} className="sched-head">{DAY_BLOCK_LABEL[b]}</div>)}
           {tier.dayparts.flatMap((part) => tier.blocks.map((block) => {
@@ -74,8 +76,9 @@ export function ScheduleScreen({
             );
           }))}
         </div>
+        </div>
         <p className="tiny muted" style={{ marginTop: 8 }}>
-          {state.tier === 'local' ? 'Weekday slots air 5 times a week, weekend slots twice.' : 'Mon–Wed slots air 3 times a week, Thu–Fri and weekend slots twice.'} ★ shows how well a format suits the time slot. Sports games take over their slot in season.
+          {state.tier === 'local' ? 'Weekday slots air 5 times a week, weekend slots twice.' : state.tier === 'state' ? 'Mon–Wed slots air 3 times a week, Thu–Fri and weekend slots twice.' : 'Mon–Tue, Wed–Thu and weekend slots air twice a week, Friday once. Scroll sideways for all days.'} ★ shows how well a format suits the time slot. Sports games take over their slot in season.
         </p>
       </section>
 
@@ -115,6 +118,7 @@ export function ScheduleScreen({
                     {show.episodesLeft <= 0 && !state.projects.some((p) => p.showId === show.id) && (
                       <button className="btn good small" onClick={() => onRenew(show.id)}>New season</button>
                     )}
+                    {canSpinOff(show) && <button className="btn ghost small" onClick={() => onSpinoff(show.id)}>✨ Spin-off</button>}
                     <button className="btn danger small" onClick={() => {
                       if (confirm(`Cancel "${show.name}" for good?`)) onCancelShow(show.id);
                     }}>Cancel show</button>

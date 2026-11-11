@@ -1,4 +1,4 @@
-import { airWeek, answerEvent, bidOnRights, buyPack, expandToState, stateLicenseGaps, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
+import { airWeek, answerEvent, bidOnRights, buyPack, expandToNational, expandToState, signAffiliate, stateLicenseGaps, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
 import { startEvent } from './events';
 import { holdCeremony } from './awards';
 import { makeReviews } from './reviews';
@@ -394,5 +394,77 @@ describe('State network', () => {
     s = createShow(s, { ...adv, specialists: { sound: 'snd' }, writer2Id: 'w2' });
     expect(s.projects[s.projects.length - 1].level).toBe('advanced');
     expect(() => previewPlan(readyShow(4), adv)).toThrow();
+  });
+});
+
+describe('National network', () => {
+  const nationalGame = (seed: number) => {
+    let s = readyShow(seed);
+    s = scheduleShow(s, 'weekday-prime', s.shows[0].id);
+    s.reputation = 70;
+    s.cash = 5000;
+    s = expandToState(s);
+    s.reputation = 70;
+    return expandToNational(s);
+  };
+
+  test('needs a State network, reputation and cash', () => {
+    const s = readyShow(2);
+    expect(() => expandToNational(s)).toThrow();
+  });
+
+  test('20 slots, 3 national rivals, show keeps its Friday prime slot', () => {
+    let s = nationalGame(3);
+    expect(s.tier).toBe('national');
+    expect(Object.keys(s.schedule)).toHaveLength(20);
+    expect(s.schedule['fri-prime']).toBe(s.shows[0].id);
+    expect(s.rivals.map((r) => r.id)).toEqual(['atlas', 'nova', 'fizz']);
+    s.pendingEvent = null;
+    s = airWeek(s);
+    expect(s.lastResult!.slots).toHaveLength(20);
+  });
+
+  test('affiliates grow reach and cost more each time', () => {
+    let s = nationalGame(5);
+    s.pendingEvent = null;
+    const before = s.cash;
+    s = signAffiliate(s);
+    s = signAffiliate(s);
+    expect(s.affiliates).toBe(2);
+    expect(before - s.cash).toBe(150 + 200);
+  });
+
+  test('AAA production takes three writers and 20 points; spin-offs need a hit', () => {
+    let s = nationalGame(6);
+    s.pendingEvent = null;
+    const w = s.people.find((p) => p.kind === 'writer')!;
+    s.people.push({ ...structuredClone(w), id: 'w2', house: false, uses: 3 }, { ...structuredClone(w), id: 'w3', house: false, uses: 3 });
+    const base = firstPlan(s);
+    const points = { direction: 4, sound: 4, image: 4, fx: 0, music: 4, art: 4 };
+    const plan = { ...base, level: 'aaa' as const, points, writer2Id: 'w2', writer3Id: 'w3' };
+    const one = previewPlan(s, { ...plan, writer2Id: null, writer3Id: null }).breakdown.scores.script;
+    const three = previewPlan(s, plan).breakdown.scores.script;
+    expect(three).toBeGreaterThan(one);
+    expect(() => previewPlan(s, { ...plan, spinoffOf: s.shows[0].id })).toThrow();
+    s.shows[0].classic = true;
+    s = createShow(s, { ...plan, spinoffOf: s.shows[0].id, name: 'Spin' });
+    expect(s.projects[s.projects.length - 1].spinoffOf).toBe(s.shows[0].id);
+  });
+
+  test('full Glimmys at national, and the #1 network crown', () => {
+    let s = nationalGame(8);
+    s.pendingEvent = null;
+    s = airWeek(s);
+    const show = s.shows[0];
+    show.reviews = { ...(show.reviews ?? { audienceQuote: '', criticQuote: '', outlet: '' }), audience: 95, critics: 95 } as never;
+    show.premieredAt = { week: s.week, year: s.year };
+    const c = holdCeremony(s, 'glimmy')!;
+    expect(c.categories.length).toBeGreaterThan(1);
+    // Crown: we beat every rival on average share.
+    s.shareHistory = Array(13).fill(0.5);
+    for (const r of s.rivals) r.history = Array(13).fill(0.05);
+    s.pendingEvent = null;
+    s = airWeek(s);
+    expect(s.champion).toBe(true);
   });
 });

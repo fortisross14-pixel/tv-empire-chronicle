@@ -1,5 +1,7 @@
+import { Fragment } from 'react';
 import {
-  STATE_LICENSE, TIERS, dateLabel, isSweeps, periodOf, slotsOf, stateLicenseGaps, upcomingMarkers, slotLabel, type GameState,
+  AFFILIATE_MAX, CHAMPION_WEEKS, TIERS, affiliateCost, dateLabel, isSweeps, licenseGaps, nextLicense, periodOf, reachOf, slotsOf,
+  upcomingMarkers, slotLabel, type GameState,
 } from '../../engine';
 import { money, signedMoney } from '../util';
 
@@ -8,8 +10,10 @@ const PERIOD_EMOJI = { winter: '❄️', spring: '🌷', summer: '☀️', fall:
 export interface Todo { emoji: string; title: string; detail: string; onClick: () => void }
 
 export function WeekScreen({
-  state, todos, onNewGame, onExpand,
-}: { state: GameState; todos: Todo[]; onNewGame: () => void; onExpand: () => void }) {
+  state, todos, onNewGame, onExpand, onAffiliate,
+}: { state: GameState; todos: Todo[]; onNewGame: () => void; onExpand: () => void; onAffiliate: () => void }) {
+  const lic = nextLicense(state);
+  const avg = (xs: number[]) => (xs.length ? xs.slice(-CHAMPION_WEEKS).reduce((a, b) => a + b, 0) / Math.min(CHAMPION_WEEKS, xs.length) : 0);
   const SLOTS = slotsOf(state);
   const period = periodOf(state.week);
   const last = state.lastResult;
@@ -107,26 +111,42 @@ export function WeekScreen({
           ))}</div>}
       </section>
 
-      {state.tier === 'local' ? (
+      {lic && (
         <section className="panel stack-sm">
-          <div className="section-title"><h2>🎯 Goal: State network</h2></div>
-          <p className="small muted">A State license brings 15 slots (afternoon and late night too), {TIERS.state.households / 1000}M households, Advanced productions with specialists and 2 topics, State rights and new formats. Running costs rise to ${TIERS.state.overhead}K/week.</p>
+          <div className="section-title"><h2>🎯 Goal: {lic.tier === 'state' ? 'State' : 'National'} network</h2></div>
+          <p className="small muted">
+            {lic.tier === 'state'
+              ? `A State license brings 15 slots (afternoon and late night too), ${TIERS.state.households / 1000}M households, Advanced productions with specialists and 2 topics, State rights and new formats. Running costs rise to $${TIERS.state.overhead}K/week.`
+              : `Going national brings 20 slots, up to ${TIERS.national.households / 1000}M households (grow reach with affiliates), AAA productions, Galaxy Wars and the Gridiron League, and the full Glimmys. Running costs rise to $${TIERS.national.overhead}K/week.`}
+          </p>
           <div className="req">
-            <span>Reputation {Math.floor(state.reputation)} / {STATE_LICENSE.reputation}</span>
-            <span>{state.reputation >= STATE_LICENSE.reputation ? '✅' : '⏳'}</span>
-            <span className="bar" style={{ gridColumn: '1 / -1' }}><i style={{ width: `${Math.min(100, (state.reputation / STATE_LICENSE.reputation) * 100)}%`, background: 'var(--accent)' }} /></span>
-            <span>Cash ${Math.floor(state.cash)}K / ${STATE_LICENSE.cash}K</span>
-            <span>{state.cash >= STATE_LICENSE.cash ? '✅' : '⏳'}</span>
-            <span className="bar" style={{ gridColumn: '1 / -1' }}><i style={{ width: `${Math.max(0, Math.min(100, (state.cash / STATE_LICENSE.cash) * 100))}%`, background: 'var(--good)' }} /></span>
+            <span>Reputation {Math.floor(state.reputation)} / {lic.reputation}</span>
+            <span>{state.reputation >= lic.reputation ? '✅' : '⏳'}</span>
+            <span className="bar" style={{ gridColumn: '1 / -1' }}><i style={{ width: `${Math.min(100, (state.reputation / lic.reputation) * 100)}%`, background: 'var(--accent)' }} /></span>
+            <span>Cash ${Math.floor(state.cash)}K / ${lic.cash}K</span>
+            <span>{state.cash >= lic.cash ? '✅' : '⏳'}</span>
+            <span className="bar" style={{ gridColumn: '1 / -1' }}><i style={{ width: `${Math.max(0, Math.min(100, (state.cash / lic.cash) * 100))}%`, background: 'var(--good)' }} /></span>
           </div>
-          <button className="btn primary" disabled={stateLicenseGaps(state).length > 0} onClick={onExpand}>
-            Buy State license · ${STATE_LICENSE.fee}K
+          <button className="btn primary" disabled={licenseGaps(state).length > 0} onClick={onExpand}>
+            Buy {lic.tier === 'state' ? 'State' : 'National'} license · ${lic.fee}K
           </button>
         </section>
-      ) : (
-        <section className="panel">
-          <div className="section-title"><h2>🎯 Goal: National network</h2></div>
-          <p className="small muted">You are a State network. Win State Awards, grow reputation and cash — the national tier comes in a later update.</p>
+      )}
+      {state.tier === 'national' && (
+        <section className="panel stack-sm">
+          <div className="section-title"><h2>{state.champion ? '👑 #1 network' : '👑 Goal: #1 network'}</h2></div>
+          <p className="small muted">Beat every rival on average share over {CHAMPION_WEEKS} weeks.</p>
+          <div className="req">
+            <span>You</span><b>{(avg(state.shareHistory) * 100).toFixed(1)}%</b>
+            {state.rivals.map((r) => <Fragment key={r.id}><span style={{ color: r.color }}>{r.short}</span><b>{(avg(r.history) * 100).toFixed(1)}%</b></Fragment>)}
+          </div>
+          <div className="section-title" style={{ marginTop: 8 }}><h3>📡 Affiliates</h3><span className="sub">Reach {Math.round(reachOf(state) * 100)}%</span></div>
+          <div className="affiliates">{Array.from({ length: AFFILIATE_MAX }, (_, i) => <i key={i} className={i < state.affiliates ? 'on' : ''} />)}</div>
+          {state.affiliates < AFFILIATE_MAX && (
+            <button className="btn ghost" disabled={state.cash < affiliateCost(state.affiliates)} onClick={onAffiliate}>
+              Sign an affiliate · ${affiliateCost(state.affiliates)}K (+5% reach)
+            </button>
+          )}
         </section>
       )}
 

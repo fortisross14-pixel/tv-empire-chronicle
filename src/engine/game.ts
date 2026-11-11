@@ -19,13 +19,17 @@ import {
   sportsInSlot, sportsQuality, SPORTS_AIRINGS, SPORTS_CPM_BONUS,
 } from './rights';
 import {
-  AIRINGS, CPM, FILLER_APPEAL, FILLER_NAME, HUT, OTHER_APPEAL, TIERS, emptySchedule, slotsOf, tierSlot,
+  AIRINGS, AFFILIATE_MAX, CPM, FILLER_APPEAL, FILLER_NAME, HUT, OTHER_APPEAL, TIERS, affiliateCost, emptySchedule, reachOf, slotsOf, tierSlot,
 } from './schedule';
 
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 /** What it takes to become a State network. */
 export const STATE_LICENSE = { reputation: 35, cash: 250, fee: 200 };
+/** What it takes to go National. */
+export const NATIONAL_LICENSE = { reputation: 60, cash: 1500, fee: 1000 };
+/** Weeks of average share compared to decide the #1 network. */
+export const CHAMPION_WEEKS = 13;
 export const START_CASH = 120;
 export const LOAN = { amount: 100, total: 125, payment: 2.5 };
 
@@ -38,6 +42,9 @@ export function newGame(seed: number, stationName: string): GameState {
     stationName: stationName.trim() || 'Channel 8',
     tier: 'local',
     milestone: null,
+    affiliates: 0,
+    shareHistory: [],
+    champion: false,
     week: 27,
     year: 1,
     cash: START_CASH,
@@ -190,32 +197,67 @@ export const assignSportsTeam = (state: GameState, rightsId: string, crewId: str
 
 export const dismissMilestone = (state: GameState) => produce(state, (s) => void (s.milestone = null));
 
-/** Can the station apply for a State license? Returns what is missing. */
-export function stateLicenseGaps(s: GameState): string[] {
-  if (s.tier !== 'local') return [];
+/** The next license for this station, or null at the top. */
+export const nextLicense = (s: Pick<GameState, 'tier'>) =>
+  s.tier === 'local' ? { tier: 'state' as const, ...STATE_LICENSE } : s.tier === 'state' ? { tier: 'national' as const, ...NATIONAL_LICENSE } : null;
+
+/** What is missing for the next license. */
+export function licenseGaps(s: GameState): string[] {
+  const lic = nextLicense(s);
+  if (!lic) return [];
   const gaps: string[] = [];
-  if (s.reputation < STATE_LICENSE.reputation) gaps.push(`Reputation ${Math.floor(s.reputation)}/${STATE_LICENSE.reputation}`);
-  if (s.cash < STATE_LICENSE.cash) gaps.push(`Cash $${Math.floor(s.cash)}K/$${STATE_LICENSE.cash}K`);
+  if (s.reputation < lic.reputation) gaps.push(`Reputation ${Math.floor(s.reputation)}/${lic.reputation}`);
+  if (s.cash < lic.cash) gaps.push(`Cash $${Math.floor(s.cash)}K/$${lic.cash}K`);
   return gaps;
 }
+
+/** Kept for older callers: gaps for the State license. */
+export const stateLicenseGaps = (s: GameState) => (s.tier === 'local' ? licenseGaps(s) : []);
+
+function moveUp(s: GameState) {
+  const lic = nextLicense(s);
+  if (!lic) throw new GameError('You are already a national network.');
+  const gaps = licenseGaps(s);
+  if (gaps.length) throw new GameError(`Not yet: ${gaps.join(', ')}.`);
+  s.cash = round1(s.cash - lic.fee);
+  s.tier = lic.tier;
+  const old = s.schedule;
+  s.schedule = emptySchedule(lic.tier);
+  for (const [slot, id] of Object.entries(old) as [SlotId, string | null][]) {
+    const target = tierSlot(slot, lic.tier);
+    if (id && !s.schedule[target]) s.schedule[target] = id;
+  }
+  s.rivals = makeRivals(s);
+  s.rivalRights = [];
+  s.sweeps = { shareSum: 0, samples: 0 };
+  s.milestone = lic.tier;
+  return lic.tier;
+}
+
+/** Sign one more affiliate station (national only): +5% reach. */
+export const signAffiliate = (state: GameState) =>
+  produce(state, (s) => {
+    if (s.tier !== 'national') throw new GameError('Affiliates are for national networks.');
+    if (s.affiliates >= AFFILIATE_MAX) throw new GameError('Your network already covers the whole country.');
+    const cost = affiliateCost(s.affiliates);
+    if (s.cash < cost) throw new GameError('Not enough cash.');
+    s.cash = round1(s.cash - cost);
+    s.affiliates += 1;
+    addNews(s, `📡 A new affiliate joins ${s.stationName}. Reach is now ${Math.round(reachOf(s) * 100)}% of the country.`, 'good');
+  });
+
+export const expandToNational = (state: GameState) =>
+  produce(state, (s) => {
+    if (s.tier !== 'state') throw new GameError('Become a State network first.');
+    moveUp(s);
+    addNews(s, `🇺🇸 ${s.stationName} goes national! 20 slots, 12M households, and rivals ${s.rivals.map((r) => r.short).join(', ')}.`, 'good');
+  });
 
 /** Become a State network: bigger audience, 15 slots, state rivals, Advanced productions. */
 export const expandToState = (state: GameState) =>
   produce(state, (s) => {
     if (s.tier !== 'local') throw new GameError('You are already a State network.');
-    const gaps = stateLicenseGaps(s);
-    if (gaps.length) throw new GameError(`Not yet: ${gaps.join(', ')}.`);
-    s.cash = round1(s.cash - STATE_LICENSE.fee);
-    s.tier = 'state';
-    const old = s.schedule;
-    s.schedule = emptySchedule('state');
-    for (const [slot, id] of Object.entries(old) as [SlotId, string | null][]) {
-      if (id) s.schedule[tierSlot(slot, 'state')] = id;
-    }
-    s.rivals = makeRivals(s);
-    s.rivalRights = [];
-    s.sweeps = { shareSum: 0, samples: 0 };
-    s.milestone = 'state';
+    moveUp(s);
     addNews(s, `🎉 ${s.stationName} is now a State network! 15 slots, 2.4M households, and new rivals: ${s.rivals.map((r) => r.short).join(' and ')}.`, 'good');
   });
 
@@ -318,7 +360,7 @@ export const airWeek = (state: GameState) =>
         const rivalsHere = s.rivals.map((r, i) => ({ id: r.id, short: r.short, name: rivalShows[i].name, share: rivalAppeals[i] / total }))
           .sort((a, b) => b.share - a.share);
         const rivalShare = rivalsHere[0]?.share ?? 0;
-        const watching = tierCfg.households * HUT[block][part] * period.viewing;
+        const watching = tierCfg.households * reachOf(s) * HUT[block][part] * period.viewing;
         const viewers = round1(watching * share * viewerMod);
         const revenue = round1((viewers * airings * CPM[part] * cpmBonus * period.adPrice * s.rateCard) / 1000);
         const won = !!kind && share > rivalShare;
@@ -422,6 +464,17 @@ export const airWeek = (state: GameState) =>
     s.reputation = round1(clamp(s.reputation + reputationDelta, 0, 100));
 
     recordRivalShares(s, slots);
+    s.shareHistory.push(slots.reduce((sum, r) => sum + r.share, 0) / slots.length);
+    if (s.shareHistory.length > 26) s.shareHistory.shift();
+    if (s.tier === 'national' && !s.champion && s.shareHistory.length >= CHAMPION_WEEKS) {
+      const avg = (xs: number[]) => xs.slice(-CHAMPION_WEEKS).reduce((a, b) => a + b, 0) / Math.min(CHAMPION_WEEKS, xs.length);
+      const ours = avg(s.shareHistory);
+      if (s.rivals.every((r) => r.history.length >= CHAMPION_WEEKS && avg(r.history) < ours)) {
+        s.champion = true;
+        s.milestone = 'champion';
+        addNews(s, `👑 ${s.stationName} is the #1 network in the country!`, 'good');
+      }
+    }
     const wins = slots.filter((r) => r.won).length;
     if (wins > 0) addNews(s, `${s.stationName} wins ${wins} of ${slots.length} slots this week.`, 'good');
 

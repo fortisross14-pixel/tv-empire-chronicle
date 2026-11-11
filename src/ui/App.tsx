@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import {
   CITY, GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, clearSave, createShow,
   dateLabel, dismissFinished, dismissReveal, loadGame, newGame, openPack, saveGame, scheduleShow, useBusinessCard,
-  rightsById, answerEvent, dismissCeremony, dismissMilestone, expandToState, projectPeople, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
-  type GameState, type ShowPlan,
+  rightsById, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, projectPeople, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
+  reachOf, type GameState, type ShowPlan,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
 import { PackReveal } from './components/PackReveal';
@@ -57,7 +57,7 @@ function TitleScreen({ onStart }: { onStart: (name: string) => void }) {
 
 function Game({ state, setState }: { state: GameState; setState: (s: GameState | null) => void }) {
   const [tab, setTab] = useState<Tab>('week');
-  const [wizard, setWizard] = useState<{ renew?: string } | null>(null);
+  const [wizard, setWizard] = useState<{ renew?: string; spinoff?: string } | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [usingCard, setUsingCard] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -176,12 +176,17 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
       <main className="main">
         {tab === 'week' && (
           <WeekScreen state={state} todos={todos} onNewGame={newGameConfirm}
-            onExpand={() => { if (confirm('Buy the State license? Running costs rise a lot, but so does the audience.')) run(expandToState); }} />
+            onExpand={() => {
+              if (!confirm('Buy the license? Running costs rise a lot, but so does the audience.')) return;
+              run(state.tier === 'local' ? expandToState : expandToNational);
+            }}
+            onAffiliate={() => run(signAffiliate)} />
         )}
         {tab === 'schedule' && (
           <ScheduleScreen state={state}
             onSchedule={(slot, id) => run((s) => scheduleShow(s, slot, id))}
             onRenew={(id) => setWizard({ renew: id })}
+            onSpinoff={(id) => setWizard({ spinoff: id })}
             onCancelShow={(id) => run((s) => cancelShow(s, id))}
             onAssignTeam={(rid, c, t) => run((s) => assignSportsTeam(s, rid, c, t), 'Broadcast team set.')} />
         )}
@@ -220,7 +225,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
       </nav>
 
       {wizard && (
-        <NewShowWizard state={state} renewShowId={wizard.renew} onClose={() => setWizard(null)}
+        <NewShowWizard state={state} renewShowId={wizard.renew} spinoffOf={wizard.spinoff} onClose={() => setWizard(null)}
           onCreate={(plan: ShowPlan) => run((s) => createShow(s, plan), `"${plan.name || 'New season'}" is in production!`)} />
       )}
       {state.reveal && <PackReveal key={state.reveal.id} pack={state.reveal} onDone={() => run(dismissReveal)} />}
@@ -259,6 +264,33 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
               <div>📜 State rights at the Rights Market.</div>
               <div>⚔️ New rivals: <b>{state.rivals.map((r) => r.short).join(' and ')}</b>.</div>
             </div>
+          </div>
+        </Sheet>
+      )}
+      {state.milestone === 'national' && !state.reveal && !showResults && (
+        <Sheet title="Coast to coast! 🇺🇸" onClose={() => run(dismissMilestone)}
+          footer={<button className="btn primary" onClick={() => { run(dismissMilestone); setTab('schedule'); }}>See the national schedule</button>}>
+          <div className="milestone">
+            <div className="big">🌎</div>
+            <p><b>{state.stationName}</b> is a national network.</p>
+            <div className="panel stack-sm small" style={{ textAlign: 'left' }}>
+              <div>📺 <b>20 slots:</b> Mon–Tue, Wed–Thu, Friday and Weekend, five dayparts each.</div>
+              <div>📡 <b>Reach {Math.round(reachOf(state) * 100)}%</b> of {TIERS.national.households / 1000}M households. Sign affiliates to grow it.</div>
+              <div>🎬 <b>AAA productions:</b> 3 writers, a full crew, 20 focus points.</div>
+              <div>🌌 <b>Big IP</b> at the Rights Market: Galaxy Wars, the Gridiron League.</div>
+              <div>🏆 The <b>full Glimmy Awards</b>, and spin-offs for your hits.</div>
+              <div>⚔️ Rivals: <b>{state.rivals.map((r) => r.short).join(', ')}</b>. Beat them all to become #1.</div>
+            </div>
+          </div>
+        </Sheet>
+      )}
+      {state.milestone === 'champion' && !state.reveal && !showResults && (
+        <Sheet title="#1 in the nation! 👑" onClose={() => run(dismissMilestone)}
+          footer={<button className="btn primary" onClick={() => run(dismissMilestone)}>Keep broadcasting</button>}>
+          <div className="milestone">
+            <div className="big">👑</div>
+            <p>From a tiny station in Port Ellison to the most-watched network in the country. <b>{state.stationName}</b> is #1!</p>
+            <p className="small muted">The game goes on — keep your crown, chase more Glimmys and build more Shows for the Ages.</p>
           </div>
         </Sheet>
       )}

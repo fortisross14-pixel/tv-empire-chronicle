@@ -6,7 +6,7 @@ export * from './appeal';
 export * from './people';
 export * from './packs';
 export {
-  computeScores, previewPlan, suggestTitle, grade, focusMatch, STAGE_LABEL, MAX_POINTS_PER_AREA, LEVELS, projectPeople, stagePeople,
+  computeScores, previewPlan, suggestTitle, grade, focusMatch, STAGE_LABEL, MAX_POINTS_PER_AREA, LEVELS, projectPeople, stagePeople, levelsFor, canSpinOff, SPINOFF,
   SCRIPT_TIME, CLASSIC_QUALITY, scriptStars, teamBonus,
   type ShowPlan, type ScoreBreakdown,
 } from './production';
