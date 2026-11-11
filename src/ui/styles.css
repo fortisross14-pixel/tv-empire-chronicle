@@ -150,34 +150,32 @@ p { margin: 0; }
 .empty { text-align: center; padding: 26px 16px; color: var(--text-3); background: var(--surface); border-radius: var(--r-tile); }
 .empty .big { font-size: 34px; margin-bottom: 6px; }
 
-/* ---------- Posters (shows) ---------- */
+/* ---------- Posters (shows) ----------
+   Landscape 3:2 tiles like a TV home screen. Art is 96x64 px, shown crisp. */
 .poster {
   --c1: #6b4fd8; --c2: #c56bff;
-  width: 136px; aspect-ratio: 2 / 3; border-radius: var(--r-tile); position: relative; overflow: hidden;
-  display: grid; align-content: end; background: var(--tile); text-align: left; color: #fff;
+  width: 176px; border-radius: var(--r-tile); position: relative; overflow: hidden;
+  display: flex; flex-direction: column; background: var(--tile); text-align: left; color: #fff;
   transition: transform 0.15s, box-shadow 0.15s;
 }
-.poster.wide { width: 240px; aspect-ratio: 16 / 9; }
+.poster.wide { width: 236px; }
 .poster.fill { width: 100%; }
-.poster .art { position: absolute; inset: 0 0 34% 0; background: linear-gradient(150deg, var(--c1), var(--c2)); overflow: hidden; }
-.poster.wide .art { inset: 0; }
-.poster.wide .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(20, 8, 40, 0.92), rgba(20, 8, 40, 0.1) 70%); }
-.poster .glyph { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); font-size: 64px; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3)); }
-.poster.wide .glyph { left: auto; right: 14px; top: 42%; transform: translateY(-50%); font-size: 60px; }
-.poster .info { position: relative; padding: 10px; display: grid; gap: 3px; min-height: 34%; align-content: start; }
-.poster.wide .info { min-height: 0; }
-.poster .ttl { font-weight: 900; font-size: 15px; line-height: 1.08; }
+.poster .art { position: relative; width: 100%; aspect-ratio: 3 / 2; background: linear-gradient(150deg, var(--c1), var(--c2)); overflow: hidden; }
+.poster .art img { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.poster .glyph { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); font-size: 52px; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.3)); }
+.poster .info { position: relative; padding: 9px 10px 11px; display: grid; gap: 3px; }
+.poster .ttl { font-weight: 900; font-size: 15px; line-height: 1.1; }
 .poster .sub { font-size: 11px; color: var(--text-2); font-weight: 600; }
 .poster .badge { position: absolute; top: 8px; left: 8px; z-index: 1; font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 999px; background: var(--accent); color: var(--bg); }
 .poster .badge.hit { background: var(--good); }
 .poster .badge.live { background: var(--bad); color: #fff; }
-.poster .pgrade { position: absolute; top: 8px; right: 8px; z-index: 1; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-weight: 900; font-size: 14px; background: var(--bg); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.poster .pgrade { position: absolute; top: 8px; right: 8px; z-index: 1; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-weight: 900; font-size: 14px; background: var(--bg); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
 .poster .pgrade.top { color: var(--legend); box-shadow: inset 0 0 0 2px var(--legend); }
 .poster .prog { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.18); overflow: hidden; margin-top: 5px; }
 .poster .prog i { display: block; height: 100%; background: var(--good); }
 .poster.classic { box-shadow: 0 0 0 2px var(--legend); }
 button.poster:hover, button.poster:focus-visible, .poster.focus { box-shadow: 0 0 0 3px var(--focus), var(--shadow); transform: scale(1.04); outline: none; }
-.poster-grid { display: grid; gap: 14px 12px; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
+.poster-grid { display: grid; gap: 14px 12px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 .poster-grid .poster { width: 100%; }
 
 /* Billboard */
