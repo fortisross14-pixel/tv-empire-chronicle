@@ -9,8 +9,10 @@ export type CrewSkill = Area | 'production';
 export type Genre = 'factual' | 'entertainment' | 'drama' | 'comedy';
 export type TalentSkill = 'hosting' | 'acting' | 'charisma' | 'fame';
 
-export type Daypart = 'morning' | 'evening' | 'prime';
-export type DayBlock = 'weekday' | 'weekend';
+export type Daypart = 'morning' | 'afternoon' | 'evening' | 'prime' | 'late';
+/** Local: weekday + weekend. State: Mon–Wed, Thu–Fri + weekend. */
+export type DayBlock = 'weekday' | 'monwed' | 'thufri' | 'weekend';
+export type Tier = 'local' | 'state';
 export type SlotId = `${DayBlock}-${Daypart}`;
 
 export type Pillar = 'script' | 'technical' | 'art' | 'screen';
@@ -51,6 +53,9 @@ export type PersonKind = Person['kind'];
 
 export type Stage = 'script' | 'production' | 'post';
 
+/** Basic: 1 writer, 1 crew lead, 10 points. Advanced (State): 2 writers, specialists, 15 points, 2 topics. */
+export type ProductionLevel = 'basic' | 'advanced';
+
 /** How long the writer gets: shorter is faster, longer writes a better script. */
 export type ScriptTime = 'rush' | 'standard' | 'polish';
 
@@ -68,6 +73,11 @@ export interface Project {
   writerId: string;
   crewId: string;
   talentId: string;
+  level: ProductionLevel;
+  writer2Id: string | null;
+  /** Advanced: a specialist crew card per area. Areas without one are covered by the lead. */
+  specialists: Partial<Record<Area, string>>;
+  topic2Id: string | null;
   points: Record<Area, number>;
   cost: number;
   twist: boolean;
@@ -97,6 +107,8 @@ export interface Show {
   name: string;
   formatId: string;
   topicId: string;
+  topic2Id: string | null;
+  level: ProductionLevel;
   season: number;
   scores: Scores;
   quality: number;
@@ -323,6 +335,9 @@ export interface GameState {
   version: number;
   rng: number;
   stationName: string;
+  tier: Tier;
+  /** A big moment to celebrate on screen (e.g. 'state'), then cleared. */
+  milestone: string | null;
   week: number;
   year: number;
   cash: number;

@@ -5,7 +5,7 @@ import { formatById } from './data/formats';
 import { CITY } from './data/names';
 import { addHouseCards, newId } from './people';
 import { applyPack, makePack, PRICES } from './packs';
-import { advanceProjects, GameError, startProject, type ShowPlan } from './production';
+import { advanceProjects, GameError, projectPeople, startProject, type ShowPlan } from './production';
 import { advanceRivals, makeRivals, recordRivalShares } from './rivals';
 import { appeal } from './appeal';
 import { applyPromo, applySponsor, HYPE_POWER } from './network';
@@ -19,10 +19,13 @@ import {
   sportsInSlot, sportsQuality, SPORTS_AIRINGS, SPORTS_CPM_BONUS,
 } from './rights';
 import {
-  AIRINGS, CPM, DAYPARTS, DAY_BLOCKS, FILLER_APPEAL, FILLER_NAME, HUT, MARKET_HOUSEHOLDS, OTHER_APPEAL, OVERHEAD, SLOTS,
+  AIRINGS, CPM, FILLER_APPEAL, FILLER_NAME, HUT, OTHER_APPEAL, TIERS, emptySchedule, slotsOf, tierSlot,
 } from './schedule';
 
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
+
+/** What it takes to become a State network. */
+export const STATE_LICENSE = { reputation: 35, cash: 250, fee: 200 };
 export const START_CASH = 120;
 export const LOAN = { amount: 100, total: 125, payment: 2.5 };
 
@@ -33,6 +36,8 @@ export function newGame(seed: number, stationName: string): GameState {
     version: SAVE_VERSION,
     rng: seed | 0,
     stationName: stationName.trim() || 'Channel 8',
+    tier: 'local',
+    milestone: null,
     week: 27,
     year: 1,
     cash: START_CASH,
@@ -46,7 +51,7 @@ export function newGame(seed: number, stationName: string): GameState {
     twists: {},
     projects: [],
     shows: [],
-    schedule: Object.fromEntries(SLOTS.map((s) => [s, null])) as Record<SlotId, string | null>,
+    schedule: emptySchedule('local'),
     rivals: [],
     unopened: [],
     reveal: null,
@@ -151,7 +156,7 @@ export const scheduleShow = (state: GameState, slot: SlotId, showId: string | nu
     const film = showId ? s.rights.find((r) => r.id === showId) : null;
     if (film && rightsById(film.defId).kind !== 'film') throw new GameError('Sports air automatically in their own slot.');
     if (showId && !film && !s.shows.some((x) => x.id === showId)) throw new GameError('Show not found.');
-    for (const other of SLOTS) if (showId && s.schedule[other] === showId) s.schedule[other] = null;
+    for (const other of slotsOf(s)) if (showId && s.schedule[other] === showId) s.schedule[other] = null;
     s.schedule[slot] = showId;
   });
 
@@ -162,7 +167,7 @@ export const cancelShow = (state: GameState, showId: string) =>
     if (!show) throw new GameError('Show not found.');
     if (s.projects.some((p) => p.showId === showId)) throw new GameError('A new season is in production.');
     s.shows = s.shows.filter((x) => x.id !== showId);
-    for (const slot of SLOTS) if (s.schedule[slot] === showId) s.schedule[slot] = null;
+    for (const slot of slotsOf(s)) if (s.schedule[slot] === showId) s.schedule[slot] = null;
     addNews(s, `${s.stationName} cancels "${show.name}".`, 'neutral');
   });
 
@@ -183,6 +188,37 @@ export const bidOnRights = (state: GameState, lotId: string, amount: number | nu
 export const assignSportsTeam = (state: GameState, rightsId: string, crewId: string, talentId: string) =>
   produce(state, (s) => assignTeam(s, rightsId, crewId, talentId));
 
+export const dismissMilestone = (state: GameState) => produce(state, (s) => void (s.milestone = null));
+
+/** Can the station apply for a State license? Returns what is missing. */
+export function stateLicenseGaps(s: GameState): string[] {
+  if (s.tier !== 'local') return [];
+  const gaps: string[] = [];
+  if (s.reputation < STATE_LICENSE.reputation) gaps.push(`Reputation ${Math.floor(s.reputation)}/${STATE_LICENSE.reputation}`);
+  if (s.cash < STATE_LICENSE.cash) gaps.push(`Cash $${Math.floor(s.cash)}K/$${STATE_LICENSE.cash}K`);
+  return gaps;
+}
+
+/** Become a State network: bigger audience, 15 slots, state rivals, Advanced productions. */
+export const expandToState = (state: GameState) =>
+  produce(state, (s) => {
+    if (s.tier !== 'local') throw new GameError('You are already a State network.');
+    const gaps = stateLicenseGaps(s);
+    if (gaps.length) throw new GameError(`Not yet: ${gaps.join(', ')}.`);
+    s.cash = round1(s.cash - STATE_LICENSE.fee);
+    s.tier = 'state';
+    const old = s.schedule;
+    s.schedule = emptySchedule('state');
+    for (const [slot, id] of Object.entries(old) as [SlotId, string | null][]) {
+      if (id) s.schedule[tierSlot(slot, 'state')] = id;
+    }
+    s.rivals = makeRivals(s);
+    s.rivalRights = [];
+    s.sweeps = { shareSum: 0, samples: 0 };
+    s.milestone = 'state';
+    addNews(s, `🎉 ${s.stationName} is now a State network! 15 slots, 2.4M households, and new rivals: ${s.rivals.map((r) => r.short).join(' and ')}.`, 'good');
+  });
+
 export const dismissCeremony = (state: GameState) => produce(state, (s) => void (s.ceremony = null));
 
 /** Let a person go for good. House staff can't be released. */
@@ -191,7 +227,7 @@ export const releasePerson = (state: GameState, personId: string) =>
     const p = s.people.find((x) => x.id === personId);
     if (!p) throw new GameError('Person not found.');
     if (p.house) throw new GameError('House staff stay with the station.');
-    if (s.projects.some((pr) => [pr.writerId, pr.crewId, pr.talentId].includes(p.id))) throw new GameError(`${p.name} is working on a show.`);
+    if (s.projects.some((pr) => projectPeople(pr).includes(p.id))) throw new GameError(`${p.name} is working on a show.`);
     s.people = s.people.filter((x) => x.id !== personId);
     addNews(s, `${p.name} leaves ${s.stationName}. Thanks for everything!`, 'neutral');
   });
@@ -201,7 +237,7 @@ export const releasePerson = (state: GameState, personId: string) =>
 /** How many shows on air share this show's format and topic (saturation). */
 function saturation(state: GameState, show: Show): number {
   let same = 0;
-  for (const slot of SLOTS) {
+  for (const slot of slotsOf(state)) {
     const id = state.schedule[slot];
     const other = id && id !== show.id ? state.shows.find((x) => x.id === id) : null;
     if (other) same += other.formatId === show.formatId ? (other.topicId === show.topicId ? 1 : 0.3) : 0;
@@ -225,9 +261,10 @@ export const airWeek = (state: GameState) =>
     const aired = new Set<string>();
     let reputationDelta = 0;
 
-    for (const block of DAY_BLOCKS) {
+    const tierCfg = TIERS[s.tier];
+    for (const block of tierCfg.blocks) {
       let prevShare = 0.1;
-      for (const part of DAYPARTS) {
+      for (const part of tierCfg.dayparts) {
         const slot = `${block}-${part}` as SlotId;
         // Sports games take over their slot; otherwise the scheduled show or film airs.
         const sports = sportsInSlot(s, slot);
@@ -281,7 +318,7 @@ export const airWeek = (state: GameState) =>
         const rivalsHere = s.rivals.map((r, i) => ({ id: r.id, short: r.short, name: rivalShows[i].name, share: rivalAppeals[i] / total }))
           .sort((a, b) => b.share - a.share);
         const rivalShare = rivalsHere[0]?.share ?? 0;
-        const watching = MARKET_HOUSEHOLDS * HUT[block][part] * period.viewing;
+        const watching = tierCfg.households * HUT[block][part] * period.viewing;
         const viewers = round1(watching * share * viewerMod);
         const revenue = round1((viewers * airings * CPM[part] * cpmBonus * period.adPrice * s.rateCard) / 1000);
         const won = !!kind && share > rivalShare;
@@ -378,7 +415,7 @@ export const airWeek = (state: GameState) =>
         addNews(s, 'The bank loan is paid off.', 'good');
       }
     }
-    const net = round1(revenue + sponsors - OVERHEAD - loanPayment);
+    const net = round1(revenue + sponsors - tierCfg.overhead - loanPayment);
     s.cash = round1(s.cash + net);
     // Reputation fades unless you keep earning it.
     reputationDelta -= s.reputation * 0.02;
@@ -389,7 +426,7 @@ export const airWeek = (state: GameState) =>
     if (wins > 0) addNews(s, `${s.stationName} wins ${wins} of ${slots.length} slots this week.`, 'good');
 
     s.lastResult = {
-      week: s.week, year: s.year, slots, revenue, sponsors, overhead: OVERHEAD, loanPayment, net, reputationDelta: round1(reputationDelta),
+      week: s.week, year: s.year, slots, revenue, sponsors, overhead: tierCfg.overhead, loanPayment, net, reputationDelta: round1(reputationDelta),
     } satisfies WeekResult;
 
     // Studio work happens during the week too.

@@ -3,7 +3,7 @@ import { clamp, pick, random, randInt, shuffle } from './rng';
 import { formatById } from './data/formats';
 import { topicsForFormat } from './data/topics';
 import { CITY, LOCAL_RIVALS, TITLE_TEMPLATES, type RivalDef } from './data/names';
-import { SLOTS, slotParts } from './schedule';
+import { slotParts, slotsOf } from './schedule';
 import { fitStars } from './appeal';
 
 const HOSTS = ['Chip', 'Darla', 'Brock', 'Tammy', 'Duke', 'Peg'];
@@ -38,8 +38,8 @@ function launchRival(state: GameState, def: RivalDef): Rival {
   const rival = { id: def.id, strength: 1 };
   return {
     id: def.id, name: def.name, short: def.short, color: def.color, strength: 1,
-    schedule: Object.fromEntries(SLOTS.map((slot) => [slot, makeRivalShow(state, slot, rival)])) as Record<SlotId, RivalShow>,
-    shares: Object.fromEntries(SLOTS.map((slot) => [slot, []])) as unknown as Record<SlotId, number[]>,
+    schedule: Object.fromEntries(slotsOf(state).map((slot) => [slot, makeRivalShow(state, slot, rival)])) as Record<SlotId, RivalShow>,
+    shares: Object.fromEntries(slotsOf(state).map((slot) => [slot, []])) as unknown as Record<SlotId, number[]>,
     history: [],
     counterCooldown: 0,
     winsVsYou: 0,
@@ -47,7 +47,7 @@ function launchRival(state: GameState, def: RivalDef): Rival {
 }
 
 export function makeRivals(state: GameState): Rival[] {
-  return LOCAL_RIVALS.filter((d) => d.launchWeek === 0).map((d) => launchRival(state, d));
+  return LOCAL_RIVALS.filter((d) => d.launchWeek === 0 && d.tier === state.tier).map((d) => launchRival(state, d));
 }
 
 /** Record this week's shares so the AI can react to them. */
@@ -83,7 +83,7 @@ export function advanceRivals(state: GameState, fallPremiere: boolean, recent: S
 
   // New stations launch on their date (year 1 only).
   for (const def of LOCAL_RIVALS) {
-    if (state.year === 1 && def.launchWeek === state.week && !state.rivals.some((r) => r.id === def.id)) {
+    if (state.year === 1 && def.tier === state.tier && def.launchWeek === state.week && !state.rivals.some((r) => r.id === def.id)) {
       state.rivals.push(launchRival(state, def));
       news.push(`📡 New competition: ${def.name} goes on air. ${def.blurb}`);
     }
@@ -92,7 +92,7 @@ export function advanceRivals(state: GameState, fallPremiere: boolean, recent: S
   for (const rival of state.rivals) {
     const def = rivalDef(rival.id);
     if (rival.counterCooldown > 0) rival.counterCooldown -= 1;
-    for (const slot of SLOTS) {
+    for (const slot of slotsOf(state)) {
       const show = rival.schedule[slot];
       show.novelty = Math.max(0, show.novelty - formatById(show.formatId).decay);
       show.weeksLeft -= 1;
@@ -136,7 +136,7 @@ export function advanceRivals(state: GameState, fallPremiere: boolean, recent: S
     }
 
     if (fallPremiere) {
-      for (const slot of shuffle(state, SLOTS).slice(0, 3)) {
+      for (const slot of shuffle(state, slotsOf(state)).slice(0, state.tier === 'local' ? 3 : 6)) {
         rival.schedule[slot] = makeRivalShow(state, slot, rival, 8);
         rival.schedule[slot].novelty = 100;
         rival.shares[slot] = [];

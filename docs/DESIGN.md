@@ -290,6 +290,22 @@ Unlocks:
 - **National**: affiliate stations, the big IP (Galaxy Wars, Gridiron League),
   prime-time wars, the Glimmys at full scale.
 
+## 10b. State network (built)
+
+- **License:** reputation 35 and $250K cash, then a $200K fee (Week tab goal card).
+- **Schedule:** Mon–Wed (3 airings), Thu–Fri (2) and Weekend (2) ×
+  Morning, Afternoon, Evening, Prime, Late Night = 15 slots. Existing shows move
+  over (weekday prime → Thu–Fri prime, other weekday slots → Mon–Wed).
+- **Market:** 2.4M households, $30K/week running costs.
+- **Rivals:** Capital 7 (polished, rich, aggressive) and StateNet (cheap upstart)
+  replace the local stations.
+- **Advanced productions:** up to 2 writers (the second adds 25% of their
+  skill), a specialist crew card per area, 15 focus points (max 7 per area),
+  an optional second topic (+4 script when both fit at 2+ stars), cost ×1.6,
+  +1 week of production.
+- **New formats in packs:** Animation, Late Show.
+- **Rights:** State lots open (Detective Noir Library, State College Football).
+
 ## 11. Screens (mobile-first, bottom tab bar)
 
 1. **Week** — calendar strip, cash, alerts, big *Air Week* button, results reveal
@@ -328,7 +344,8 @@ Unlocks:
    rival-owned rights, broadcast teams.
 5. **Rivals & AI** ✅ — reactive KPEL 5, second rival WAVE 12, personality
    bids, Rivals view.
-6. **State tier** — license, more slots, second rival, new formats.
+6. **State tier** ✅ — license, 15 slots, state rivals, Advanced productions,
+   2 topics, new formats, State rights.
 7. **National + payoff** — national tier, Glimmy Awards, franchises.
 
 The last three waves are always:

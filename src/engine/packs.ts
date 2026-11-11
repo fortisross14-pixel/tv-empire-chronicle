@@ -18,7 +18,7 @@ const FORMAT_WEIGHTS: Record<string, number> = {
 function programCards(state: GameState, starter: boolean): PackCard[] {
   const formatId = starter
     ? pick(state, STARTER_FORMATS)
-    : weighted(state, Object.fromEntries(FORMATS.map((f) => [f.id, FORMAT_WEIGHTS[f.id] ?? 8])));
+    : weighted(state, Object.fromEntries(FORMATS.filter((f) => !f.tier || state.tier === 'state').map((f) => [f.id, FORMAT_WEIGHTS[f.id] ?? 8])));
   let topics = topicsForFormat(formatId);
   if (starter) topics = topics.filter((t) => t.fits[formatId] >= 2);
   const chosen = shuffle(state, topics).slice(0, 2);

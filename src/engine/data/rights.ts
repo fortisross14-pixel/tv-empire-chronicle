@@ -58,7 +58,9 @@ export const rightsById = (id: string) => RIGHTS_BY_ID[id];
 export const MARKET_WEEKS = [10, 30, 42];
 export const MARKET_OPEN_WEEKS = 2;
 /** Which sports rights are sold at which market. */
-export const SPORTS_AT_MARKET: Record<number, string> = { 10: 'pelicans', 30: 'friday-football', 42: 'ice-hawks' };
+export const SPORTS_AT_MARKET: Record<number, string[]> = { 10: ['pelicans'], 30: ['friday-football', 'state-college'], 42: ['ice-hawks'] };
+
+export const TIER_RANK: Record<RightsTier, number> = { local: 0, state: 1, national: 2 };
 
 export const TIER_LABEL: Record<RightsTier, string> = { local: 'Local', state: 'State networks', national: 'National networks' };
 

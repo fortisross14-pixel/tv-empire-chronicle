@@ -1,12 +1,13 @@
 import type { GameState, OwnedRights, RightsLot } from './types';
 import { clamp, pick, randInt, shuffle } from './rng';
 import {
-  MARKET_OPEN_WEEKS, MARKET_WEEKS, RIGHTS, SPORTS_AT_MARKET, inSeason, rightsById, weeksToSeasonEnd, weeksToSeasonStart,
+  MARKET_OPEN_WEEKS, MARKET_WEEKS, RIGHTS, SPORTS_AT_MARKET, TIER_RANK, inSeason, rightsById, weeksToSeasonEnd, weeksToSeasonStart,
   type RightsDef,
 } from './data/rights';
 import { GameError } from './errors';
 import { newId } from './people';
 import { rivalBids } from './rivals';
+import { tierSlot } from './schedule';
 
 export const absWeek = (s: Pick<GameState, 'week' | 'year'>) => s.year * 52 + s.week;
 
@@ -21,12 +22,18 @@ const owned = (s: GameState, defId: string) =>
 export function maybeOpenMarket(s: GameState): string | null {
   if (s.rightsMarket || !MARKET_WEEKS.includes(s.week)) return null;
   const lots: RightsLot[] = [];
-  const sport = rightsById(SPORTS_AT_MARKET[s.week]);
-  if (sport && !owned(s, sport.id)) lots.push(makeLot(s, sport, false));
-  const films = shuffle(s, RIGHTS.filter((d) => d.kind === 'film' && d.tier === 'local' && !owned(s, d.id))).slice(0, 2);
+  const rank = TIER_RANK[s.tier];
+  const allowed = (d: RightsDef) => TIER_RANK[d.tier] <= rank;
+  for (const id of SPORTS_AT_MARKET[s.week] ?? []) {
+    const sport = rightsById(id);
+    if (allowed(sport) && !owned(s, sport.id)) lots.push(makeLot(s, sport, false));
+  }
+  const films = shuffle(s, RIGHTS.filter((d) => d.kind === 'film' && allowed(d) && !owned(s, d.id)))
+    .sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier]).slice(0, s.tier === 'local' ? 2 : 3);
   films.forEach((d) => lots.push(makeLot(s, d, false)));
   // One big lot you can see but not bid on yet.
-  lots.push(makeLot(s, pick(s, RIGHTS.filter((d) => d.tier !== 'local')), true));
+  const bigger = RIGHTS.filter((d) => TIER_RANK[d.tier] > rank);
+  if (bigger.length) lots.push(makeLot(s, pick(s, bigger), true));
   s.rightsMarket = { closesWeek: s.week + MARKET_OPEN_WEEKS, lots };
   return `The Rights Market is open for ${MARKET_OPEN_WEEKS} weeks: ${lots.filter((l) => !l.locked).map((l) => rightsById(l.defId).name).join(', ')}.`;
 }
@@ -112,7 +119,7 @@ export function assignTeam(s: GameState, rightsId: string, crewId: string, talen
 export function sportsInSlot(s: GameState, slot: string): OwnedRights | null {
   return s.rights.find((r) => {
     const def = rightsById(r.defId);
-    return def.kind === 'sports' && def.slot === slot && inSeason(def, s.week) && absWeek(s) <= r.expires;
+    return def.kind === 'sports' && tierSlot(def.slot!, s.tier) === slot && inSeason(def, s.week) && absWeek(s) <= r.expires;
   }) ?? null;
 }
 
@@ -140,7 +147,7 @@ export function sportsQuality(s: GameState, r: OwnedRights): { quality: number; 
 export function rivalSportsInSlot(s: GameState, slot: string, rivalId: string): RightsDef | null {
   const r = s.rivalRights.find((x) => {
     const def = rightsById(x.defId);
-    return x.rivalId === rivalId && def.kind === 'sports' && def.slot === slot && inSeason(def, s.week) && absWeek(s) <= x.expires;
+    return x.rivalId === rivalId && def.kind === 'sports' && tierSlot(def.slot!, s.tier) === slot && inSeason(def, s.week) && absWeek(s) <= x.expires;
   });
   return r ? rightsById(r.defId) : null;
 }

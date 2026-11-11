@@ -1,4 +1,4 @@
-import { airWeek, answerEvent, bidOnRights, buyPack, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
+import { airWeek, answerEvent, bidOnRights, buyPack, expandToState, stateLicenseGaps, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
 import { startEvent } from './events';
 import { holdCeremony } from './awards';
 import { makeReviews } from './reviews';
@@ -344,5 +344,55 @@ describe('rival AI', () => {
     const name = s.rivals[0].schedule[slot].name;
     s = airWeek(s);
     expect(s.news.some((n) => n.text.includes(`cancels "${name}"`))).toBe(true);
+  });
+});
+
+describe('State network', () => {
+  const stateGame = (seed: number) => {
+    let s = readyShow(seed);
+    s = scheduleShow(s, 'weekday-prime', s.shows[0].id);
+    s.reputation = 40;
+    s.cash = 600;
+    return expandToState(s);
+  };
+
+  test('license needs reputation and cash', () => {
+    const s = readyShow(2);
+    expect(stateLicenseGaps(s).length).toBeGreaterThan(0);
+    expect(() => expandToState(s)).toThrow();
+  });
+
+  test('expanding gives 15 slots, state rivals and keeps your shows on air', () => {
+    let s = stateGame(3);
+    expect(s.tier).toBe('state');
+    expect(Object.keys(s.schedule)).toHaveLength(15);
+    expect(s.schedule['thufri-prime']).toBe(s.shows[0].id);
+    expect(s.rivals.map((r) => r.id)).toEqual(['capital', 'statenet']);
+    s = airWeek(s);
+    expect(s.lastResult!.slots).toHaveLength(15);
+    expect(s.lastResult!.overhead).toBe(30);
+  });
+
+  test('advanced production: specialists and a second topic', () => {
+    let s = stateGame(4);
+    s.pendingEvent = null;
+    // Give the studio a sound specialist and a second writer.
+    const crew = s.people.find((p) => p.kind === 'crew')!;
+    const sound = { ...structuredClone(crew), id: 'snd', house: false, uses: 3, skills: { ...crew.skills, sound: 95 } } as typeof crew;
+    const writer = s.people.find((p) => p.kind === 'writer')!;
+    s.people.push(sound, { ...structuredClone(writer), id: 'w2', house: false, uses: 3 });
+    const base = firstPlan(s);
+    const format = FORMATS.find((f) => f.id === base.formatId)!;
+    const points = Object.fromEntries(Object.entries(format.ideal).map(([a, v]) => [a, Math.floor(v * 1.5)])) as typeof base.points;
+    let left = 15 - Object.values(points).reduce((a, b) => a + b, 0);
+    for (const a of Object.keys(points) as (keyof typeof points)[]) { while (left > 0 && points[a] < 7) { points[a]++; left--; } }
+    const adv = { ...base, level: 'advanced' as const, points };
+    const plain = previewPlan(s, adv).breakdown;
+    const withSpec = previewPlan(s, { ...adv, specialists: { sound: 'snd' }, writer2Id: 'w2' }).breakdown;
+    if (format.ideal.sound > 0) expect(withSpec.scores.technical).toBeGreaterThan(plain.scores.technical);
+    expect(withSpec.scores.script).toBeGreaterThan(plain.scores.script);
+    s = createShow(s, { ...adv, specialists: { sound: 'snd' }, writer2Id: 'w2' });
+    expect(s.projects[s.projects.length - 1].level).toBe('advanced');
+    expect(() => previewPlan(readyShow(4), adv)).toThrow();
   });
 });

@@ -1,5 +1,5 @@
 import type {
-  Area, CrewCard, GameState, Person, Project, Scores, ScriptTime, Show, Stage, TalentCard, WriterCard,
+  Area, CrewCard, GameState, Person, ProductionLevel, Project, Scores, ScriptTime, Show, Stage, TalentCard, WriterCard,
 } from './types';
 import { ART_AREAS, AREAS, FOCUS_POINTS, TECH_AREAS, formatById, type Format } from './data/formats';
 import { FIT_MULT, topicById } from './data/topics';
@@ -15,6 +15,21 @@ export { GameError };
 /** Most points one area can take on a basic (local) production. */
 export const MAX_POINTS_PER_AREA = 5;
 
+export interface LevelDef {
+  label: string;
+  blurb: string;
+  points: number;
+  maxPerArea: number;
+  costMult: number;
+  /** Extra production weeks. */
+  extraWeeks: number;
+}
+
+export const LEVELS: Record<ProductionLevel, LevelDef> = {
+  basic: { label: 'Basic', blurb: '1 writer, 1 crew lead covers everything, 10 focus points.', points: FOCUS_POINTS, maxPerArea: MAX_POINTS_PER_AREA, costMult: 1, extraWeeks: 0 },
+  advanced: { label: 'Advanced', blurb: 'Up to 2 writers, a specialist per area, 15 focus points, 2 topics.', points: 15, maxPerArea: 7, costMult: 1.6, extraWeeks: 1 },
+};
+
 export interface ShowPlan {
   name: string;
   formatId: string;
@@ -27,7 +42,26 @@ export interface ShowPlan {
   showId?: string | null;
   twist?: boolean;
   scriptTime?: ScriptTime;
+  level?: ProductionLevel;
+  writer2Id?: string | null;
+  specialists?: Partial<Record<Area, string>>;
+  topic2Id?: string | null;
 }
+
+export interface Team {
+  writer: WriterCard;
+  writer2: WriterCard | null;
+  crew: CrewCard;
+  specialists: Partial<Record<Area, CrewCard>>;
+  talent: TalentCard;
+}
+
+export const teamPeople = (t: Team): Person[] =>
+  [t.writer, t.writer2, t.crew, ...Object.values(t.specialists), t.talent].filter((p): p is Person => !!p);
+
+/** Every person id booked on a project. */
+export const projectPeople = (p: Pick<Project, 'writerId' | 'crewId' | 'talentId' | 'writer2Id' | 'specialists'>): string[] =>
+  [p.writerId, p.writer2Id, p.crewId, ...Object.values(p.specialists ?? {}), p.talentId].filter((x): x is string => !!x);
 
 /** Writing time: weeks added to the script stage and the effect on the script. */
 export const SCRIPT_TIME: Record<ScriptTime, { label: string; weeks: number; mult: number; blurb: string }> = {
@@ -38,6 +72,8 @@ export const SCRIPT_TIME: Record<ScriptTime, { label: string; weeks: number; mul
 
 /** Show quality needed to become a Show for the Ages. */
 export const CLASSIC_QUALITY = 85;
+/** Script bonus when two topics both fit the format well (2+ stars each). */
+export const TOPIC_MIX_BONUS = 4;
 
 /** Script score (0–100) to 1–5 stars. */
 export function scriptStars(score: number): number {
@@ -48,11 +84,19 @@ export function scriptStars(score: number): number {
   return 1;
 }
 
-/** Expected script score before luck. */
-export function scriptBase(formatId: string, topicId: string, writer: WriterCard, time: ScriptTime): number {
+/** Expected script score before luck. A second writer adds a quarter of their skill. */
+export function scriptBase(
+  formatId: string, topicIds: (string | null | undefined)[], writer: WriterCard, time: ScriptTime, writer2: WriterCard | null = null,
+): number {
   const format = formatById(formatId);
-  const stars = topicById(topicId).fits[formatId] ?? 1;
-  return writer.skills[format.genre] * FIT_MULT[stars] * SCRIPT_TIME[time].mult;
+  const topics = topicIds.filter((x): x is string => !!x);
+  const stars = topics.map((t) => topicById(t).fits[formatId] ?? 1);
+  const fit = stars.reduce((s, n) => s + FIT_MULT[n], 0) / stars.length;
+  const a = writer.skills[format.genre];
+  const b = writer2 ? writer2.skills[format.genre] : 0;
+  const skill = writer2 ? Math.max(a, b) + Math.min(a, b) * 0.25 : a;
+  const mix = stars.length > 1 && stars.every((n) => n >= 2) ? TOPIC_MIX_BONUS : 0;
+  return skill * fit * SCRIPT_TIME[time].mult + mix;
 }
 
 /** Rare, epic and legend cards on one team add quality: +1 per 2 rarity points. */
@@ -69,25 +113,29 @@ export interface ScoreBreakdown {
   quality: number;
 }
 
-function pillarFromAreas(format: Format, crew: CrewCard, points: Record<Area, number>, areas: Area[]): number {
+/** Ideal points for an area at a given budget (ideals are written for 10 points). */
+const idealAt = (format: Format, a: Area, total: number) => (format.ideal[a] * total) / FOCUS_POINTS;
+
+function pillarFromAreas(format: Format, team: Team, points: Record<Area, number>, areas: Area[], total: number): number {
+  const who = (a: Area) => team.specialists[a] ?? team.crew;
   const idealTotal = areas.reduce((s, a) => s + format.ideal[a], 0);
   if (idealTotal === 0) {
-    return (areas.reduce((s, a) => s + crew.skills[a], 0) / areas.length) * 0.6;
+    return (areas.reduce((s, a) => s + who(a).skills[a], 0) / areas.length) * 0.6;
   }
   let sum = 0;
   for (const a of areas) {
     const ideal = format.ideal[a];
     if (ideal === 0) continue;
-    const effort = 0.35 + 0.65 * Math.min(1, points[a] / ideal);
-    sum += ideal * crew.skills[a] * effort;
+    const effort = 0.35 + 0.65 * Math.min(1, points[a] / idealAt(format, a, total));
+    sum += ideal * who(a).skills[a] * effort;
   }
   return sum / idealTotal;
 }
 
 /** 1 = points exactly on the ideal, 0 = as far off as possible. */
-export function focusMatch(format: Format, points: Record<Area, number>): number {
-  const off = AREAS.reduce((s, a) => s + Math.abs(points[a] - format.ideal[a]), 0);
-  return clamp(1 - off / (FOCUS_POINTS * 2), 0, 1);
+export function focusMatch(format: Format, points: Record<Area, number>, total = FOCUS_POINTS): number {
+  const off = AREAS.reduce((s, a) => s + Math.abs(points[a] - idealAt(format, a, total)), 0);
+  return clamp(1 - off / (total * 2), 0, 1);
 }
 
 export function focusBonus(match: number): number {
@@ -97,39 +145,49 @@ export function focusBonus(match: number): number {
   return 0;
 }
 
+/** Old-style call: one writer, one crew, one host. Kept for tests and simple callers. */
 export function computeScores(
   formatId: string, topicId: string, writer: WriterCard, crew: CrewCard, talent: TalentCard, points: Record<Area, number>,
+  script?: number, time: ScriptTime = 'standard',
+): ScoreBreakdown {
+  return computeTeamScores(formatId, [topicId], { writer, writer2: null, crew, specialists: {}, talent }, points, 'basic', script, time);
+}
+
+export function computeTeamScores(
+  formatId: string, topicIds: (string | null | undefined)[], team: Team, points: Record<Area, number>, level: ProductionLevel,
   /** Final script score once written; otherwise the expected score is used. */
   script?: number, time: ScriptTime = 'standard',
 ): ScoreBreakdown {
   const format = formatById(formatId);
+  const total = LEVELS[level].points;
   const scores: Scores = {
-    script: clamp(script ?? scriptBase(formatId, topicId, writer, time), 0, 100),
-    technical: pillarFromAreas(format, crew, points, TECH_AREAS),
-    art: pillarFromAreas(format, crew, points, ART_AREAS),
-    screen: talent.skills[format.screenSkill] * 0.65 + talent.skills.charisma * 0.35,
+    script: clamp(script ?? scriptBase(formatId, topicIds, team.writer, time, team.writer2), 0, 100),
+    technical: pillarFromAreas(format, team, points, TECH_AREAS, total),
+    art: pillarFromAreas(format, team, points, ART_AREAS, total),
+    screen: team.talent.skills[format.screenSkill] * 0.65 + team.talent.skills.charisma * 0.35,
   };
-  (Object.keys(scores) as (keyof Scores)[]).forEach((k) => (scores[k] = Math.round(scores[k])));
+  (Object.keys(scores) as (keyof Scores)[]).forEach((k) => (scores[k] = Math.round(clamp(scores[k], 0, 100))));
   const base = (Object.keys(scores) as (keyof Scores)[]).reduce((s, k) => s + scores[k] * format.weights[k], 0);
-  const match = focusMatch(format, points);
+  const match = focusMatch(format, points, total);
   const bonus = focusBonus(match);
-  const team = teamBonus([writer, crew, talent]);
-  return { scores, base, focusMatch: match, focusBonus: bonus, teamBonus: team, quality: clamp(Math.round(base + bonus + team), 1, 99) };
+  const team_ = teamBonus(teamPeople(team));
+  return { scores, base, focusMatch: match, focusBonus: bonus, teamBonus: team_, quality: clamp(Math.round(base + bonus + team_), 1, 99) };
 }
 
 export function stageDurations(
-  format: Format, writer: WriterCard, crew: CrewCard, renewal: boolean, time: ScriptTime = 'standard',
+  format: Format, team: Team, renewal: boolean, time: ScriptTime = 'standard', level: ProductionLevel = 'basic',
 ): Record<Stage, number> {
   const cut = renewal ? 1 : 0;
+  const speed = team.writer2 ? Math.max(team.writer.speed, team.writer2.speed) : team.writer.speed;
   return {
-    script: Math.max(1, Math.round(format.weeks.script * (1.3 - writer.speed / 200)) - cut + SCRIPT_TIME[time].weeks),
-    production: Math.max(1, Math.round(format.weeks.production * (1.25 - crew.skills.production / 200)) - cut),
+    script: Math.max(1, Math.round(format.weeks.script * (1.3 - speed / 200)) - cut + SCRIPT_TIME[time].weeks),
+    production: Math.max(1, Math.round(format.weeks.production * (1.25 - team.crew.skills.production / 200)) - cut + LEVELS[level].extraWeeks),
     post: format.weeks.post,
   };
 }
 
-export function productionCost(format: Format, crew: CrewCard, renewal: boolean): number {
-  const raw = format.costPerEpisode * format.episodes * (1 - crew.skills.production / 500) * (renewal ? 0.9 : 1);
+export function productionCost(format: Format, crew: CrewCard, renewal: boolean, level: ProductionLevel = 'basic'): number {
+  const raw = format.costPerEpisode * format.episodes * (1 - crew.skills.production / 500) * (renewal ? 0.9 : 1) * LEVELS[level].costMult;
   return Math.round(raw * 10) / 10;
 }
 
@@ -146,21 +204,61 @@ export function findPerson<K extends Person['kind']>(state: GameState, id: strin
   return p as Extract<Person, { kind: K }>;
 }
 
+/** Team with studio upgrades applied to every member. */
+function boosted(state: GameState, team: Team): Team {
+  const main = withFacilities(state, team.writer, team.crew, team.talent);
+  const specialists: Partial<Record<Area, CrewCard>> = {};
+  for (const [a, c] of Object.entries(team.specialists) as [Area, CrewCard][]) {
+    specialists[a] = withFacilities(state, team.writer, c, team.talent).crew;
+  }
+  return {
+    writer: main.writer, crew: main.crew, talent: main.talent, specialists,
+    writer2: team.writer2 ? withFacilities(state, team.writer2, team.crew, team.talent).writer : null,
+  };
+}
+
+export function teamOf(state: GameState, t: Pick<Project, 'writerId' | 'crewId' | 'talentId'> & { writer2Id?: string | null; specialists?: Partial<Record<Area, string>> }): Team {
+  const specialists: Partial<Record<Area, CrewCard>> = {};
+  for (const [a, id] of Object.entries(t.specialists ?? {}) as [Area, string][]) if (id) specialists[a] = findPerson(state, id, 'crew');
+  return {
+    writer: findPerson(state, t.writerId, 'writer'),
+    writer2: t.writer2Id ? findPerson(state, t.writer2Id, 'writer') : null,
+    crew: findPerson(state, t.crewId, 'crew'),
+    specialists,
+    talent: findPerson(state, t.talentId, 'talent'),
+  };
+}
+
 /** Validate a plan and return everything needed to start it. */
 export function previewPlan(state: GameState, plan: ShowPlan) {
   const format = formatById(plan.formatId);
   const topic = topicById(plan.topicId);
+  const level: ProductionLevel = plan.level ?? 'basic';
+  const L = LEVELS[level];
+  if (level === 'advanced' && state.tier === 'local') throw new GameError('Advanced productions need a State network.');
   if (!format || !state.formats.includes(plan.formatId)) throw new GameError('You do not own that format card.');
   if (!topic || !state.topics.includes(plan.topicId)) throw new GameError('You do not own that topic card.');
   if (!topic.fits[plan.formatId]) throw new GameError(`${topic.name} does not work as ${format.name}.`);
-  const writer = findPerson(state, plan.writerId, 'writer');
-  const crew = findPerson(state, plan.crewId, 'crew');
-  const talent = findPerson(state, plan.talentId, 'talent');
-  for (const p of [writer, crew, talent]) if (!p.house && p.uses <= 0) throw new GameError(`${p.name} has no uses left.`);
+  const topic2Id = level === 'advanced' ? plan.topic2Id ?? null : null;
+  if (topic2Id) {
+    const t2 = topicById(topic2Id);
+    if (!t2 || !state.topics.includes(topic2Id) || topic2Id === plan.topicId) throw new GameError('Pick a different second topic you own.');
+    if (!t2.fits[plan.formatId]) throw new GameError(`${t2.name} does not work as ${format.name}.`);
+  }
+  const team = teamOf(state, {
+    ...plan,
+    writer2Id: level === 'advanced' ? plan.writer2Id ?? null : null,
+    specialists: level === 'advanced' ? plan.specialists ?? {} : {},
+  });
+  if (team.writer2 && team.writer2.id === team.writer.id) throw new GameError('Pick two different writers.');
+  const crewIds = [team.crew.id, ...Object.values(team.specialists).map((c) => c.id)];
+  if (new Set(crewIds).size !== crewIds.length) throw new GameError('Each crew card can only fill one role.');
+  const people = teamPeople(team);
+  for (const p of people) if (!p.house && p.uses <= 0) throw new GameError(`${p.name} has no uses left.`);
   const total = AREAS.reduce((s, a) => s + (plan.points[a] ?? 0), 0);
-  if (total !== FOCUS_POINTS) throw new GameError(`Spend exactly ${FOCUS_POINTS} focus points.`);
-  if (AREAS.some((a) => plan.points[a] < 0 || plan.points[a] > MAX_POINTS_PER_AREA)) {
-    throw new GameError(`Max ${MAX_POINTS_PER_AREA} points per area.`);
+  if (total !== L.points) throw new GameError(`Spend exactly ${L.points} focus points.`);
+  if (AREAS.some((a) => plan.points[a] < 0 || plan.points[a] > L.maxPerArea)) {
+    throw new GameError(`Max ${L.maxPerArea} points per area.`);
   }
   const renewal = !!plan.showId;
   if (renewal) {
@@ -171,20 +269,19 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
   }
   if (plan.twist && !(state.twists[plan.topicId] > 0)) throw new GameError('No Twist token for this topic.');
   const time = plan.scriptTime ?? 'standard';
-  const cost = productionCost(format, crew, renewal);
-  const durations = stageDurations(format, writer, crew, renewal, time);
-  const eff = withFacilities(state, writer, crew, talent);
-  const breakdown = computeScores(plan.formatId, plan.topicId, eff.writer, eff.crew, eff.talent, plan.points, undefined, time);
-  breakdown.teamBonus = teamBonus([writer, crew, talent]);
-  return { format, topic, writer, crew, talent, cost, durations, breakdown, renewal };
+  const cost = productionCost(format, team.crew, renewal, level);
+  const durations = stageDurations(format, team, renewal, time, level);
+  const breakdown = computeTeamScores(plan.formatId, [plan.topicId, topic2Id], boosted(state, team), plan.points, level, undefined, time);
+  breakdown.teamBonus = teamBonus(people);
+  return { format, topic, team, people, writer: team.writer, crew: team.crew, talent: team.talent, cost, durations, breakdown, renewal, level, topic2Id };
 }
 
 export function startProject(state: GameState, plan: ShowPlan): void {
-  const { cost, durations, writer, crew, talent, renewal } = previewPlan(state, plan);
+  const { cost, durations, team, people, renewal, level, topic2Id } = previewPlan(state, plan);
   if (state.cash < cost) throw new GameError('Not enough cash for this production.');
   const show = renewal ? state.shows.find((s) => s.id === plan.showId)! : null;
   state.cash = Math.round((state.cash - cost) * 10) / 10;
-  for (const p of [writer, crew, talent]) if (!p.house) p.uses -= 1;
+  for (const p of people) if (!p.house) p.uses -= 1;
   if (plan.twist) state.twists[plan.topicId] -= 1;
   const project: Project = {
     id: newId(state, 'pr'),
@@ -196,9 +293,13 @@ export function startProject(state: GameState, plan: ShowPlan): void {
     stage: 'script',
     weeksLeft: durations.script,
     durations,
-    writerId: writer.id,
-    crewId: crew.id,
-    talentId: talent.id,
+    writerId: team.writer.id,
+    crewId: team.crew.id,
+    talentId: team.talent.id,
+    level,
+    writer2Id: team.writer2?.id ?? null,
+    specialists: Object.fromEntries(Object.entries(team.specialists).map(([a, c]) => [a, c.id])),
+    topic2Id,
     points: { ...plan.points },
     cost,
     twist: !!plan.twist,
@@ -211,11 +312,12 @@ export function startProject(state: GameState, plan: ShowPlan): void {
   state.projects.push(project);
 }
 
-export const STAGE_ROLES: Record<Stage, ('writerId' | 'crewId' | 'talentId')[]> = {
-  script: ['writerId'],
-  production: ['crewId', 'talentId'],
-  post: ['crewId'],
-};
+/** Who works each stage. */
+export function stagePeople(p: Project, stage: Stage): string[] {
+  if (stage === 'script') return [p.writerId, p.writer2Id].filter((x): x is string => !!x);
+  if (stage === 'production') return [p.crewId, ...Object.values(p.specialists ?? {}), p.talentId].filter((x): x is string => !!x);
+  return [p.crewId];
+}
 
 export const STAGE_LABEL: Record<Stage, string> = { script: 'Script', production: 'Production', post: 'Post-production' };
 const NEXT_STAGE: Record<Stage, Stage | null> = { script: 'production', production: 'post', post: null };
@@ -227,7 +329,7 @@ export function advanceProjects(state: GameState): { finished: Show[]; scripts: 
   const finished: Show[] = [];
   const scripts: Project[] = [];
   for (const project of [...state.projects]) {
-    const roles = STAGE_ROLES[project.stage].map((r) => project[r]);
+    const roles = stagePeople(project, project.stage);
     const busy = roles.find((id) => working.has(id));
     if (busy) {
       project.waitingOn = state.people.find((p) => p.id === busy)?.name ?? 'someone';
@@ -240,8 +342,8 @@ export function advanceProjects(state: GameState): { finished: Show[]; scripts: 
     if (project.stage === 'script') {
       // The script is done: skill, writing time and a bit of luck.
       const t = project;
-      const eff = withFacilities(state, findPerson(state, t.writerId, 'writer'), findPerson(state, t.crewId, 'crew'), findPerson(state, t.talentId, 'talent'));
-      const base = scriptBase(t.formatId, t.topicId, eff.writer, t.scriptTime) + t.scriptBonus;
+      const team = boosted(state, teamOf(state, t));
+      const base = scriptBase(t.formatId, [t.topicId, t.topic2Id], team.writer, t.scriptTime, team.writer2) + t.scriptBonus;
       const score = clamp(Math.round(base + randInt(state, -8, 8)), 1, 100);
       project.script = { score, stars: scriptStars(score) };
       scripts.push(project);
@@ -259,15 +361,16 @@ export function advanceProjects(state: GameState): { finished: Show[]; scripts: 
 
 function finishProject(state: GameState, project: Project): Show {
   state.projects = state.projects.filter((p) => p.id !== project.id);
-  const writer = findPerson(state, project.writerId, 'writer');
-  const crew = findPerson(state, project.crewId, 'crew');
-  const talent = findPerson(state, project.talentId, 'talent');
+  const team = teamOf(state, project);
+  const talent = team.talent;
   const format = formatById(project.formatId);
-  const eff = withFacilities(state, writer, crew, talent);
-  const result = computeScores(project.formatId, project.topicId, eff.writer, eff.crew, eff.talent, project.points, project.script?.score, project.scriptTime);
+  const result = computeTeamScores(
+    project.formatId, [project.topicId, project.topic2Id], boosted(state, team), project.points, project.level ?? 'basic',
+    project.script?.score, project.scriptTime,
+  );
   // A little production luck.
   const quality = clamp(result.quality + randInt(state, -3, 3), 1, 99);
-  [writer, crew, talent].forEach((p) => grantXp(state, p));
+  teamPeople(team).forEach((p) => grantXp(state, p));
   if (!state.knownFormats.includes(project.formatId)) state.knownFormats.push(project.formatId);
 
   let show = project.showId ? state.shows.find((s) => s.id === project.showId) : undefined;
@@ -281,6 +384,8 @@ function finishProject(state: GameState, project: Project): Show {
       name: project.name,
       formatId: project.formatId,
       topicId: project.topicId,
+      topic2Id: project.topic2Id ?? null,
+      level: project.level ?? 'basic',
       season: 1,
       scores: result.scores,
       quality,
@@ -316,6 +421,7 @@ function finishProject(state: GameState, project: Project): Show {
     episodesTotal: format.episodes,
     episodesLeft: format.episodes,
     premiered: false,
+    level: project.level ?? 'basic',
     hype: Math.min(100, show.hype + project.hype),
     reviews: null,
     premieredAt: null,

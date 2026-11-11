@@ -25,6 +25,8 @@ export interface Format {
   fit: Record<Daypart, number>;
   /** Extra multiplier when airing on the weekend. */
   weekendFit: number;
+  /** Packs only offer this format from this tier up. */
+  tier?: 'state';
 }
 
 const f = (x: Format) => x;
@@ -37,7 +39,7 @@ export const FORMATS: Format[] = [
     weights: { script: 0.2, technical: 0.35, art: 0.1, screen: 0.35 },
     ideal: { direction: 2, sound: 3, image: 3, fx: 0, music: 1, art: 1 },
     weeks: { script: 1, production: 2, post: 1 }, episodes: 13, costPerEpisode: 1.4, decay: 1.6,
-    fit: { morning: 1.15, evening: 1.15, prime: 0.85 }, weekendFit: 0.9,
+    fit: { morning: 1.15, afternoon: 1.0, evening: 1.15, prime: 0.85, late: 1.0 }, weekendFit: 0.9,
   }),
   f({
     id: 'talk', name: 'Talk Show', icon: '🎙️', color: '#e0753a',
@@ -46,7 +48,7 @@ export const FORMATS: Format[] = [
     weights: { script: 0.25, technical: 0.15, art: 0.15, screen: 0.45 },
     ideal: { direction: 3, sound: 3, image: 2, fx: 0, music: 1, art: 1 },
     weeks: { script: 1, production: 2, post: 1 }, episodes: 13, costPerEpisode: 1.6, decay: 2.2,
-    fit: { morning: 1.15, evening: 1.0, prime: 0.85 }, weekendFit: 0.95,
+    fit: { morning: 1.15, afternoon: 1.1, evening: 1.0, prime: 0.85, late: 1.15 }, weekendFit: 0.95,
   }),
   f({
     id: 'contest', name: 'Contest', icon: '🏆', color: '#d9a400',
@@ -55,7 +57,7 @@ export const FORMATS: Format[] = [
     weights: { script: 0.2, technical: 0.3, art: 0.2, screen: 0.3 },
     ideal: { direction: 0, sound: 3, image: 2, fx: 0, music: 2, art: 3 },
     weeks: { script: 2, production: 2, post: 1 }, episodes: 13, costPerEpisode: 2.4, decay: 2.6,
-    fit: { morning: 0.85, evening: 1.15, prime: 1.1 }, weekendFit: 1.05,
+    fit: { morning: 0.85, afternoon: 1.1, evening: 1.15, prime: 1.1, late: 0.85 }, weekendFit: 1.05,
   }),
   f({
     id: 'reality', name: 'Reality', icon: '🏝️', color: '#1fa37a',
@@ -64,7 +66,7 @@ export const FORMATS: Format[] = [
     weights: { script: 0.15, technical: 0.25, art: 0.2, screen: 0.4 },
     ideal: { direction: 3, sound: 2, image: 3, fx: 0, music: 1, art: 1 },
     weeks: { script: 1, production: 3, post: 2 }, episodes: 13, costPerEpisode: 2.8, decay: 3.2,
-    fit: { morning: 0.8, evening: 1.0, prime: 1.15 }, weekendFit: 1.0,
+    fit: { morning: 0.8, afternoon: 0.9, evening: 1.0, prime: 1.15, late: 1.0 }, weekendFit: 1.0,
   }),
   f({
     id: 'magazine', name: 'Magazine', icon: '📺', color: '#8a5cd6',
@@ -73,7 +75,7 @@ export const FORMATS: Format[] = [
     weights: { script: 0.3, technical: 0.25, art: 0.25, screen: 0.2 },
     ideal: { direction: 2, sound: 2, image: 3, fx: 0, music: 1, art: 2 },
     weeks: { script: 1, production: 2, post: 1 }, episodes: 13, costPerEpisode: 1.6, decay: 2.0,
-    fit: { morning: 1.15, evening: 1.05, prime: 0.85 }, weekendFit: 1.1,
+    fit: { morning: 1.15, afternoon: 1.15, evening: 1.05, prime: 0.85, late: 0.8 }, weekendFit: 1.1,
   }),
   f({
     id: 'documentary', name: 'Documentary', icon: '🎞️', color: '#4f7f8f',
@@ -82,7 +84,7 @@ export const FORMATS: Format[] = [
     weights: { script: 0.4, technical: 0.3, art: 0.25, screen: 0.05 },
     ideal: { direction: 3, sound: 1, image: 4, fx: 0, music: 2, art: 0 },
     weeks: { script: 2, production: 3, post: 2 }, episodes: 13, costPerEpisode: 3.0, decay: 3.0,
-    fit: { morning: 0.85, evening: 1.1, prime: 1.0 }, weekendFit: 1.15,
+    fit: { morning: 0.85, afternoon: 1.0, evening: 1.1, prime: 1.0, late: 0.95 }, weekendFit: 1.15,
   }),
   f({
     id: 'series', name: 'Series', icon: '🎭', color: '#c2354f',
@@ -91,7 +93,7 @@ export const FORMATS: Format[] = [
     weights: { script: 0.4, technical: 0.15, art: 0.25, screen: 0.2 },
     ideal: { direction: 3, sound: 1, image: 2, fx: 0, music: 2, art: 2 },
     weeks: { script: 3, production: 3, post: 2 }, episodes: 13, costPerEpisode: 4.0, decay: 2.8,
-    fit: { morning: 0.75, evening: 1.0, prime: 1.15 }, weekendFit: 0.95,
+    fit: { morning: 0.75, afternoon: 0.8, evening: 1.0, prime: 1.15, late: 1.0 }, weekendFit: 0.95,
   }),
   f({
     id: 'sitcom', name: 'Sitcom', icon: '😂', color: '#f0508c',
@@ -100,7 +102,7 @@ export const FORMATS: Format[] = [
     weights: { script: 0.45, technical: 0.1, art: 0.15, screen: 0.3 },
     ideal: { direction: 4, sound: 3, image: 1, fx: 0, music: 1, art: 1 },
     weeks: { script: 2, production: 3, post: 1 }, episodes: 13, costPerEpisode: 3.2, decay: 2.2,
-    fit: { morning: 0.85, evening: 1.15, prime: 1.05 }, weekendFit: 1.0,
+    fit: { morning: 0.85, afternoon: 1.0, evening: 1.15, prime: 1.05, late: 1.1 }, weekendFit: 1.0,
   }),
   f({
     id: 'movie', name: 'TV Movie', icon: '🎬', color: '#5a4fcf',
@@ -109,7 +111,25 @@ export const FORMATS: Format[] = [
     weights: { script: 0.35, technical: 0.2, art: 0.25, screen: 0.2 },
     ideal: { direction: 3, sound: 1, image: 2, fx: 1, music: 2, art: 1 },
     weeks: { script: 2, production: 2, post: 2 }, episodes: 1, costPerEpisode: 22, decay: 18,
-    fit: { morning: 0.7, evening: 1.0, prime: 1.15 }, weekendFit: 1.15,
+    fit: { morning: 0.7, afternoon: 0.9, evening: 1.0, prime: 1.15, late: 1.1 }, weekendFit: 1.15,
+  }),
+  f({
+    id: 'animation', name: 'Animation', icon: '🎨', color: '#ff9f1c', tier: 'state',
+    blurb: 'Cartoons for kids and grown-ups. Art and FX heavy, ages slowly.',
+    genre: 'comedy', screenSkill: 'acting',
+    weights: { script: 0.35, technical: 0.2, art: 0.35, screen: 0.1 },
+    ideal: { direction: 2, sound: 2, image: 0, fx: 3, music: 1, art: 2 },
+    weeks: { script: 2, production: 4, post: 2 }, episodes: 13, costPerEpisode: 4.5, decay: 1.8,
+    fit: { morning: 1.15, afternoon: 1.15, evening: 1.0, prime: 0.95, late: 1.05 }, weekendFit: 1.15,
+  }),
+  f({
+    id: 'late-show', name: 'Late Show', icon: '🌃', color: '#3d3b8e', tier: 'state',
+    blurb: 'Monologue, band, celebrity couch. Lives in late night.',
+    genre: 'comedy', screenSkill: 'hosting',
+    weights: { script: 0.35, technical: 0.15, art: 0.15, screen: 0.35 },
+    ideal: { direction: 3, sound: 3, image: 1, fx: 0, music: 2, art: 1 },
+    weeks: { script: 1, production: 2, post: 1 }, episodes: 13, costPerEpisode: 2.6, decay: 2.0,
+    fit: { morning: 0.6, afternoon: 0.7, evening: 0.85, prime: 0.95, late: 1.2 }, weekendFit: 0.9,
   }),
 ];
 
@@ -121,7 +141,7 @@ export const SPORTS_FORMAT: Format = f({
   weights: { script: 0, technical: 0.45, art: 0.15, screen: 0.4 },
   ideal: { direction: 3, sound: 3, image: 4, fx: 0, music: 0, art: 0 },
   weeks: { script: 0, production: 0, post: 0 }, episodes: 1, costPerEpisode: 0, decay: 0,
-  fit: { morning: 0.8, evening: 1.15, prime: 1.15 }, weekendFit: 1.1,
+  fit: { morning: 0.8, afternoon: 1.1, evening: 1.15, prime: 1.15, late: 0.9 }, weekendFit: 1.1,
 });
 
 export const FORMAT_BY_ID: Record<string, Format> = Object.fromEntries([...FORMATS, SPORTS_FORMAT].map((x) => [x.id, x]));

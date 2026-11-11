@@ -1,5 +1,5 @@
 import {
-  SLOTS, dateLabel, isSweeps, periodOf, upcomingMarkers, slotLabel, type GameState,
+  STATE_LICENSE, TIERS, dateLabel, isSweeps, periodOf, slotsOf, stateLicenseGaps, upcomingMarkers, slotLabel, type GameState,
 } from '../../engine';
 import { money, signedMoney } from '../util';
 
@@ -8,8 +8,9 @@ const PERIOD_EMOJI = { winter: '❄️', spring: '🌷', summer: '☀️', fall:
 export interface Todo { emoji: string; title: string; detail: string; onClick: () => void }
 
 export function WeekScreen({
-  state, todos, onNewGame,
-}: { state: GameState; todos: Todo[]; onNewGame: () => void }) {
+  state, todos, onNewGame, onExpand,
+}: { state: GameState; todos: Todo[]; onNewGame: () => void; onExpand: () => void }) {
+  const SLOTS = slotsOf(state);
   const period = periodOf(state.week);
   const last = state.lastResult;
   const onAir = SLOTS.filter((s) => state.schedule[s]).length;
@@ -106,12 +107,28 @@ export function WeekScreen({
           ))}</div>}
       </section>
 
-      <section className="panel">
-        <div className="section-title"><h2>🎯 Goal: State network</h2></div>
-        <p className="small muted">Grow from local station to a state network: more slots, afternoon and late night, bigger audiences. Coming in a later update — build reputation now.</p>
-        <div className="bar" style={{ marginTop: 10 }}><i style={{ width: `${Math.min(100, (state.reputation / 60) * 100)}%`, background: 'var(--accent)' }} /></div>
-        <p className="tiny muted" style={{ marginTop: 4 }}>Reputation {state.reputation.toFixed(0)} / 60</p>
-      </section>
+      {state.tier === 'local' ? (
+        <section className="panel stack-sm">
+          <div className="section-title"><h2>🎯 Goal: State network</h2></div>
+          <p className="small muted">A State license brings 15 slots (afternoon and late night too), {TIERS.state.households / 1000}M households, Advanced productions with specialists and 2 topics, State rights and new formats. Running costs rise to ${TIERS.state.overhead}K/week.</p>
+          <div className="req">
+            <span>Reputation {Math.floor(state.reputation)} / {STATE_LICENSE.reputation}</span>
+            <span>{state.reputation >= STATE_LICENSE.reputation ? '✅' : '⏳'}</span>
+            <span className="bar" style={{ gridColumn: '1 / -1' }}><i style={{ width: `${Math.min(100, (state.reputation / STATE_LICENSE.reputation) * 100)}%`, background: 'var(--accent)' }} /></span>
+            <span>Cash ${Math.floor(state.cash)}K / ${STATE_LICENSE.cash}K</span>
+            <span>{state.cash >= STATE_LICENSE.cash ? '✅' : '⏳'}</span>
+            <span className="bar" style={{ gridColumn: '1 / -1' }}><i style={{ width: `${Math.max(0, Math.min(100, (state.cash / STATE_LICENSE.cash) * 100))}%`, background: 'var(--good)' }} /></span>
+          </div>
+          <button className="btn primary" disabled={stateLicenseGaps(state).length > 0} onClick={onExpand}>
+            Buy State license · ${STATE_LICENSE.fee}K
+          </button>
+        </section>
+      ) : (
+        <section className="panel">
+          <div className="section-title"><h2>🎯 Goal: National network</h2></div>
+          <p className="small muted">You are a State network. Win State Awards, grow reputation and cash — the national tier comes in a later update.</p>
+        </section>
+      )}
 
       <section className="panel">
         <div className="section-title"><h2>📰 The Chronicle</h2></div>

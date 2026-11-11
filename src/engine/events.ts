@@ -3,8 +3,9 @@ import { pick, random, weighted } from './rng';
 import { newId, overall } from './people';
 import { NETWORK_CARDS } from './data/network';
 import { GameError } from './errors';
+import { projectPeople } from './production';
 import { makeRivalShow } from './rivals';
-import { SLOTS } from './schedule';
+import { slotsOf } from './schedule';
 
 /** Chance of an event in a week once the cooldown is over. Kept low on purpose. */
 export const EVENT_CHANCE = 0.3;
@@ -21,8 +22,8 @@ interface EventDef {
 }
 
 const onAir = (s: GameState): Show[] =>
-  SLOTS.map((slot) => s.shows.find((x) => x.id === s.schedule[slot])).filter((x): x is Show => !!x && x.premiered);
-const booked = (s: GameState, id: string) => s.projects.some((p) => [p.writerId, p.crewId, p.talentId].includes(id));
+  slotsOf(s).map((slot) => s.shows.find((x) => x.id === s.schedule[slot])).filter((x): x is Show => !!x && x.premiered);
+const booked = (s: GameState, id: string) => s.projects.some((p) => projectPeople(p).includes(id));
 const packPeople = (s: GameState) => s.people.filter((p) => !p.house && p.uses > 0);
 const person = (s: GameState, id: string) => s.people.find((p) => p.id === id) as Person;
 const show = (s: GameState, id: string) => s.shows.find((x) => x.id === id) as Show;
@@ -216,7 +217,7 @@ const EVENTS: EventDef[] = [
       const sh = show(s, ev.targetId!);
       const rival = s.rivals[0];
       if (rival) {
-        const slot = pick(s, SLOTS);
+        const slot = pick(s, slotsOf(s));
         const copy = makeRivalShow(s, slot, rival);
         rival.schedule[slot] = { ...copy, formatId: sh.formatId, topicId: sh.topicId, name: `${sh.name.split(' ')[0]} Too`, novelty: 100 };
       }

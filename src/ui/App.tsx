@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   CITY, GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, clearSave, createShow,
   dateLabel, dismissFinished, dismissReveal, loadGame, newGame, openPack, saveGame, scheduleShow, useBusinessCard,
-  rightsById, answerEvent, dismissCeremony, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
+  rightsById, answerEvent, dismissCeremony, dismissMilestone, expandToState, projectPeople, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
   type GameState, type ShowPlan,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
@@ -12,6 +12,7 @@ import { FinishedReveal } from './components/FinishedReveal';
 import { EventModal } from './components/EventModal';
 import { CeremonyModal } from './components/CeremonyModal';
 import { TargetPicker } from './components/TargetPicker';
+import { Sheet } from './components/Sheet';
 import { WeekScreen, type Todo } from './screens/WeekScreen';
 import { ScheduleScreen } from './screens/ScheduleScreen';
 import { StudioScreen } from './screens/StudioScreen';
@@ -120,7 +121,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
       onClick: () => run((s) => openPack(s, pack.id)),
     });
   }
-  const booked = (id: string) => state.projects.some((pr) => [pr.writerId, pr.crewId, pr.talentId].includes(id));
+  const booked = (id: string) => state.projects.some((pr) => projectPeople(pr).includes(id));
   const freeKinds = new Set(state.people.filter((p) => (p.house || p.uses > 0) && !booked(p.id)).map((p) => p.kind));
   if (state.formats.length > 0 && freeKinds.size === 3) {
     todos.push({
@@ -173,7 +174,10 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
       </header>
 
       <main className="main">
-        {tab === 'week' && <WeekScreen state={state} todos={todos} onNewGame={newGameConfirm} />}
+        {tab === 'week' && (
+          <WeekScreen state={state} todos={todos} onNewGame={newGameConfirm}
+            onExpand={() => { if (confirm('Buy the State license? Running costs rise a lot, but so does the audience.')) run(expandToState); }} />
+        )}
         {tab === 'schedule' && (
           <ScheduleScreen state={state}
             onSchedule={(slot, id) => run((s) => scheduleShow(s, slot, id))}
@@ -240,6 +244,23 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
       )}
       {!state.reveal && !showResults && !state.ceremony && !state.pendingEvent && finishedShows.length > 0 && (
         <FinishedReveal shows={finishedShows} state={state} onClose={() => { run(dismissFinished); setTab('schedule'); }} />
+      )}
+      {state.milestone === 'state' && !state.reveal && !showResults && (
+        <Sheet title="Welcome to the State! 🎉" onClose={() => run(dismissMilestone)}
+          footer={<button className="btn primary" onClick={() => { run(dismissMilestone); setTab('schedule'); }}>See the new schedule</button>}>
+          <div className="milestone">
+            <div className="big">📡</div>
+            <p><b>{state.stationName}</b> now broadcasts across the state.</p>
+            <div className="panel stack-sm small" style={{ textAlign: 'left' }}>
+              <div>📺 <b>15 slots:</b> Mon–Wed, Thu–Fri and Weekend, with Afternoon and Late Night.</div>
+              <div>👥 <b>{TIERS.state.households / 1000}M households</b> — and ${TIERS.state.overhead}K/week running costs.</div>
+              <div>🎛️ <b>Advanced productions:</b> 2 writers, specialists per area, 15 focus points, 2 topics.</div>
+              <div>🃏 New formats in packs: <b>Animation</b> and <b>Late Show</b>.</div>
+              <div>📜 State rights at the Rights Market.</div>
+              <div>⚔️ New rivals: <b>{state.rivals.map((r) => r.short).join(' and ')}</b>.</div>
+            </div>
+          </div>
+        </Sheet>
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>

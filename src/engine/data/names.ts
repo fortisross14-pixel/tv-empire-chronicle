@@ -31,18 +31,22 @@ export interface RivalDef {
   /** Extra bid multiplier for sports rights. */
   sportsLove: number;
   /** Formats it likes per daypart. */
-  formats: Record<'morning' | 'evening' | 'prime', string[]>;
+  formats: Record<'morning' | 'afternoon' | 'evening' | 'prime' | 'late', string[]>;
   /** Week of year 1 it goes on air (0 = from the start). */
   launchWeek: number;
+  /** Which tier of competition it belongs to. */
+  tier: 'local' | 'state';
 }
 
 export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'kpel', name: 'KPEL Pelican 5', short: 'KPEL 5', color: '#e04f4f',
     blurb: 'The old local giant. News at six, sports, and it hates losing a slot.',
-    quality: [30, 52], aggression: 0.6, appetite: 1, sportsLove: 1.15, launchWeek: 0,
+    quality: [30, 52], aggression: 0.6, appetite: 1, sportsLove: 1.15, launchWeek: 0, tier: 'local',
     formats: {
       morning: ['news', 'talk', 'magazine'],
+      afternoon: ['talk', 'magazine', 'contest'],
+      late: ['talk', 'movie', 'sitcom'],
       evening: ['news', 'contest', 'sitcom', 'magazine'],
       prime: ['series', 'reality', 'contest', 'movie', 'sitcom', 'documentary'],
     },
@@ -50,11 +54,37 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'wave', name: 'WAVE 12 Harbor', short: 'WAVE 12', color: '#2fa3c4',
     blurb: 'A cheeky new channel for young viewers. Reality, contests and comedy, on a budget.',
-    quality: [26, 48], aggression: 0.35, appetite: 0.6, sportsLove: 0.8, launchWeek: 36,
+    quality: [26, 48], aggression: 0.35, appetite: 0.6, sportsLove: 0.8, launchWeek: 36, tier: 'local',
     formats: {
       morning: ['talk', 'magazine'],
+      afternoon: ['contest', 'reality'],
+      late: ['sitcom', 'talk'],
       evening: ['contest', 'sitcom', 'reality'],
       prime: ['reality', 'contest', 'sitcom'],
+    },
+  },
+  {
+    id: 'capital', name: 'Capital 7 Network', short: 'Capital 7', color: '#c9302c',
+    blurb: 'The state capital\'s flagship network. Polished news, big dramas, deep pockets.',
+    quality: [44, 66], aggression: 0.55, appetite: 1.2, sportsLove: 1.2, launchWeek: 0, tier: 'state',
+    formats: {
+      morning: ['news', 'talk', 'magazine'],
+      afternoon: ['talk', 'magazine', 'contest'],
+      evening: ['news', 'contest', 'sitcom'],
+      prime: ['series', 'reality', 'movie', 'documentary'],
+      late: ['talk', 'movie'],
+    },
+  },
+  {
+    id: 'statenet', name: 'StateNet', short: 'StateNet', color: '#7b4fd6',
+    blurb: 'A scrappy statewide upstart. Reality, sitcoms and anything cheap that rates.',
+    quality: [40, 62], aggression: 0.45, appetite: 0.9, sportsLove: 0.9, launchWeek: 0, tier: 'state',
+    formats: {
+      morning: ['talk', 'magazine'],
+      afternoon: ['contest', 'reality', 'talk'],
+      evening: ['contest', 'sitcom', 'reality'],
+      prime: ['reality', 'contest', 'sitcom', 'series'],
+      late: ['sitcom', 'talk', 'movie'],
     },
   },
 ];
@@ -70,4 +100,6 @@ export const TITLE_TEMPLATES: Record<string, string[]> = {
   series: ['{w} Hearts', '{w} of {c}', 'Game of {w}s', 'The {w}', '{w} Nights'],
   sitcom: ['Everybody Loves {w}', 'How I Met Your {w}', '{w} & Friends', 'The {w} Bunch', 'Two and a Half {w}s'],
   movie: ['{w} Rising', 'Return of the {w}', 'A {w} Christmas', '{w}: The Movie', 'Last {w} Standing'],
+  animation: ['The {w}s', '{w} Toons', 'Adventures of {w}', 'Super {w}', '{w} Town'],
+  'late-show': ['Late Night with {h}', 'The {h} Late Show', 'Tonight in {c}', 'After Dark with {h}', 'The Late {w}'],
 };

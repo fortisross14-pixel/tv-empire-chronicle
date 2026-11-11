@@ -1,10 +1,10 @@
-import type { GameState } from '../../engine';
+import { projectPeople, type GameState } from '../../engine';
 import { PersonCard, ProjectCard } from '../components/Cards';
 
 export function StudioScreen({
   state, onNewShow, onCancelProject,
 }: { state: GameState; onNewShow: () => void; onCancelProject: (id: string) => void }) {
-  const booked = (id: string) => state.projects.find((pr) => [pr.writerId, pr.crewId, pr.talentId].includes(id));
+  const booked = (id: string) => state.projects.find((pr) => projectPeople(pr).includes(id));
   const free = state.people.filter((p) => (p.house || p.uses > 0) && !booked(p.id));
   return (
     <>

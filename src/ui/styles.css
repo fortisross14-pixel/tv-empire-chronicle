@@ -253,6 +253,13 @@ button.card:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(
   display: grid; gap: 6px; align-content: start; text-align: left; border: 2px solid transparent; position: relative; overflow: hidden;
 }
 .slot:hover { border-color: var(--line); }
+.sched.cols-3 { gap: 6px; }
+.sched.cols-3 .slot { padding: 8px 7px; min-height: 100px; }
+.sched.cols-3 .slot-show { font-size: 13px; }
+.sched.cols-3 .slot-vs, .sched.cols-3 .slot-part { font-size: 10px; }
+.milestone { text-align: center; display: grid; gap: 12px; }
+.milestone .big { font-size: 64px; animation: pop 0.6s both; }
+.req { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; font-size: 13px; }
 .slot-part { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; display: flex; justify-content: space-between; }
 .slot-show { font-family: var(--display); font-weight: 600; font-size: 15px; line-height: 1.15; }
 .slot.filler { background: repeating-linear-gradient(135deg, #fbf8f2, #fbf8f2 10px, #f4eee2 10px, #f4eee2 20px); box-shadow: none; border: 2px dashed var(--line); }

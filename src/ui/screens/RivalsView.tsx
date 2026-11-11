@@ -1,5 +1,5 @@
 import {
-  DAYPARTS, DAYPART_ICON, DAYPART_LABEL, DAY_BLOCKS, DAY_BLOCK_LABEL, formatById, grade, rightsById,
+  DAYPART_ICON, DAYPART_LABEL, DAY_BLOCK_LABEL, TIERS, formatById, grade, rightsById,
   type GameState, type SlotId,
 } from '../../engine';
 import { rivalDef } from '../../engine/rivals';
@@ -49,9 +49,9 @@ export function RivalsView({ state }: { state: GameState }) {
                 {rights.map((r) => <span key={r.defId} className="chip">{rightsById(r.defId).icon} {rightsById(r.defId).name}</span>)}
               </div>
             )}
-            <div className="sched">
-              {DAY_BLOCKS.map((b) => <div key={b} className="sched-head">{DAY_BLOCK_LABEL[b]}</div>)}
-              {DAYPARTS.flatMap((part) => DAY_BLOCKS.map((block) => {
+            <div className={cx('sched', TIERS[state.tier].blocks.length > 2 && 'cols-3')} style={{ gridTemplateColumns: `repeat(${TIERS[state.tier].blocks.length}, minmax(0, 1fr))` }}>
+              {TIERS[state.tier].blocks.map((b) => <div key={b} className="sched-head">{DAY_BLOCK_LABEL[b]}</div>)}
+              {TIERS[state.tier].dayparts.flatMap((part) => TIERS[state.tier].blocks.map((block) => {
                 const slot = `${block}-${part}` as SlotId;
                 const show = rival.schedule[slot];
                 const shares = rival.shares[slot] ?? [];

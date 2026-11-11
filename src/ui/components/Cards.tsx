@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import {
   CREW_SKILL_LABEL, GENRE_LABEL, KIND_LABEL, TALENT_SKILL_LABEL, AREA_LABEL, STAGE_LABEL,
-  formatById, topicById, keyAreas, grade, overall,
+  formatById, topicById, keyAreas, grade, overall, projectPeople,
   type Format, type Person, type Project, type Show, type Topic, type GameState, type Stage,
 } from '../../engine';
 import { cx, gradeClass, initials } from '../util';
@@ -174,7 +174,7 @@ export function ShowCard({
           <span className="show-icon">{format.icon}</span>
           <div style={{ minWidth: 0 }}>
             <div className="show-title">{show.name}</div>
-            <div className="show-meta">{format.name} · {topic.icon} {topic.name}{show.season > 1 && ` · S${show.season}`}</div>
+            <div className="show-meta">{format.name} · {topic.icon} {topic.name}{show.topic2Id && ` + ${topicById(show.topic2Id).icon} ${topicById(show.topic2Id).name}`}{show.season > 1 && ` · S${show.season}`}{show.level === 'advanced' && ' · Advanced'}</div>
           </div>
           <span className={cx('grade', gradeClass(g))} title={`Quality ${show.quality}`}>{g}</span>
         </div>
@@ -213,7 +213,7 @@ export function ProjectCard({ project, state, onCancel }: { project: Project; st
   const format = formatById(project.formatId);
   const topic = topicById(project.topicId);
   const idx = STAGES.indexOf(project.stage);
-  const team = [project.writerId, project.crewId, project.talentId]
+  const team = projectPeople(project)
     .map((id) => state.people.find((p) => p.id === id)).filter(Boolean) as Person[];
   const weeksLeft = project.weeksLeft + STAGES.slice(idx + 1).reduce((s, st) => s + project.durations[st], 0);
   return (
@@ -223,7 +223,7 @@ export function ProjectCard({ project, state, onCancel }: { project: Project; st
           <span style={{ fontSize: 26 }}>{format.icon}</span>
           <div>
             <div className="show-title">{project.name}{project.season > 1 && ` · S${project.season}`}</div>
-            <div className="show-meta">{format.name} · {topic.icon} {topic.name}{project.twist && ' · 🌀 Twist'}</div>
+            <div className="show-meta">{format.name} · {topic.icon} {topic.name}{project.topic2Id && ` + ${topicById(project.topic2Id).icon}`}{project.level === 'advanced' && ' · Advanced'}{project.twist && ' · 🌀 Twist'}</div>
           </div>
         </div>
         <span className="chip dark">{weeksLeft} wk{weeksLeft !== 1 && 's'}</span>

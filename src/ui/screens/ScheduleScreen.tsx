@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   DAYPARTS, DAYPART_ICON, DAYPART_LABEL, DAY_BLOCKS, DAY_BLOCK_LABEL, FILLER_NAME, fitStars, formatById, grade, slotLabel,
-  rightsById, inSeason, type GameState, type OwnedRights, type Show, type SlotId,
+  rightsById, inSeason, TIERS, tierSlot, type GameState, type OwnedRights, type Show, type SlotId,
 } from '../../engine';
 import { PersonCard, ShowCard, Stars } from '../components/Cards';
 import { RightsCard, seasonLabel } from '../components/RightsCard';
@@ -23,7 +23,8 @@ export function ScheduleScreen({
   const [view, setView] = useState<'ours' | 'rivals'>('ours');
   const showIn = (slot: SlotId) => state.shows.find((s) => s.id === state.schedule[slot]);
   const filmIn = (slot: SlotId) => state.rights.find((r) => r.id === state.schedule[slot]);
-  const sportsFor = (slot: SlotId) => state.rights.find((r) => rightsById(r.defId).slot === slot);
+  const sportsFor = (slot: SlotId) => state.rights.find((r) => tierSlot(rightsById(r.defId).slot!, state.tier) === slot);
+  const tier = TIERS[state.tier];
 
   return (
     <>
@@ -35,9 +36,9 @@ export function ScheduleScreen({
       {view === 'ours' && <>
       <section>
         <div className="section-title"><h2>Next week's schedule</h2><span className="sub">Tap a slot</span></div>
-        <div className="sched">
-          {DAY_BLOCKS.map((b) => <div key={b} className="sched-head">{DAY_BLOCK_LABEL[b]}</div>)}
-          {DAYPARTS.flatMap((part) => DAY_BLOCKS.map((block) => {
+        <div className={cx('sched', tier.blocks.length > 2 && 'cols-3')} style={{ gridTemplateColumns: `repeat(${tier.blocks.length}, minmax(0, 1fr))` }}>
+          {tier.blocks.map((b) => <div key={b} className="sched-head">{DAY_BLOCK_LABEL[b]}</div>)}
+          {tier.dayparts.flatMap((part) => tier.blocks.map((block) => {
             const slot = `${block}-${part}` as SlotId;
             const show = showIn(slot);
             const film = filmIn(slot);
@@ -74,7 +75,7 @@ export function ScheduleScreen({
           }))}
         </div>
         <p className="tiny muted" style={{ marginTop: 8 }}>
-          Weekday slots air 5 times a week, weekend slots twice. ★ shows how well a format suits the time slot. Sports games take over their slot in season.
+          {state.tier === 'local' ? 'Weekday slots air 5 times a week, weekend slots twice.' : 'Mon–Wed slots air 3 times a week, Thu–Fri and weekend slots twice.'} ★ shows how well a format suits the time slot. Sports games take over their slot in season.
         </p>
       </section>
 
@@ -144,7 +145,7 @@ function SlotPicker({
   const where = (id: string) => Object.entries(state.schedule).find(([, sid]) => sid === id)?.[0] as SlotId | undefined;
   const shows = [...state.shows].sort((a, b) => fitStars(b.formatId, block, part) - fitStars(a.formatId, block, part) || b.quality - a.quality);
   const films = state.rights.filter((x) => rightsById(x.defId).kind === 'film');
-  const sport = state.rights.find((x) => rightsById(x.defId).slot === slot);
+  const sport = state.rights.find((x) => tierSlot(rightsById(x.defId).slot!, state.tier) === slot);
   const note = (id: string) => {
     const other = where(id);
     if (other === slot) return '· already here';
