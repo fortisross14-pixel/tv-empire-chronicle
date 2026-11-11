@@ -1,7 +1,7 @@
 import type { PosterSpec } from '../../engine';
-import { EFFECTS, FRAMES, FRONTS, SCENES, type PosterAsset } from './assets.gen';
+import { EFFECTS, FRAMES, FRONTS, ICONS, SCENES, type PosterAsset } from './assets.gen';
 
-export { EFFECTS, FRAMES, FRONTS, SCENES };
+export { EFFECTS, FRAMES, FRONTS, ICONS, SCENES };
 
 /** Background colour or sky, drawn in CSS (no art needed). */
 export interface Sky { id: string; label: string; css: string; kind: 'plain' | 'gradient' | 'sky' }
@@ -28,6 +28,16 @@ export const SKIES: Sky[] = [
   { id: 'sky-space', label: 'Deep space', css: `${stars}, radial-gradient(ellipse at 30% 70%, rgba(160,80,255,.45), transparent 60%), #07061a`, kind: 'sky' },
 ];
 export const skyById = (id: string) => SKIES.find((s) => s.id === id) ?? SKIES[12];
+
+/** Where icons go: positions as [x%, y%, rotation°] for up to 8 icons. */
+export const ICON_LAYOUTS = {
+  scatter: { label: 'Scattered', spots: [[14, 22, -12], [86, 20, 10], [10, 70, 8], [90, 72, -10], [30, 86, 14], [70, 88, -6], [24, 46, 6], [76, 48, -14]] },
+  row: { label: 'Bottom row', spots: [[50, 84, 0], [36, 84, -6], [64, 84, 6], [22, 84, 8], [78, 84, -8], [10, 84, 0], [90, 84, 0], [50, 84, 0]] },
+  top: { label: 'Top row', spots: [[50, 16, 0], [36, 16, 6], [64, 16, -6], [22, 16, -8], [78, 16, 8], [10, 16, 0], [90, 16, 0], [50, 16, 0]] },
+  corners: { label: 'Corners', spots: [[12, 18, -12], [88, 18, 12], [12, 82, 10], [88, 82, -10], [50, 12, 0], [50, 88, 0], [8, 50, 0], [92, 50, 0]] },
+  ring: { label: 'Around', spots: [[50, 12, 0], [80, 24, 12], [90, 54, 0], [76, 84, -12], [50, 90, 0], [24, 84, 12], [10, 54, 0], [20, 24, -12]] },
+} as const;
+export type IconLayout = keyof typeof ICON_LAYOUTS;
 
 /** Title fonts (Google Fonts, loaded in index.html), by mood. */
 export const FONTS = [

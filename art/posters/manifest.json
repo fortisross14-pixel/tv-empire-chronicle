@@ -1,172 +1,724 @@
 {
-  "cell": { "sheetWidth": 1536, "sheetHeight": 1024, "cols": 4, "rows": 4, "outWidth": 384, "outHeight": 256 },
+  "cell": {
+    "sheetWidth": 1536,
+    "sheetHeight": 1024,
+    "cols": 4,
+    "rows": 4,
+    "outWidth": 384,
+    "outHeight": 256
+  },
   "sheets": [
     {
-      "file": "sheet-1-frames.png", "group": "frames", "transparent": true,
+      "file": "sheet-1-frames.png",
+      "group": "frames",
+      "transparent": true,
       "items": [
-        ["frame-classic", "thin cream border with a fine inner line"],
-        ["frame-gold", "ornate gold award frame"],
-        ["frame-tvguide", "vintage TV-guide magazine cover border with a solid masthead band across the top"],
-        ["frame-filmstrip", "film-strip border with sprocket holes top and bottom"],
-        ["frame-tvset", "retro wooden TV set around the picture, knobs on the right"],
-        ["frame-polaroid", "instant-photo frame, thicker bottom edge"],
-        ["frame-neon", "glowing pink and blue neon tube border"],
-        ["frame-marquee", "cinema marquee light bulbs all around the edge"],
-        ["frame-torn", "torn paper edges"],
-        ["frame-comic", "comic-book panel border with a halftone corner"],
-        ["frame-ticket", "old cinema ticket stub with notched corners"],
-        ["frame-curtains", "red theatre curtains drawn open at both sides"],
-        ["frame-wood", "rough wooden wanted-poster board edge"],
-        ["frame-stamp", "perforated postage-stamp edge"],
-        ["frame-starburst", "corner starburst sticker in the top right, rest of the edge plain"],
-        ["frame-chrome", "shiny chrome retro bezel"]
+        [
+          "frame-classic",
+          "thin cream border with a fine inner line"
+        ],
+        [
+          "frame-gold",
+          "ornate gold award frame"
+        ],
+        [
+          "frame-tvguide",
+          "vintage TV-guide magazine cover border with a solid masthead band across the top"
+        ],
+        [
+          "frame-filmstrip",
+          "film-strip border with sprocket holes top and bottom"
+        ],
+        [
+          "frame-tvset",
+          "retro wooden TV set around the picture, knobs on the right"
+        ],
+        [
+          "frame-polaroid",
+          "instant-photo frame, thicker bottom edge"
+        ],
+        [
+          "frame-neon",
+          "glowing pink and blue neon tube border"
+        ],
+        [
+          "frame-marquee",
+          "cinema marquee light bulbs all around the edge"
+        ],
+        [
+          "frame-torn",
+          "torn paper edges"
+        ],
+        [
+          "frame-comic",
+          "comic-book panel border with a halftone corner"
+        ],
+        [
+          "frame-ticket",
+          "old cinema ticket stub with notched corners"
+        ],
+        [
+          "frame-curtains",
+          "red theatre curtains drawn open at both sides"
+        ],
+        [
+          "frame-wood",
+          "rough wooden wanted-poster board edge"
+        ],
+        [
+          "frame-stamp",
+          "perforated postage-stamp edge"
+        ],
+        [
+          "frame-starburst",
+          "corner starburst sticker in the top right, rest of the edge plain"
+        ],
+        [
+          "frame-chrome",
+          "shiny chrome retro bezel"
+        ]
       ]
     },
     {
-      "file": "sheet-2-backgrounds.png", "group": "backgrounds", "transparent": false, "inset": 5,
+      "file": "sheet-2-backgrounds.png",
+      "group": "backgrounds",
+      "transparent": false,
+      "inset": 5,
       "items": [
-        ["bg-castle", "medieval castle on a hill"],
-        ["bg-beach", "tropical beach with palm trees"],
-        ["bg-city-night", "city skyline at night with lit windows"],
-        ["bg-city-day", "busy city street in daylight"],
-        ["bg-kitchen", "restaurant kitchen with pots and steam"],
-        ["bg-studio", "TV studio stage with lights"],
-        ["bg-newsroom", "news desk with screens behind"],
-        ["bg-gameshow", "game-show set with podiums and flashing lights"],
-        ["bg-stadium", "sports stadium under floodlights"],
-        ["bg-dojo", "martial-arts dojo with paper walls"],
-        ["bg-hospital", "hospital corridor"],
-        ["bg-precinct", "dark city alley with police lights"],
-        ["bg-school", "high-school hallway with lockers"],
-        ["bg-office", "open-plan office with desks"],
-        ["bg-livingroom", "cosy family living room with a sofa"],
-        ["bg-suburb", "suburban houses and green lawns"]
+        [
+          "bg-castle",
+          "medieval castle on a hill"
+        ],
+        [
+          "bg-beach",
+          "tropical beach with palm trees"
+        ],
+        [
+          "bg-city-night",
+          "city skyline at night with lit windows"
+        ],
+        [
+          "bg-city-day",
+          "busy city street in daylight"
+        ],
+        [
+          "bg-kitchen",
+          "restaurant kitchen with pots and steam"
+        ],
+        [
+          "bg-studio",
+          "TV studio stage with lights"
+        ],
+        [
+          "bg-newsroom",
+          "news desk with screens behind"
+        ],
+        [
+          "bg-gameshow",
+          "game-show set with podiums and flashing lights"
+        ],
+        [
+          "bg-stadium",
+          "sports stadium under floodlights"
+        ],
+        [
+          "bg-dojo",
+          "martial-arts dojo with paper walls"
+        ],
+        [
+          "bg-hospital",
+          "hospital corridor"
+        ],
+        [
+          "bg-precinct",
+          "dark city alley with police lights"
+        ],
+        [
+          "bg-school",
+          "high-school hallway with lockers"
+        ],
+        [
+          "bg-office",
+          "open-plan office with desks"
+        ],
+        [
+          "bg-livingroom",
+          "cosy family living room with a sofa"
+        ],
+        [
+          "bg-suburb",
+          "suburban houses and green lawns"
+        ]
       ]
     },
     {
-      "file": "sheet-3-backgrounds.png", "group": "backgrounds", "transparent": false, "inset": 5,
+      "file": "sheet-3-backgrounds.png",
+      "group": "backgrounds",
+      "transparent": false,
+      "inset": 5,
       "items": [
-        ["bg-island", "jungle island with a waterfall"],
-        ["bg-desert", "desert canyon at sunset"],
-        ["bg-mountains", "snowy mountains"],
-        ["bg-underwater", "coral reef under the sea"],
-        ["bg-forest", "deep green forest"],
-        ["bg-space", "outer space with a ringed planet"],
-        ["bg-spaceship", "spaceship bridge interior"],
-        ["bg-haunted", "spooky mansion on a stormy night"],
-        ["bg-courtroom", "courtroom with a judge's bench"],
-        ["bg-capitol", "government building with flags"],
-        ["bg-concert", "concert stage with a crowd"],
-        ["bg-runway", "fashion runway with camera flashes"],
-        ["bg-snowtown", "snowy village with holiday lights"],
-        ["bg-ruins", "ancient temple ruins"],
-        ["bg-farm", "farm with a red barn and fields"],
-        ["bg-oldtown", "romantic old-town street with string lights"]
+        [
+          "bg-island",
+          "jungle island with a waterfall"
+        ],
+        [
+          "bg-desert",
+          "desert canyon at sunset"
+        ],
+        [
+          "bg-mountains",
+          "snowy mountains"
+        ],
+        [
+          "bg-underwater",
+          "coral reef under the sea"
+        ],
+        [
+          "bg-forest",
+          "deep green forest"
+        ],
+        [
+          "bg-space",
+          "outer space with a ringed planet"
+        ],
+        [
+          "bg-spaceship",
+          "spaceship bridge interior"
+        ],
+        [
+          "bg-haunted",
+          "spooky mansion on a stormy night"
+        ],
+        [
+          "bg-courtroom",
+          "courtroom with a judge's bench"
+        ],
+        [
+          "bg-capitol",
+          "government building with flags"
+        ],
+        [
+          "bg-concert",
+          "concert stage with a crowd"
+        ],
+        [
+          "bg-runway",
+          "fashion runway with camera flashes"
+        ],
+        [
+          "bg-snowtown",
+          "snowy village with holiday lights"
+        ],
+        [
+          "bg-ruins",
+          "ancient temple ruins"
+        ],
+        [
+          "bg-farm",
+          "farm with a red barn and fields"
+        ],
+        [
+          "bg-oldtown",
+          "romantic old-town street with string lights"
+        ]
       ]
     },
     {
-      "file": "sheet-4-fronts.png", "group": "fronts", "transparent": true,
+      "file": "sheet-4-fronts.png",
+      "group": "fronts",
+      "transparent": true,
       "items": [
-        ["front-kiss-silhouette", "couple kissing, solid black silhouette"],
-        ["front-kiss-color", "couple kissing, full colour"],
-        ["front-couple-hands", "couple holding hands, walking"],
-        ["front-rose", "single red rose"],
-        ["front-fighters", "two fighters mid-kick facing each other"],
-        ["front-boxer", "boxer with gloves up"],
-        ["front-ninja", "ninja leaping with a sword"],
-        ["front-karate-kid", "kid in a karate pose"],
-        ["front-chef-pan", "chef flipping a pan with flames"],
-        ["front-dishes", "three plated gourmet dishes"],
-        ["front-cake", "tall decorated cake"],
-        ["front-chefs-duel", "two chefs facing off with knives"],
-        ["front-anchor", "news anchor at a desk"],
-        ["front-weather", "weather presenter pointing at a map"],
-        ["front-reporter", "field reporter with a microphone"],
-        ["front-microphone", "retro studio microphone"]
+        [
+          "front-kiss-silhouette",
+          "couple kissing, solid black silhouette"
+        ],
+        [
+          "front-kiss-color",
+          "couple kissing, full colour"
+        ],
+        [
+          "front-couple-hands",
+          "couple holding hands, walking"
+        ],
+        [
+          "front-rose",
+          "single red rose"
+        ],
+        [
+          "front-fighters",
+          "two fighters mid-kick facing each other"
+        ],
+        [
+          "front-boxer",
+          "boxer with gloves up"
+        ],
+        [
+          "front-ninja",
+          "ninja leaping with a sword"
+        ],
+        [
+          "front-karate-kid",
+          "kid in a karate pose"
+        ],
+        [
+          "front-chef-pan",
+          "chef flipping a pan with flames"
+        ],
+        [
+          "front-dishes",
+          "three plated gourmet dishes"
+        ],
+        [
+          "front-cake",
+          "tall decorated cake"
+        ],
+        [
+          "front-chefs-duel",
+          "two chefs facing off with knives"
+        ],
+        [
+          "front-anchor",
+          "news anchor at a desk"
+        ],
+        [
+          "front-weather",
+          "weather presenter pointing at a map"
+        ],
+        [
+          "front-reporter",
+          "field reporter with a microphone"
+        ],
+        [
+          "front-microphone",
+          "retro studio microphone"
+        ]
       ]
     },
     {
-      "file": "sheet-5-fronts.png", "group": "fronts", "transparent": true,
+      "file": "sheet-5-fronts.png",
+      "group": "fronts",
+      "transparent": true,
       "items": [
-        ["front-talk-couch", "talk-show host and guest on a couch"],
-        ["front-late-host", "late-night host at a desk with a mug"],
-        ["front-quiz-host", "game-show host holding cue cards"],
-        ["front-buzzers", "two contestants slamming buzzers"],
-        ["front-trophy", "big golden trophy"],
-        ["front-money", "pile of cash and a giant prize cheque"],
-        ["front-castaways", "group of castaways in torn clothes"],
-        ["front-campfire", "three people around a campfire"],
-        ["front-date-bench", "two people on a date on a park bench"],
-        ["front-doctor", "doctor with a stethoscope"],
-        ["front-medical-team", "surgeon, nurse and doctor team"],
-        ["front-detective", "detective with a magnifying glass and trench coat"],
-        ["front-cops", "two police officers by a squad car"],
-        ["front-crime-tape", "crime-scene tape and an evidence bag"],
-        ["front-family-sofa", "family of four on a sofa"],
-        ["front-coworkers", "group of office coworkers"]
+        [
+          "front-talk-couch",
+          "talk-show host and guest on a couch"
+        ],
+        [
+          "front-late-host",
+          "late-night host at a desk with a mug"
+        ],
+        [
+          "front-quiz-host",
+          "game-show host holding cue cards"
+        ],
+        [
+          "front-buzzers",
+          "two contestants slamming buzzers"
+        ],
+        [
+          "front-trophy",
+          "big golden trophy"
+        ],
+        [
+          "front-money",
+          "pile of cash and a giant prize cheque"
+        ],
+        [
+          "front-castaways",
+          "group of castaways in torn clothes"
+        ],
+        [
+          "front-campfire",
+          "three people around a campfire"
+        ],
+        [
+          "front-date-bench",
+          "two people on a date on a park bench"
+        ],
+        [
+          "front-doctor",
+          "doctor with a stethoscope"
+        ],
+        [
+          "front-medical-team",
+          "surgeon, nurse and doctor team"
+        ],
+        [
+          "front-detective",
+          "detective with a magnifying glass and trench coat"
+        ],
+        [
+          "front-cops",
+          "two police officers by a squad car"
+        ],
+        [
+          "front-crime-tape",
+          "crime-scene tape and an evidence bag"
+        ],
+        [
+          "front-family-sofa",
+          "family of four on a sofa"
+        ],
+        [
+          "front-coworkers",
+          "group of office coworkers"
+        ]
       ]
     },
     {
-      "file": "sheet-6-fronts.png", "group": "fronts", "transparent": true,
+      "file": "sheet-6-fronts.png",
+      "group": "fronts",
+      "transparent": true,
       "items": [
-        ["front-roommates", "three roommates laughing"],
-        ["front-astronaut", "astronaut floating"],
-        ["front-robot", "friendly giant robot"],
-        ["front-rocket", "rocket launching"],
-        ["front-alien", "cartoon alien waving"],
-        ["front-knight", "knight raising a sword"],
-        ["front-queen", "queen on a throne with a crown"],
-        ["front-dragon", "dragon breathing fire"],
-        ["front-lion", "lion roaring"],
-        ["front-owl", "owl on a branch"],
-        ["front-explorer", "explorer with binoculars"],
-        ["front-singer", "singer at a stand microphone"],
-        ["front-band", "rock band of three with guitars"],
-        ["front-dj", "DJ at turntables"],
-        ["front-football", "American football player charging"],
-        ["front-soccer", "soccer player kicking a ball"]
+        [
+          "front-roommates",
+          "three roommates laughing"
+        ],
+        [
+          "front-astronaut",
+          "astronaut floating"
+        ],
+        [
+          "front-robot",
+          "friendly giant robot"
+        ],
+        [
+          "front-rocket",
+          "rocket launching"
+        ],
+        [
+          "front-alien",
+          "cartoon alien waving"
+        ],
+        [
+          "front-knight",
+          "knight raising a sword"
+        ],
+        [
+          "front-queen",
+          "queen on a throne with a crown"
+        ],
+        [
+          "front-dragon",
+          "dragon breathing fire"
+        ],
+        [
+          "front-lion",
+          "lion roaring"
+        ],
+        [
+          "front-owl",
+          "owl on a branch"
+        ],
+        [
+          "front-explorer",
+          "explorer with binoculars"
+        ],
+        [
+          "front-singer",
+          "singer at a stand microphone"
+        ],
+        [
+          "front-band",
+          "rock band of three with guitars"
+        ],
+        [
+          "front-dj",
+          "DJ at turntables"
+        ],
+        [
+          "front-football",
+          "American football player charging"
+        ],
+        [
+          "front-soccer",
+          "soccer player kicking a ball"
+        ]
       ]
     },
     {
-      "file": "sheet-7-fronts.png", "group": "fronts", "transparent": true,
+      "file": "sheet-7-fronts.png",
+      "group": "fronts",
+      "transparent": true,
       "items": [
-        ["front-basketball", "basketball player dunking"],
-        ["front-model", "fashion model posing"],
-        ["front-red-carpet", "movie star waving on a red carpet"],
-        ["front-dog-cat", "dog and cat sitting together"],
-        ["front-builder", "builder with a hammer and plans"],
-        ["front-house", "dream house with a big ribbon bow"],
-        ["front-briefcase", "businessperson with a briefcase"],
-        ["front-handshake", "two businesspeople shaking hands"],
-        ["front-politician", "politician at a podium"],
-        ["front-pharaoh", "explorer holding a torch by a pharaoh statue"],
-        ["front-students", "two students with backpacks"],
-        ["front-camera", "vintage TV camera on a tripod"],
-        ["front-cowboy", "cowboy with a lasso"],
-        ["front-superhero", "superhero flying with a cape"],
-        ["front-zombie", "cartoon zombie shuffling"],
-        ["front-judges", "panel of three talent-show judges at a desk"]
+        [
+          "front-basketball",
+          "basketball player dunking"
+        ],
+        [
+          "front-model",
+          "fashion model posing"
+        ],
+        [
+          "front-red-carpet",
+          "movie star waving on a red carpet"
+        ],
+        [
+          "front-dog-cat",
+          "dog and cat sitting together"
+        ],
+        [
+          "front-builder",
+          "builder with a hammer and plans"
+        ],
+        [
+          "front-house",
+          "dream house with a big ribbon bow"
+        ],
+        [
+          "front-briefcase",
+          "businessperson with a briefcase"
+        ],
+        [
+          "front-handshake",
+          "two businesspeople shaking hands"
+        ],
+        [
+          "front-politician",
+          "politician at a podium"
+        ],
+        [
+          "front-pharaoh",
+          "explorer holding a torch by a pharaoh statue"
+        ],
+        [
+          "front-students",
+          "two students with backpacks"
+        ],
+        [
+          "front-camera",
+          "vintage TV camera on a tripod"
+        ],
+        [
+          "front-cowboy",
+          "cowboy with a lasso"
+        ],
+        [
+          "front-superhero",
+          "superhero flying with a cape"
+        ],
+        [
+          "front-zombie",
+          "cartoon zombie shuffling"
+        ],
+        [
+          "front-judges",
+          "panel of three talent-show judges at a desk"
+        ]
+      ],
+      "haze": 120
+    },
+    {
+      "file": "sheet-8-effects.png",
+      "group": "effects",
+      "transparent": true,
+      "items": [
+        [
+          "fx-spotlights",
+          "two crossing stage spotlights from below"
+        ],
+        [
+          "fx-notes",
+          "floating music notes"
+        ],
+        [
+          "fx-sparkles",
+          "sparkles and twinkles"
+        ],
+        [
+          "fx-confetti",
+          "falling confetti"
+        ],
+        [
+          "fx-rain",
+          "rain streaks"
+        ],
+        [
+          "fx-fog",
+          "low fog along the bottom"
+        ],
+        [
+          "fx-sparks",
+          "fire sparks and embers"
+        ],
+        [
+          "fx-flare",
+          "bright light burst behind the centre"
+        ],
+        [
+          "fx-hearts",
+          "floating hearts"
+        ],
+        [
+          "fx-lightning",
+          "lightning bolts"
+        ],
+        [
+          "fx-snow",
+          "falling snowflakes"
+        ],
+        [
+          "fx-bubbles",
+          "rising bubbles"
+        ],
+        [
+          "fx-speedlines",
+          "comic speed lines from the edges"
+        ],
+        [
+          "fx-explosion",
+          "cartoon explosion burst"
+        ],
+        [
+          "fx-money",
+          "falling dollar bills"
+        ],
+        [
+          "fx-stars",
+          "shooting stars"
+        ]
       ]
     },
     {
-      "file": "sheet-8-effects.png", "group": "effects", "transparent": true,
+      "file": "sheet-9-icons.png",
+      "group": "icons",
+      "transparent": true,
       "items": [
-        ["fx-spotlights", "two crossing stage spotlights from below"],
-        ["fx-notes", "floating music notes"],
-        ["fx-sparkles", "sparkles and twinkles"],
-        ["fx-confetti", "falling confetti"],
-        ["fx-rain", "rain streaks"],
-        ["fx-fog", "low fog along the bottom"],
-        ["fx-sparks", "fire sparks and embers"],
-        ["fx-flare", "bright light burst behind the centre"],
-        ["fx-hearts", "floating hearts"],
-        ["fx-lightning", "lightning bolts"],
-        ["fx-snow", "falling snowflakes"],
-        ["fx-bubbles", "rising bubbles"],
-        ["fx-speedlines", "comic speed lines from the edges"],
-        ["fx-explosion", "cartoon explosion burst"],
-        ["fx-money", "falling dollar bills"],
-        ["fx-stars", "shooting stars"]
+        [
+          "icon-basketball",
+          "basketball"
+        ],
+        [
+          "icon-football",
+          "American football"
+        ],
+        [
+          "icon-soccer",
+          "soccer ball"
+        ],
+        [
+          "icon-tennis",
+          "tennis ball"
+        ],
+        [
+          "icon-baseball",
+          "baseball"
+        ],
+        [
+          "icon-golf",
+          "golf ball on a tee"
+        ],
+        [
+          "icon-volleyball",
+          "volleyball"
+        ],
+        [
+          "icon-hockey",
+          "hockey stick and puck"
+        ],
+        [
+          "icon-glove",
+          "red boxing glove"
+        ],
+        [
+          "icon-flag",
+          "checkered racing flag"
+        ],
+        [
+          "icon-medal",
+          "gold medal with ribbon"
+        ],
+        [
+          "icon-stopwatch",
+          "stopwatch"
+        ],
+        [
+          "icon-dice",
+          "pair of dice"
+        ],
+        [
+          "icon-cards",
+          "fan of playing cards"
+        ],
+        [
+          "icon-chess",
+          "chess knight piece"
+        ],
+        [
+          "icon-bowling",
+          "bowling pin and ball"
+        ]
+      ]
+    },
+    {
+      "file": "sheet-10-icons.png",
+      "group": "icons",
+      "transparent": true,
+      "items": [
+        [
+          "icon-pizza",
+          "pizza slice"
+        ],
+        [
+          "icon-burger",
+          "burger"
+        ],
+        [
+          "icon-cupcake",
+          "cupcake"
+        ],
+        [
+          "icon-coffee",
+          "coffee cup with steam"
+        ],
+        [
+          "icon-guitar",
+          "electric guitar"
+        ],
+        [
+          "icon-note",
+          "music note"
+        ],
+        [
+          "icon-mic",
+          "handheld microphone"
+        ],
+        [
+          "icon-clapper",
+          "film clapperboard"
+        ],
+        [
+          "icon-popcorn",
+          "popcorn bucket"
+        ],
+        [
+          "icon-reel",
+          "film reel"
+        ],
+        [
+          "icon-star",
+          "gold star"
+        ],
+        [
+          "icon-heart",
+          "red heart"
+        ],
+        [
+          "icon-moneybag",
+          "money bag"
+        ],
+        [
+          "icon-crown",
+          "gold crown"
+        ],
+        [
+          "icon-bolt",
+          "lightning bolt"
+        ],
+        [
+          "icon-bulb",
+          "glowing light bulb"
+        ]
       ]
     }
   ]

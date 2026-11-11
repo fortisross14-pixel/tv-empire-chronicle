@@ -47,6 +47,15 @@ META = {
  'fx-sparks': ('🔥', 'cooking martial-arts'), 'fx-flare': ('💥', 'series movie'), 'fx-hearts': ('💖', 'romance dating'),
  'fx-lightning': ('⚡', 'scifi'), 'fx-snow': ('❄️', 'family'), 'fx-bubbles': ('🫧', 'nature'), 'fx-speedlines': ('💨', 'sports animation'),
  'fx-explosion': ('💥', 'movie scifi'), 'fx-money': ('💵', 'business contest'), 'fx-stars': ('🌠', 'scifi celebrity'),
+ # icons (shown as stickers)
+ 'icon-basketball': ('🏀', 'sports'), 'icon-football': ('🏈', 'sports'), 'icon-soccer': ('⚽', 'sports'), 'icon-tennis': ('🎾', 'sports'),
+ 'icon-baseball': ('⚾', 'sports'), 'icon-golf': ('⛳', 'sports'), 'icon-volleyball': ('🏐', 'sports'), 'icon-hockey': ('🏒', 'sports'),
+ 'icon-glove': ('🥊', 'sports martial-arts'), 'icon-flag': ('🏁', 'sports'), 'icon-medal': ('🏅', 'sports contest'), 'icon-stopwatch': ('⏱️', 'sports contest'),
+ 'icon-dice': ('🎲', 'contest trivia'), 'icon-cards': ('🃏', 'contest'), 'icon-chess': ('♟️', 'trivia'), 'icon-bowling': ('🎳', 'sports'),
+ 'icon-pizza': ('🍕', 'cooking'), 'icon-burger': ('🍔', 'cooking'), 'icon-cupcake': ('🧁', 'cooking'), 'icon-coffee': ('☕', 'talk late-show'),
+ 'icon-guitar': ('🎸', 'music'), 'icon-note': ('🎵', 'music'), 'icon-mic': ('🎤', 'music talk'), 'icon-clapper': ('🎬', 'movie series'),
+ 'icon-popcorn': ('🍿', 'movie'), 'icon-reel': ('🎞️', 'movie documentary'), 'icon-star': ('⭐', 'celebrity'), 'icon-heart': ('❤️', 'romance dating'),
+ 'icon-moneybag': ('💰', 'business contest'), 'icon-crown': ('👑', 'medieval celebrity'), 'icon-bolt': ('⚡', 'scifi sports'), 'icon-bulb': ('💡', 'trivia magazine'),
 }
 groups = {}
 for sh in spec['sheets']:
@@ -60,7 +69,7 @@ def label(desc):
 
 out = ["// Generated from art/posters/manifest.json by the poster tooling. Edit the manifest, not this file.",
        "export interface PosterAsset { id: string; label: string; emoji: string; tags: string[] }", ""]
-for g, key in [('backgrounds', 'SCENES'), ('fronts', 'FRONTS'), ('effects', 'EFFECTS')]:
+for g, key in [('backgrounds', 'SCENES'), ('fronts', 'FRONTS'), ('effects', 'EFFECTS'), ('icons', 'ICONS')]:
     out.append(f"export const {key}: PosterAsset[] = [")
     for aid, desc in groups[g]:
         e, tags = META[aid]

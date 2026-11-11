@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { PosterSpec } from '../../engine';
-import { EFFECTS, FRONTS, SCENES, fontById, skyById } from './library';
+import { EFFECTS, FRONTS, ICONS, ICON_LAYOUTS, SCENES, fontById, skyById } from './library';
 import { cx } from '../util';
 
 // ---------- Which real art files exist ----------
@@ -36,9 +36,16 @@ function useArtIndex(): ArtIndex {
   return index ?? { assets: new Set(), windows: {} };
 }
 
-const GROUP: Record<string, string> = { bg: 'backgrounds', front: 'fronts', fx: 'effects', frame: 'frames' };
+const GROUP: Record<string, string> = { bg: 'backgrounds', front: 'fronts', fx: 'effects', frame: 'frames', icon: 'icons' };
 const src = (id: string) => `${import.meta.env.BASE_URL}posters/${GROUP[id.split('-')[0]]}/${id}.webp`;
-const emojiOf = (id: string) => [...SCENES, ...FRONTS, ...EFFECTS].find((a) => a.id === id)?.emoji ?? '❔';
+const emojiOf = (id: string) => [...SCENES, ...FRONTS, ...EFFECTS, ...ICONS].find((a) => a.id === id)?.emoji ?? '❔';
+const ICON_SIZE = { s: 18, m: 26, l: 34 } as const;
+
+/** One icon on its own, for the editor's picker. */
+export function PosterIcon({ id, emoji }: { id: string; emoji: string }) {
+  const art = useArtIndex();
+  return art.assets.has(id) ? <img src={src(id)} alt="" loading="lazy" /> : <span aria-hidden="true">{emoji}</span>;
+}
 
 /** Window used for a frame that has no measured art yet (left, top, right, bottom). */
 const DEFAULT_WINDOW: [number, number, number, number] = [0.08, 0.12, 0.08, 0.12];
@@ -70,6 +77,15 @@ export function PosterArt({ spec, title, hideTitle, className }: { spec: PosterS
             {has(id) ? <img className="pa-layer" src={src(id)} alt="" loading="lazy" /> : <span className="pa-front-stand" aria-hidden="true">{emojiOf(id)}</span>}
           </div>
         ))}
+        {spec.icons && spec.icons.ids.slice(0, 8).map((id, i) => {
+          const [x, y, rot] = (ICON_LAYOUTS[spec.icons!.layout] ?? ICON_LAYOUTS.scatter).spots[i];
+          const size = ICON_SIZE[spec.icons!.size] ?? ICON_SIZE.m;
+          return (
+            <span key={id + i} className="pa-icon" style={{ left: `${x}%`, top: `${y}%`, width: `${size}cqh`, height: `${size}cqh`, transform: `translate(-50%, -50%) rotate(${rot}deg)` }}>
+              {has(id) ? <img src={src(id)} alt="" loading="lazy" /> : <span style={{ fontSize: `${size * 0.82}cqh` }} aria-hidden="true">{emojiOf(id)}</span>}
+            </span>
+          );
+        })}
         {spec.effect && (has(spec.effect)
           ? <img className="pa-layer" src={src(spec.effect)} alt="" loading="lazy" />
           : <span className="pa-fx-stand" aria-hidden="true">{Array.from({ length: 5 }, () => emojiOf(spec.effect!)).join(' ')}</span>)}

@@ -517,3 +517,11 @@ select.input option { background: var(--surface); }
 .pe-font.on { box-shadow: 0 0 0 3px var(--focus); }
 .pe-swatch { width: 38px; height: 38px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.3); }
 .pe-swatch.on { box-shadow: 0 0 0 3px var(--focus); }
+
+/* Icons (stickers) on posters */
+.pa-icon { position: absolute; display: grid; place-items: center; filter: drop-shadow(0 0.8cqh 0.8cqh rgba(0, 0, 0, 0.4)); }
+.pa-icon img { width: 100%; height: 100%; object-fit: contain; }
+.pe-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); gap: 6px; }
+.pe-icon { aspect-ratio: 1; border-radius: 12px; background: var(--tile); display: grid; place-items: center; font-size: 26px; padding: 6px; }
+.pe-icon img { width: 100%; height: 100%; object-fit: contain; }
+.pe-icon.on { box-shadow: 0 0 0 3px var(--focus); background: var(--tile-2); }

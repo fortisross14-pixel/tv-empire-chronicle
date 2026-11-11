@@ -182,3 +182,48 @@ SHEET 8 — EFFECTS — transparent background. Only the effect, spread across t
 15. falling dollar bills
 16. shooting stars
 ```
+
+## Extra: icon sheets (9 and 10)
+
+Paste this in the same ChatGPT chat after sheet 8. Save them as `sheet-9-icons.png`
+and `sheet-10-icons.png`.
+
+```text
+Two more sheets in exactly the same style and sheet format as before (1536 × 1024, 4 × 4 grid of 384 × 256 cells, transparent background, no text). These are ICONS: one single object per cell, centred, filling about 80% of the cell height, bold outline, no shadow, no scenery. Generate Sheet 9 now; I'll type NEXT for Sheet 10.
+
+SHEET 9 — ICONS
+1. basketball
+2. American football
+3. soccer ball
+4. tennis ball
+5. baseball
+6. golf ball on a tee
+7. volleyball
+8. hockey stick and puck
+9. red boxing glove
+10. checkered racing flag
+11. gold medal with ribbon
+12. stopwatch
+13. pair of dice
+14. fan of playing cards
+15. chess knight piece
+16. bowling pin and ball
+
+SHEET 10 — ICONS
+1. pizza slice
+2. burger
+3. cupcake
+4. coffee cup with steam
+5. electric guitar
+6. music note
+7. handheld microphone
+8. film clapperboard
+9. popcorn bucket
+10. film reel
+11. gold star
+12. red heart
+13. money bag
+14. gold crown
+15. lightning bolt
+16. glowing light bulb
+```

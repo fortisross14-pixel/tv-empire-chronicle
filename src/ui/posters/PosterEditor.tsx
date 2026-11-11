@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import type { PosterSpec } from '../../engine';
 import { Sheet } from '../components/Sheet';
-import { PosterArt } from './PosterArt';
-import { EFFECTS, FONTS, FRAMES, FRONTS, SCENES, SKIES, TITLE_COLORS, autoPoster, shufflePoster } from './library';
+import { PosterArt, PosterIcon } from './PosterArt';
+import { EFFECTS, FONTS, FRAMES, FRONTS, ICONS, ICON_LAYOUTS, SCENES, SKIES, TITLE_COLORS, autoPoster, shufflePoster, type IconLayout } from './library';
 import { cx } from '../util';
 
-type Tab = 'background' | 'cast' | 'effect' | 'frame' | 'title';
+type Tab = 'background' | 'cast' | 'icons' | 'effect' | 'frame' | 'title';
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'background', label: 'Background' }, { id: 'cast', label: 'Cast' },
+  { id: 'background', label: 'Background' }, { id: 'cast', label: 'Cast' }, { id: 'icons', label: 'Icons' },
   { id: 'effect', label: 'Effect' }, { id: 'frame', label: 'Frame' }, { id: 'title', label: 'Title' },
 ];
 
@@ -30,6 +30,14 @@ export function PosterEditor({
     if (spec.fronts.includes(id)) set({ fronts: spec.fronts.filter((f) => f !== id) });
     else set({ fronts: [...spec.fronts, id].slice(-2) });
   };
+
+ const icons = spec.icons ?? { ids: [], layout: 'scatter' as IconLayout, size: 'm' as const };
+  const setIcons = (patch: Partial<typeof icons>) => {
+    const next = { ...icons, ...patch };
+    set({ icons: next.ids.length ? next : null });
+  };
+  const toggleIcon = (id: string) =>
+    setIcons({ ids: icons.ids.includes(id) ? icons.ids.filter((x) => x !== id) : [...icons.ids, id].slice(0, 8) });
 
   const Option = ({ on, onPick, preview, label }: { on: boolean; onPick: () => void; preview: PosterSpec; label: string }) => (
     <button className={cx('pe-opt', on && 'on')} onClick={onPick} title={label} aria-label={label} aria-pressed={on}>
@@ -76,6 +84,31 @@ export function PosterEditor({
                 preview={{ ...spec, fronts: [a.id], effect: null }} />)}
             </div>
           </>
+        )}
+        {tab === 'icons' && (
+          <div className="stack">
+            <p className="small muted">Pick up to 8 icons ({icons.ids.length}/8), then how to arrange them. They sit inside the frame, under the effect and title.</p>
+            <div className="pe-icons">
+              {sortByFit(ICONS).map((a) => (
+                <button key={a.id} className={cx('pe-icon', icons.ids.includes(a.id) && 'on')} onClick={() => toggleIcon(a.id)} title={a.label} aria-label={a.label} aria-pressed={icons.ids.includes(a.id)}>
+                  <PosterIcon id={a.id} emoji={a.emoji} />
+                </button>
+              ))}
+            </div>
+            <div className="field"><label>Arrangement</label>
+              <div className="segmented pe-tabs">
+                {(Object.keys(ICON_LAYOUTS) as IconLayout[]).map((l) => (
+                  <button key={l} className={icons.layout === l ? 'on' : ''} onClick={() => setIcons({ layout: l })}>{ICON_LAYOUTS[l].label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="field"><label>Size</label>
+              <div className="segmented">
+                {(['s', 'm', 'l'] as const).map((z) => <button key={z} className={icons.size === z ? 'on' : ''} onClick={() => setIcons({ size: z })}>{z === 's' ? 'Small' : z === 'm' ? 'Medium' : 'Large'}</button>)}
+              </div>
+            </div>
+            {icons.ids.length > 0 && <button className="btn ghost small" onClick={() => set({ icons: null })}>Remove all icons</button>}
+          </div>
         )}
         {tab === 'effect' && (
           <div className="pe-grid">

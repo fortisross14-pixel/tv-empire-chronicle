@@ -144,3 +144,12 @@ test('a version 10 save gets empty posters', () => {
   expect(up.version).toBe(SAVE_VERSION);
   expect(up.shows[0].poster).toBeNull();
 });
+
+test('posters accept up to 8 icons', async () => {
+  const { setPoster } = await import('./game');
+  let s = withShow(12);
+  const base = { sky: 'sky-day', scene: null, fronts: [], effect: null, frame: null, title: { show: true, font: 'bungee', color: '#fff', size: 'm' as const, position: 'top' as const } };
+  s = setPoster(s, s.shows[0].id, { ...base, icons: { ids: ['icon-basketball', 'icon-football', 'icon-tennis', 'icon-soccer'], layout: 'scatter', size: 'm' } });
+  expect(s.shows[0].poster!.icons!.ids).toHaveLength(4);
+  expect(() => setPoster(s, s.shows[0].id, { ...base, icons: { ids: Array(9).fill('icon-star'), layout: 'row', size: 's' } })).toThrow();
+});

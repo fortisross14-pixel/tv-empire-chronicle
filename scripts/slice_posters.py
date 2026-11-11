@@ -25,6 +25,7 @@ HAZE = 60
 # A frame pixel counts as "solid" above this alpha when finding its window.
 SOLID = 140
 QUALITY = 86
+ICON_SIZE = 192
 
 
 def frame_window(tile: Image.Image) -> list:
@@ -71,7 +72,7 @@ def main() -> int:
         if sheet['transparent']:
             # ChatGPT often leaves a faint haze or soft shadow; make it fully clear.
             r, g, b, a = img.split()
-            img = Image.merge('RGBA', (r, g, b, a.point(lambda v: 0 if v < HAZE else v)))
+            img = Image.merge('RGBA', (r, g, b, a.point(lambda v, t=sheet.get('haze', HAZE): 0 if v < t else v)))
         w, h = img.size
         cw, ch = w / cols, h / rows
         group_dir = os.path.join(OUT, sheet['group'])
@@ -87,6 +88,18 @@ def main() -> int:
                 bbox = tile.getchannel('A').point(lambda v: 255 if v > HAZE else 0).getbbox()
                 if bbox:
                     tile = tile.crop(bbox)
+            if sheet['group'] == 'icons':
+                # Icons are placed one by one: crop to the drawing, centre it on a square.
+                bbox = tile.getchannel('A').point(lambda v: 255 if v > HAZE else 0).getbbox()
+                if bbox:
+                    tile = tile.crop(bbox)
+                side = max(tile.size)
+                square = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+                square.paste(tile, ((side - tile.size[0]) // 2, (side - tile.size[1]) // 2))
+                tile = square.resize((ICON_SIZE, ICON_SIZE), Image.LANCZOS)
+                tile.save(os.path.join(group_dir, f'{asset_id}.webp'), 'WEBP', quality=QUALITY, method=6)
+                made.setdefault(sheet['group'], []).append(asset_id)
+                continue
             tile = tile.resize(out_size, Image.LANCZOS)
             if not sheet['transparent']:
                 bg = Image.new('RGBA', out_size, (0, 0, 0, 255))
