@@ -577,7 +577,26 @@
           "fx-stars",
           "shooting stars"
         ]
-      ]
+      ],
+      "anchors": {
+        "fx-spotlights": "top",
+        "fx-notes": "middle",
+        "fx-sparkles": "top",
+        "fx-confetti": "top",
+        "fx-rain": "top",
+        "fx-fog": "bottom",
+        "fx-sparks": "bottom",
+        "fx-flare": "bottom",
+        "fx-hearts": "middle",
+        "fx-lightning": "top",
+        "fx-snow": "top",
+        "fx-bubbles": "middle",
+        "fx-speedlines": "middle",
+        "fx-explosion": "bottom",
+        "fx-money": "top",
+        "fx-stars": "top"
+      },
+      "haze": 120
     },
     {
       "file": "sheet-9-icons.png",
@@ -585,70 +604,267 @@
       "transparent": true,
       "items": [
         [
-          "icon-basketball",
-          "basketball"
+          "icon-sword",
+          "sword"
         ],
         [
-          "icon-football",
-          "American football"
+          "icon-swords",
+          "crossed swords"
+        ],
+        [
+          "icon-axe",
+          "axe"
+        ],
+        [
+          "icon-battle-axe",
+          "double battle axe"
+        ],
+        [
+          "icon-spear",
+          "spear"
+        ],
+        [
+          "icon-war-banner",
+          "spear with red banner"
+        ],
+        [
+          "icon-mace",
+          "spiked mace"
+        ],
+        [
+          "icon-warhammer",
+          "war hammer"
+        ],
+        [
+          "icon-round-shield",
+          "round wooden shield"
+        ],
+        [
+          "icon-crest-shield",
+          "shield with a lion crest"
+        ],
+        [
+          "icon-knight-helmet",
+          "knight's helmet"
+        ],
+        [
+          "icon-spartan-helmet",
+          "spartan helmet"
+        ],
+        [
+          "icon-gloves-red",
+          "red boxing gloves"
+        ],
+        [
+          "icon-gloves-blue",
+          "blue boxing gloves"
+        ],
+        [
+          "icon-belt",
+          "champion's belt"
+        ],
+        [
+          "icon-trophy",
+          "trophy cup"
+        ],
+        [
+          "icon-crate",
+          "wooden crate"
+        ],
+        [
+          "icon-iron-crate",
+          "iron-bound crate"
+        ],
+        [
+          "icon-barrel",
+          "barrel"
+        ],
+        [
+          "icon-sack",
+          "sack"
+        ],
+        [
+          "icon-coins",
+          "pile of gold coins"
+        ],
+        [
+          "icon-chest",
+          "treasure chest"
+        ],
+        [
+          "icon-iron-chest",
+          "locked iron chest"
+        ],
+        [
+          "icon-apples",
+          "crate of apples"
+        ],
+        [
+          "icon-scroll",
+          "scroll with a seal"
+        ],
+        [
+          "icon-letter",
+          "sealed letter"
+        ],
+        [
+          "icon-quill",
+          "quill and ink"
+        ],
+        [
+          "icon-book",
+          "open book"
+        ],
+        [
+          "icon-old-book",
+          "old leather book"
+        ],
+        [
+          "icon-spyglass",
+          "spyglass"
+        ],
+        [
+          "icon-magnifier",
+          "magnifying glass"
+        ],
+        [
+          "icon-compass",
+          "compass"
+        ],
+        [
+          "icon-mic",
+          "retro microphone"
+        ],
+        [
+          "icon-megaphone",
+          "megaphone"
+        ],
+        [
+          "icon-speaker",
+          "speaker"
+        ],
+        [
+          "icon-speakers",
+          "pair of speakers"
+        ],
+        [
+          "icon-headphones",
+          "headphones"
+        ],
+        [
+          "icon-headset",
+          "headset"
+        ],
+        [
+          "icon-clapper",
+          "clapperboard"
+        ],
+        [
+          "icon-movie-camera",
+          "movie camera"
         ],
         [
           "icon-soccer",
           "soccer ball"
         ],
         [
-          "icon-tennis",
-          "tennis ball"
+          "icon-basketball",
+          "basketball"
+        ],
+        [
+          "icon-football",
+          "american football"
+        ],
+        [
+          "icon-rugby",
+          "rugby ball"
         ],
         [
           "icon-baseball",
           "baseball"
         ],
         [
-          "icon-golf",
-          "golf ball on a tee"
+          "icon-tennis",
+          "tennis ball"
         ],
         [
-          "icon-volleyball",
-          "volleyball"
+          "icon-puck",
+          "hockey puck"
         ],
         [
-          "icon-hockey",
-          "hockey stick and puck"
+          "icon-racing-flag",
+          "checkered flag"
         ],
         [
-          "icon-glove",
-          "red boxing glove"
+          "icon-wagon-wheel",
+          "wagon wheel"
         ],
         [
-          "icon-flag",
-          "checkered racing flag"
+          "icon-tire",
+          "tyre"
         ],
         [
-          "icon-medal",
-          "gold medal with ribbon"
+          "icon-wheel",
+          "car wheel"
         ],
         [
-          "icon-stopwatch",
-          "stopwatch"
+          "icon-gears",
+          "gears"
         ],
         [
-          "icon-dice",
-          "pair of dice"
+          "icon-wrench",
+          "wrench"
         ],
         [
-          "icon-cards",
-          "fan of playing cards"
+          "icon-wrenches",
+          "crossed wrenches"
         ],
         [
-          "icon-chess",
-          "chess knight piece"
+          "icon-hammer",
+          "hammer"
         ],
         [
-          "icon-bowling",
-          "bowling pin and ball"
+          "icon-toolbox",
+          "toolbox"
+        ],
+        [
+          "icon-potion-red",
+          "red potion"
+        ],
+        [
+          "icon-potion-blue",
+          "blue potion"
+        ],
+        [
+          "icon-potion-green",
+          "green potion"
+        ],
+        [
+          "icon-bolt",
+          "lightning bolt"
+        ],
+        [
+          "icon-fire",
+          "flames"
+        ],
+        [
+          "icon-snowflake",
+          "snowflake"
+        ],
+        [
+          "icon-tornado",
+          "tornado"
+        ],
+        [
+          "icon-boom",
+          "boom"
         ]
-      ]
+      ],
+      "grid": [
+        8,
+        8
+      ],
+      "gutters": true
     },
     {
       "file": "sheet-10-icons.png",
@@ -656,70 +872,267 @@
       "transparent": true,
       "items": [
         [
+          "icon-chicken",
+          "roast chicken"
+        ],
+        [
+          "icon-steak",
+          "steak"
+        ],
+        [
+          "icon-fish",
+          "fish with lemon"
+        ],
+        [
+          "icon-stew",
+          "bowl of stew"
+        ],
+        [
+          "icon-bread",
+          "bread loaf"
+        ],
+        [
+          "icon-cheese",
+          "cheese"
+        ],
+        [
+          "icon-grapes",
+          "grapes"
+        ],
+        [
+          "icon-fruit",
+          "fruit bowl"
+        ],
+        [
           "icon-pizza",
-          "pizza slice"
+          "pizza"
         ],
         [
           "icon-burger",
           "burger"
         ],
         [
+          "icon-hotdog",
+          "hot dog"
+        ],
+        [
+          "icon-taco",
+          "taco"
+        ],
+        [
+          "icon-ramen",
+          "ramen bowl"
+        ],
+        [
+          "icon-sushi",
+          "sushi"
+        ],
+        [
+          "icon-cake",
+          "slice of cake"
+        ],
+        [
+          "icon-beer",
+          "beer mug"
+        ],
+        [
+          "icon-wine",
+          "glass of red wine"
+        ],
+        [
+          "icon-coffee",
+          "cup of coffee"
+        ],
+        [
+          "icon-tea",
+          "cup of tea"
+        ],
+        [
           "icon-cupcake",
           "cupcake"
         ],
         [
-          "icon-coffee",
-          "coffee cup with steam"
+          "icon-ice-cream",
+          "ice cream cone"
+        ],
+        [
+          "icon-donut",
+          "donut"
+        ],
+        [
+          "icon-chocolate",
+          "chocolate bar"
+        ],
+        [
+          "icon-popcorn",
+          "popcorn"
         ],
         [
           "icon-guitar",
           "electric guitar"
         ],
         [
-          "icon-note",
-          "music note"
+          "icon-drums",
+          "drum kit"
         ],
         [
-          "icon-mic",
-          "handheld microphone"
+          "icon-piano",
+          "grand piano"
         ],
         [
-          "icon-clapper",
-          "film clapperboard"
+          "icon-violin",
+          "violin"
         ],
         [
-          "icon-popcorn",
-          "popcorn bucket"
+          "icon-sax",
+          "saxophone"
+        ],
+        [
+          "icon-trumpet",
+          "trumpet"
+        ],
+        [
+          "icon-stage-mic",
+          "stage microphone"
+        ],
+        [
+          "icon-studio-headphones",
+          "studio headphones"
         ],
         [
           "icon-reel",
           "film reel"
         ],
         [
-          "icon-star",
-          "gold star"
+          "icon-clapper-2",
+          "director's clapper"
+        ],
+        [
+          "icon-camera-2",
+          "film camera"
+        ],
+        [
+          "icon-cassette",
+          "cassette tape"
+        ],
+        [
+          "icon-vinyl",
+          "vinyl record"
+        ],
+        [
+          "icon-books",
+          "stack of books"
+        ],
+        [
+          "icon-book-2",
+          "open storybook"
+        ],
+        [
+          "icon-scroll-quill",
+          "scroll and quill"
+        ],
+        [
+          "icon-crown",
+          "crown"
+        ],
+        [
+          "icon-laurel",
+          "laurel wreath"
+        ],
+        [
+          "icon-medal",
+          "gold medal"
+        ],
+        [
+          "icon-star-trophy",
+          "star trophy"
         ],
         [
           "icon-heart",
-          "red heart"
+          "heart"
+        ],
+        [
+          "icon-broken-heart",
+          "broken heart"
+        ],
+        [
+          "icon-clover",
+          "four-leaf clover"
+        ],
+        [
+          "icon-horseshoe",
+          "horseshoe"
         ],
         [
           "icon-moneybag",
           "money bag"
         ],
         [
-          "icon-crown",
-          "gold crown"
+          "icon-coin-stack",
+          "stacks of coins"
         ],
         [
-          "icon-bolt",
-          "lightning bolt"
+          "icon-cash",
+          "bundle of cash"
         ],
         [
-          "icon-bulb",
-          "glowing light bulb"
+          "icon-diamond",
+          "diamond"
+        ],
+        [
+          "icon-ruby",
+          "ruby"
+        ],
+        [
+          "icon-sapphire",
+          "sapphire"
+        ],
+        [
+          "icon-ring",
+          "ruby ring"
+        ],
+        [
+          "icon-key",
+          "golden key"
+        ],
+        [
+          "icon-hourglass",
+          "hourglass"
+        ],
+        [
+          "icon-lantern",
+          "lantern"
+        ],
+        [
+          "icon-candle",
+          "candle"
+        ],
+        [
+          "icon-map",
+          "treasure map"
+        ],
+        [
+          "icon-compass-rose",
+          "compass rose"
+        ],
+        [
+          "icon-globe",
+          "globe"
+        ],
+        [
+          "icon-anchor",
+          "anchor"
+        ],
+        [
+          "icon-spyglass-2",
+          "brass spyglass"
         ]
-      ]
+      ],
+      "grid": [
+        8,
+        8
+      ],
+      "gutters": true
     }
   ]
 }

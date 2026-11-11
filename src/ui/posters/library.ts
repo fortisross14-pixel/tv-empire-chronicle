@@ -31,6 +31,8 @@ export const skyById = (id: string) => SKIES.find((s) => s.id === id) ?? SKIES[1
 
 /** Where icons go: positions as [x%, y%, rotation°] for up to 8 icons. */
 export const ICON_LAYOUTS = {
+  center: { label: 'Centre', spots: [[50, 56, 0], [26, 56, -8], [74, 56, 8], [50, 24, 0], [14, 26, -12], [86, 26, 12], [14, 84, 10], [86, 84, -10]] },
+  sides: { label: 'Sides', spots: [[11, 62, -6], [89, 62, 6], [11, 30, 6], [89, 30, -6], [24, 84, 0], [76, 84, 0], [24, 16, 0], [76, 16, 0]] },
   scatter: { label: 'Scattered', spots: [[14, 22, -12], [86, 20, 10], [10, 70, 8], [90, 72, -10], [30, 86, 14], [70, 88, -6], [24, 46, 6], [76, 48, -14]] },
   row: { label: 'Bottom row', spots: [[50, 84, 0], [36, 84, -6], [64, 84, 6], [22, 84, 8], [78, 84, -8], [10, 84, 0], [90, 84, 0], [50, 84, 0]] },
   top: { label: 'Top row', spots: [[50, 16, 0], [36, 16, 6], [64, 16, -6], [22, 16, -8], [78, 16, 8], [10, 16, 0], [90, 16, 0], [50, 16, 0]] },
@@ -99,19 +101,29 @@ export function autoPoster(subject: PosterSubject, salt = ''): PosterSpec {
   const second = subject.topic2Id ? pickFor(rand, FRONTS.filter((f) => f.id !== front.id), [subject.topic2Id]) : null;
   const effect = rand() < 0.45 ? pickFor(rand, EFFECTS, tags) : null;
   const skies = FORMAT_SKY[subject.formatId] ?? ['sky-day'];
+  const icon = pickFor(rand, ICONS, tags);
+  const title = {
+    show: true,
+    font: (subject.topicId && TOPIC_FONT[subject.topicId]) || FORMAT_FONT[subject.formatId] || 'bungee',
+    color: TITLE_COLORS[Math.floor(rand() * 3)],
+    size: (subject.name.length > 22 ? 's' : 'm') as 's' | 'm',
+    position: (rand() < 0.7 ? 'top' : 'bottom') as 'top' | 'bottom',
+  };
+  // Sometimes the simplest poster: one big icon on a colour (a roast chicken on red).
+  if (icon && rand() < 0.25) {
+    return { sky: skies[Math.floor(rand() * skies.length)], scene: null, fronts: [], effect: null, frame: null,
+      icons: { ids: [icon.id], layout: 'center', size: 'xl' }, title: { ...title, position: 'top' } };
+  }
+  // A few matching icons on the side now and then.
+  const extras = rand() < 0.3 && icon ? { ids: [icon.id, icon.id], layout: 'corners' as const, size: 's' as const } : null;
   return {
     sky: skies[Math.floor(rand() * skies.length)],
     scene: scene && rand() < 0.8 ? scene.id : null,
     fronts: second ? [front.id, second.id] : [front.id],
     effect: effect?.id ?? null,
     frame: rand() < 0.35 ? FRAMES[Math.floor(rand() * FRAMES.length)].id : null,
-    title: {
-      show: true,
-      font: (subject.topicId && TOPIC_FONT[subject.topicId]) || FORMAT_FONT[subject.formatId] || 'bungee',
-      color: TITLE_COLORS[Math.floor(rand() * 3)],
-      size: subject.name.length > 22 ? 's' : 'm',
-      position: rand() < 0.7 ? 'top' : 'bottom',
-    },
+    icons: extras,
+    title,
   };
 }
 

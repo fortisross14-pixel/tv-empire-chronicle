@@ -155,7 +155,7 @@ export interface PosterSpec {
   effect: string | null;
   frame: string | null;
   /** Small icons sprinkled over the picture (e.g. a few balls for a sports show). */
-  icons?: { ids: string[]; layout: 'scatter' | 'row' | 'top' | 'corners' | 'ring'; size: 's' | 'm' | 'l' } | null;
+  icons?: { ids: string[]; layout: 'center' | 'sides' | 'scatter' | 'row' | 'top' | 'corners' | 'ring'; size: 's' | 'm' | 'l' | 'xl' } | null;
   title: {
     show: boolean;
     font: string;

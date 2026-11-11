@@ -192,6 +192,9 @@ export const assignSportsTeam = (state: GameState, rightsId: string, crewId: str
 
 export const MAX_POSTER_ICONS = 8;
 
+/** The minimum poster: a background (always set) plus at least one cast image or icon. */
+export const posterIsComplete = (p: PosterSpec) => p.fronts.length > 0 || (p.icons?.ids.length ?? 0) > 0;
+
 /** Save a poster design for a show (null goes back to the automatic poster). */
 export const setPoster = (state: GameState, showId: string, poster: PosterSpec | null) =>
   produce(state, (s) => {
@@ -199,6 +202,7 @@ export const setPoster = (state: GameState, showId: string, poster: PosterSpec |
     if (!show) throw new GameError('Show not found.');
     if (poster && (poster.fronts.length > 2 || typeof poster.sky !== 'string')) throw new GameError('A poster has one sky and up to two front images.');
     if (poster?.icons && poster.icons.ids.length > MAX_POSTER_ICONS) throw new GameError(`Up to ${MAX_POSTER_ICONS} icons per poster.`);
+    if (poster && !posterIsComplete(poster)) throw new GameError('A poster needs at least one cast image or icon.');
     show.poster = poster ? structuredClone(poster) : null;
   });
 

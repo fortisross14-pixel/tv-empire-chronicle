@@ -151,5 +151,16 @@ test('posters accept up to 8 icons', async () => {
   const base = { sky: 'sky-day', scene: null, fronts: [], effect: null, frame: null, title: { show: true, font: 'bungee', color: '#fff', size: 'm' as const, position: 'top' as const } };
   s = setPoster(s, s.shows[0].id, { ...base, icons: { ids: ['icon-basketball', 'icon-football', 'icon-tennis', 'icon-soccer'], layout: 'scatter', size: 'm' } });
   expect(s.shows[0].poster!.icons!.ids).toHaveLength(4);
-  expect(() => setPoster(s, s.shows[0].id, { ...base, icons: { ids: Array(9).fill('icon-star'), layout: 'row', size: 's' } })).toThrow();
+  expect(() => setPoster(s, s.shows[0].id, { ...base, icons: { ids: Array(9).fill('icon-heart'), layout: 'row', size: 's' } })).toThrow();
+});
+
+test('a poster needs a cast image or an icon on its background', async () => {
+  const { setPoster } = await import('./game');
+  let s = withShow(12);
+  const base = { sky: 'plain-red', scene: null, fronts: [] as string[], effect: 'fx-notes', frame: 'frame-ticket', title: { show: true, font: 'bungee', color: '#fff', size: 'm' as const, position: 'top' as const } };
+  expect(() => setPoster(s, s.shows[0].id, { ...base, icons: null })).toThrow(/cast image or icon/);
+  s = setPoster(s, s.shows[0].id, { ...base, effect: null, frame: null, icons: { ids: ['icon-chicken'], layout: 'center', size: 'xl' } });
+  expect(s.shows[0].poster!.icons!.ids).toEqual(['icon-chicken']);
+  s = setPoster(s, s.shows[0].id, { ...base, fronts: ['front-singer'] });
+  expect(s.shows[0].poster!.fronts).toEqual(['front-singer']);
 });

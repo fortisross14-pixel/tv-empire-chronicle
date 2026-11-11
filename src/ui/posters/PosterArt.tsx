@@ -39,7 +39,7 @@ function useArtIndex(): ArtIndex {
 const GROUP: Record<string, string> = { bg: 'backgrounds', front: 'fronts', fx: 'effects', frame: 'frames', icon: 'icons' };
 const src = (id: string) => `${import.meta.env.BASE_URL}posters/${GROUP[id.split('-')[0]]}/${id}.webp`;
 const emojiOf = (id: string) => [...SCENES, ...FRONTS, ...EFFECTS, ...ICONS].find((a) => a.id === id)?.emoji ?? '❔';
-const ICON_SIZE = { s: 18, m: 26, l: 34 } as const;
+const ICON_SIZE = { s: 18, m: 26, l: 34, xl: 58 } as const;
 
 /** One icon on its own, for the editor's picker. */
 export function PosterIcon({ id, emoji }: { id: string; emoji: string }) {
@@ -49,6 +49,8 @@ export function PosterIcon({ id, emoji }: { id: string; emoji: string }) {
 
 /** Window used for a frame that has no measured art yet (left, top, right, bottom). */
 const DEFAULT_WINDOW: [number, number, number, number] = [0.08, 0.12, 0.08, 0.12];
+/** Frames whose sides reach into the picture near the top (e.g. curtains): keep the title clear of them (% of the window). */
+const TITLE_SIDE: Record<string, number> = { 'frame-curtains': 20, 'frame-starburst': 14 };
 
 /**
  * One poster drawn from its layers, sized by its 3:2 container.
@@ -91,7 +93,7 @@ export function PosterArt({ spec, title, hideTitle, className }: { spec: PosterS
           : <span className="pa-fx-stand" aria-hidden="true">{Array.from({ length: 5 }, () => emojiOf(spec.effect!)).join(' ')}</span>)}
         {spec.title.show && !hideTitle && (
           <span className={cx('pa-title', `pos-${spec.title.position}`, `size-${spec.title.size}`)}
-            style={{ fontFamily: font.family, color: spec.title.color }}>{title}</span>
+            style={{ fontFamily: font.family, color: spec.title.color, ...(spec.frame && TITLE_SIDE[spec.frame] ? { left: `${TITLE_SIDE[spec.frame]}%`, right: `${TITLE_SIDE[spec.frame]}%` } : {}) }}>{title}</span>
         )}
       </div>
       {spec.frame && (has(spec.frame)

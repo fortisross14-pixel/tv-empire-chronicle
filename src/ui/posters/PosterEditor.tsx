@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { PosterSpec } from '../../engine';
+import { MAX_POSTER_ICONS, posterIsComplete, type PosterSpec } from '../../engine';
 import { Sheet } from '../components/Sheet';
 import { PosterArt, PosterIcon } from './PosterArt';
 import { EFFECTS, FONTS, FRAMES, FRONTS, ICONS, ICON_LAYOUTS, SCENES, SKIES, TITLE_COLORS, autoPoster, shufflePoster, type IconLayout } from './library';
@@ -31,13 +31,18 @@ export function PosterEditor({
     else set({ fronts: [...spec.fronts, id].slice(-2) });
   };
 
- const icons = spec.icons ?? { ids: [], layout: 'scatter' as IconLayout, size: 'm' as const };
+  const icons = spec.icons ?? { ids: [] as string[], layout: 'scatter' as IconLayout, size: 'm' as 's' | 'm' | 'l' | 'xl' };
+  const complete = posterIsComplete(spec);
   const setIcons = (patch: Partial<typeof icons>) => {
     const next = { ...icons, ...patch };
     set({ icons: next.ids.length ? next : null });
   };
-  const toggleIcon = (id: string) =>
-    setIcons({ ids: icons.ids.includes(id) ? icons.ids.filter((x) => x !== id) : [...icons.ids, id].slice(0, 8) });
+  const toggleIcon = (id: string) => {
+    if (icons.ids.includes(id)) return setIcons({ ids: icons.ids.filter((x) => x !== id) });
+    // A first icon with no cast is the star of the poster: big and centred.
+    const hero = !icons.ids.length && !spec.fronts.length;
+    setIcons({ ids: [...icons.ids, id].slice(0, MAX_POSTER_ICONS), ...(hero ? { layout: 'center' as IconLayout, size: 'xl' as const } : {}) });
+  };
 
   const Option = ({ on, onPick, preview, label }: { on: boolean; onPick: () => void; preview: PosterSpec; label: string }) => (
     <button className={cx('pe-opt', on && 'on')} onClick={onPick} title={label} aria-label={label} aria-pressed={on}>
@@ -49,12 +54,14 @@ export function PosterEditor({
     <Sheet title="Poster" onClose={onClose} wide
       footer={<>
         <button className="btn ghost" onClick={() => setSpec(shufflePoster(subject))}>🎲 Shuffle</button>
-        <button className="btn primary" onClick={() => onSave(spec)}>Save poster</button>
+        <button className="btn primary" disabled={!complete} onClick={() => onSave(spec)}>Save poster</button>
       </>}>
       <div className="stack">
         <div className="pe-preview"><PosterArt spec={spec} title={subject.name} /></div>
         <div className="row wrap small">
-          <span className="muted">Layers: background (scene or colour), up to 2 cast images, effect, frame, title.</span>
+          <span className={complete ? 'muted' : 'bad'}>{complete
+            ? 'Needs a background plus a cast image or icon. Frame, effect and more icons are optional.'
+            : 'Add a cast image or an icon to finish the poster.'}</span>
           <button className="btn small ghost" onClick={() => { setSpec(autoPoster(subject)); onSave(null); }}>Use automatic</button>
         </div>
         <div className="segmented pe-tabs">
@@ -87,7 +94,7 @@ export function PosterEditor({
         )}
         {tab === 'icons' && (
           <div className="stack">
-            <p className="small muted">Pick up to 8 icons ({icons.ids.length}/8), then how to arrange them. They sit inside the frame, under the effect and title.</p>
+            <p className="small muted">Pick up to {MAX_POSTER_ICONS} icons ({icons.ids.length}/{MAX_POSTER_ICONS}), then how to arrange them. They sit inside the frame, under the effect and title.</p>
             <div className="pe-icons">
               {sortByFit(ICONS).map((a) => (
                 <button key={a.id} className={cx('pe-icon', icons.ids.includes(a.id) && 'on')} onClick={() => toggleIcon(a.id)} title={a.label} aria-label={a.label} aria-pressed={icons.ids.includes(a.id)}>
@@ -104,7 +111,7 @@ export function PosterEditor({
             </div>
             <div className="field"><label>Size</label>
               <div className="segmented">
-                {(['s', 'm', 'l'] as const).map((z) => <button key={z} className={icons.size === z ? 'on' : ''} onClick={() => setIcons({ size: z })}>{z === 's' ? 'Small' : z === 'm' ? 'Medium' : 'Large'}</button>)}
+                {(['s', 'm', 'l', 'xl'] as const).map((z) => <button key={z} className={icons.size === z ? 'on' : ''} onClick={() => setIcons({ size: z })}>{{ s: 'Small', m: 'Medium', l: 'Large', xl: 'Huge' }[z]}</button>)}
               </div>
             </div>
             {icons.ids.length > 0 && <button className="btn ghost small" onClick={() => set({ icons: null })}>Remove all icons</button>}
