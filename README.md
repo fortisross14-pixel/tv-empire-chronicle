@@ -1,111 +1,42 @@
-# TV Empire Chronicle — Expansion Build
+# TV Empire Chronicle
 
-A playable Vite + React prototype of a persistent broadcast-industry simulation. You begin as **Northstar 8**, a small station serving Rockford and northern Illinois, and can build toward a Midwest regional network, cable specialist, sports service, national broadcaster, streamer, or hybrid media company.
+A Kairosoft-style TV station management game told through cards. You start
+as a tiny local station in the parody city of Port Ellison with one writer,
+one crew member and one host. Open packs to collect format and topic cards,
+make shows, schedule them, beat the rival station in the ratings, and grow.
 
-## Run locally
+The full design is in [`docs/DESIGN.md`](docs/DESIGN.md).
+
+## How to play
+
+1. **Week** tab: open your free program pack.
+2. **Studio**: start a show. Pick a format + topic, choose your writer, crew
+   and on-screen person, split 10 focus points across Direction, Sound, Image,
+   FX, Music and Visual art.
+3. Press **▶ Air week** to move time forward. Shows go Script → Production → Post.
+4. **Schedule**: put the finished show into a slot. Weekday slots air 5×/week.
+5. Watch the ratings reveal, earn ad money, buy more packs in the **Shop**.
+
+Each person card has a number of uses (1 per 13-week season). Duplicate topic
+cards become Twist tokens that refresh a tired show when you renew it.
+
+## Development
 
 ```bash
 npm install
-npm run dev
+npm run dev        # local dev server
+npm test           # engine unit tests (Vitest)
+npm run typecheck  # TypeScript
+npm run ci         # typecheck + tests + production build (used by GitHub Actions)
 ```
 
-Then open the local URL shown by Vite.
+### Code layout
 
-## Core playable systems
+- `src/engine/` — the game rules as pure TypeScript, no UI. Seeded RNG, so a
+  game replays exactly. Every action takes a state and returns a new one.
+  - `data/` — formats, topics, parody names
+  - `production.ts` — scores, focus points, the studio pipeline
+  - `game.ts` — actions and the weekly simulation (`airWeek`)
+- `src/ui/` — React screens and card components.
 
-### Living industry universe
-- Regional, national broadcast, cable-news, and streaming competitors.
-- MTD and YTD audience-share and revenue rankings.
-- Competitor momentum, reach, brand identities, flagship programs, and strategic moves.
-
-### Distribution and growth
-- Start with one owned local station and a limited household footprint.
-- Enter markets through affiliates, cable carriage, repeater chains, owned-station acquisitions, or national carriage.
-- Each route has different cost, lead time, ongoing expense, coverage, control, and research requirements.
-- Facilities have levels and condition, can be upgraded, and slowly decay.
-
-### Deeper creative pipeline
-1. **Create a project** by selecting category, subtype, target, episode count, duration, narrative structure, closure, tone, writer, and visual identity.
-2. **Write the script** over several simulated weeks.
-3. Receive a **1–5 star script package** with critical roles, secondary roles, strengths, risks, and recommended production setup.
-4. **Package production** by assigning a producer, director, and lead based on role fit rather than rarity alone.
-5. Production takes weeks; finished shows become available for programming.
-6. Continuous talk/news formats can enter the schedule while their production workflow is being finalized.
-
-### Decision-driven cost
-There is no generic quality or budget slider. Episode and season cost are calculated from:
-- Music
-- VFX / studio graphics
-- Sets
-- Locations
-- Wardrobe
-- Writing-room model
-- Episode count and length
-- External talent fees
-- Launch support
-
-### Content taxonomy
-- Drama: police, medical, young adult, political, historical/medieval, science fiction, family saga.
-- Comedy: workplace, family, romance, sketch, animation.
-- Contest: culture quiz, physical challenge, family, talent, cooking.
-- Reality: social, survival, love, transformation, entrepreneur.
-- News/factual: daily news, investigations, nature, sports, local magazine, true crime.
-- Talk: morning, daytime, late night, political, sports.
-- Many types require research before they can be commissioned.
-
-### Rights market
-- Local and regional sports.
-- College packages.
-- Movie libraries and premiere windows.
-- Proven format rights.
-- International highlights.
-- Competition, deadlines, territorial coverage, exclusivity, terms, and weekly commitments.
-
-### Outlook-style programming
-- Seven days across five meaningful dayparts: Morning, Afternoon, Evening, Prime Time, and Late Night.
-- Drag and drop between cells.
-- Drag shows, ready productions, sports, and movie packages from the content bank.
-- Click a cell for a searchable-style content picker.
-
-### People and institutional learning
-- Rarity, profession, style, reliability, prestige, and commercial value.
-- Separate skill ratings for acting, hosting, writing, producing, directing, journalism, music, and cinematography.
-- Role-specific specialties such as drama lead, contest host, local anchor, pilot director, or reality producer.
-- Staff gain experience from completed productions and can improve outside their original specialty.
-- The network itself develops institutional specialties such as local news or regional sports.
-
-### Research and facilities
-- Distribution, infrastructure, creative, production, news, commercial, rights, and corporate research trees.
-- One active capability program at a time.
-- Research unlocks markets, production types, rights packages, and expansion routes.
-
-### Business systems
-- Nielsen-style program performance.
-- Market awareness and share.
-- Advertiser market, agreements, and marketing campaigns.
-- Weekly management P&L.
-- Program-level economics, future commitments, liquidity, debt, and board confidence.
-- Weekly Chronicle stories generated from scripts, productions, premieres, expansion, research, ratings, and failure.
-
-## Controls
-- Use **Advance week** or **Advance 4 weeks** to run the simulation.
-- The game autosaves a compact state to browser `localStorage` under `tv-empire-chronicle-v2`.
-- Use **Reset universe** at the bottom of the sidebar to return to the starting state.
-
-## Current prototype boundaries
-- The simulation is intentionally compact and client-side.
-- Negotiations are represented through prices, requirements, and strategic decisions rather than multi-round dialogue.
-- Drag and drop is optimized for desktop Chrome; mobile uses the click-to-select schedule workflow.
-- No server or database is required for this build.
-
-The complete design document is included in `/docs`.
-
-## GitHub Actions note
-
-Version 0.2.2 runs the production validation through `node scripts/ci-build.mjs` instead of executing the `node_modules/.bin/vite` shim. The repository also includes `.gitignore` and a clean-install CI workflow. See `GIT_FIX.md` when upgrading an existing repository that may already track `node_modules`.
-
-## GitHub Pages deployment
-
-The included workflow builds and deploys the `dist` directory automatically on pushes to `main` or `master`.
-
-One GitHub setting is required: open **Settings → Pages** and choose **GitHub Actions** as the deployment source. See `GITHUB_PAGES_DEPLOYMENT.md` for the exact steps.
+Deploys to GitHub Pages from `main` (see `GITHUB_PAGES_DEPLOYMENT.md`).

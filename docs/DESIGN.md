@@ -3,7 +3,7 @@
 Kairosoft-style TV studio management in a parody world. Menu-based, everything
 is a **card**. Start tiny, unlock slowly: Local → State → National.
 
-Status: design agreed in principle. Items marked **[OPEN]** still need a decision.
+Status: agreed. Waves 0–1 are built (see §13).
 
 ---
 
@@ -45,8 +45,11 @@ Three kinds:
   veteran writer becomes your star.
 - **Busy state:** a card is locked while working on a stage. On-screen cards stay
   locked to the show while it airs.
-- **[OPEN]** What a "use" means for recurring shows (proposal: one use per
-  13-week cycle on air).
+- **A use = one season.** Every show runs in 13-week seasons (one quarter of
+  the 52-week year). Each person on the team spends 1 use per season. After a
+  season you renew it (new uses) or rest it so its novelty recovers.
+- **People packs are random:** 3 cards drawn from crew, writers and on-screen
+  (roughly 45% / 25% / 30%), with random rarity.
 
 ### 3.2 Program cards (the album)
 Permanent, collectible, never expire. Two types that combine:
@@ -60,8 +63,10 @@ Permanent, collectible, never expire. Two types that combine:
   - *Fiction-leaning:* Medieval → Series ★★★, TV Movie ★★★, Documentary ★.
 - **Program pack** = 1 Format + 2 Topics. Packs are expensive; contents are permanent.
 - A show = **1 Format + 1 Topic**. The fit stars give a script bonus or penalty.
-- **Duplicates** are not wasted (proposal): a duplicate Topic becomes a
-  **Twist token** for that topic, used to revamp a tired show (see §5).
+- **Duplicates** are not wasted: a duplicate Topic becomes a **Twist token**
+  for that topic. Spend it when renewing a show for a season with a new twist,
+  which restores much more novelty than a plain renewal (see §5). A duplicate
+  Format refunds a little cash.
 - The **Album** view shows every card, owned or still a silhouette — a collection goal.
 
 ### 3.3 Network cards
@@ -91,25 +96,45 @@ Content you buy instead of produce. It **expires**, unlike program cards.
 
 ## 4. Making a show (studio pipeline)
 
-Pick Format + Topic, then **Season** (N episodes: 1 / 6 / 10 / 13) or
-**Recurring** (no end, e.g. daily news or a weekly quiz).
+Pick Format + Topic, build the team, split the **focus points**, then
+Script → Production → Post. A finished show becomes a **Show card**
+(4 score bars, novelty meter, episodes left, last rating).
 
-| Stage | Role slots | Feeds score |
+### Production tiers
+
+| Tier | Unlocks at | Team | Focus points | Topics |
+|---|---|---|---|---|
+| **Basic** | Local | 1 writer, 1 crew lead (covers every area), 1 on-screen | 10 | 1 |
+| **Advanced** | State | up to 2 writers + specialist roles | 15 | 2 |
+| **AAA** | National | up to 3 writers, up to 6 crew roles (director, producer, sound, FX, composer, art) + cast | 20 | 2 |
+
+### Focus points
+Each show splits its points across six areas: **Direction, Sound, Image, FX,
+Music, Visual art** (max 5 per area on Basic). Every format has a hidden ideal
+split (a quiz needs sound and visual art, little FX; a fantasy series needs a
+balance). Before you've made a format you only see its two key areas; after
+the first production the exact ideal is revealed. Close to the ideal gives a
+quality bonus, far off a penalty.
+
+How well each area is done = the skill of whoever covers it × how many points
+it got compared with the ideal. On Basic, the one crew card covers every area
+with its own skill profile (an 80 Direction / 15 Sound crew is a great
+director and a weak sound engineer). Advanced and AAA let you put a specialist
+on each area.
+
+| Stage | Who works | Feeds |
 |---|---|---|
 | Script | Writer | **Script** |
-| Production | Director, Producer, Sound, Image, Cast | **Art**, **Technical**, **Screen Power** |
-| Post | Editor/FX | **Technical** |
+| Production | Crew + cast | **Art**, **Technical**, **Screen Power** |
+| Post | Crew | **Technical** |
 
-- At Local only **Director** and **Cast** are required. An empty optional role
-  is covered by the director at a penalty, so a 3-person studio can still make a show.
-- Producer skill reduces production time and cost.
-- Each stage takes some weeks and shows its progress; the finished show becomes
-  a **Show card** (4 score bars, novelty meter, episodes left, last rating).
+- Producer skill shortens production and lowers cost.
+- People work one stage per week. Someone booked on two shows makes the second wait.
 
 ### The four scores
 - **Script** — writer skill in the format's genre × topic fit
-- **Technical** — Sound + Image + Edit/FX (+ facility floors)
-- **Art** — Direction (+ production design later)
+- **Technical** — Sound + Image + FX
+- **Art** — Direction + Music + Visual art
 - **Screen Power** — the cast's Hosting/Acting + Charisma + Fame
 
 Each format weighs them differently (e.g. News: Technical/Screen Power heavy;
@@ -121,10 +146,12 @@ weighted sum.
 - **Novelty** starts at 100 and drops each week on air. It drops faster with
   **saturation**: other shows (yours or rivals') with the same Format+Topic.
   Five Political News shows means the newest is near 0 within weeks.
-- **Revamp** — spend a Twist token (or a short script project): restores part
-  of the novelty; each revamp of the same show works less well.
-- **Renew** (season shows) — a new season keeps most of the audience and resets novelty partly.
-- **Cancel** — frees the slot. **Rerun** — cheap filler with low novelty.
+- **Renew** — a new season (shorter script and production, uses again).
+  Restores +25 novelty, and the ceiling drops each season.
+- **Renew with a Twist token** — restores +55 novelty and resets the ceiling.
+- **Rest** — off the schedule, a show recovers novelty slowly.
+- **Rerun** — after the season, a show can keep airing as reruns: cheap, weaker, ages faster.
+- **Cancel** — removes the show for good.
 
 ## 6. Schedule
 
@@ -135,11 +162,8 @@ run **Filler** (infomercials and old reruns): tiny audience, tiny revenue.
 | Tier | Day blocks | Dayparts | Slots |
 |---|---|---|---|
 | Local | Weekday, Weekend | Morning, Evening, Prime | 6 |
-| State | Weekday ×2, Weekend | + Afternoon, Late Night | 15 |
-| National | **[OPEN]** | all | — |
-
-**[OPEN]** How the weekday is split at State and National (proposal:
-State = Mon–Wed / Thu–Fri / Weekend; National = Mon–Tue / Wed–Thu / Fri / Weekend).
+| State | Mon–Wed, Thu–Fri, Weekend | + Afternoon, Late Night | 15 |
+| National | Mon–Tue, Wed–Thu, Fri, Weekend | all 5 | 20 |
 
 Rating per slot = market size × daypart audience × season multiplier ×
 quality × novelty × format/daypart fit × hype × lead-in − rival pressure.
@@ -169,7 +193,8 @@ Plus: sports seasons, election falls (Political News boost), the yearly
 - No salaries: people are paid through packs and renewals.
 - Shop: Program pack, People pack, Network pack. A few free packs come from
   milestones (first slot win, first sweeps, awards).
-- **[OPEN]** What happens at bankruptcy (game over, or a bank loan once).
+- **Bankruptcy:** the first time cash goes negative the bank lends $100K
+  (repaid at $2.5K/week). The second time, the game is over.
 
 ## 9. Start and unlock order
 
@@ -213,14 +238,16 @@ Unlocks:
 
 0. **Foundation** — remove the old code, TS + engine/UI split, card components,
    save/load, week tick, calendar.
-1. **Core loop (Local)** — starter people, free pack opening, studio pipeline
-   with roles, show cards, 6-slot schedule with filler, 1 rival, *Air Week*
-   reveal, money, seasonal audience.
+1. **Core loop (Local)** ✅ — starter people, free pack opening, studio pipeline,
+   focus points, show cards, 6-slot schedule with filler, 1 rival, *Air Week*
+   reveal, money, calendar periods and sweeps, bank loan.
+   Also pulled forward from waves 2–3: shop (program/people packs, Business
+   Cards), duplicates → Twist tokens, album, uses, XP/levels, rarities,
+   novelty + saturation, seasons/renewals/reruns, lead-in, daypart fit.
    *Test: is making a show and seeing it rate fun within 20 minutes?*
-2. **Card economy** — shop, packs, duplicates → Twist tokens, album, uses +
-   Business Card renewals, XP and levels, rarities.
-3. **Show life** — novelty, saturation, revamp, renew/cancel, recurring vs
-   season, lead-in, daypart fit.
+2. **Card economy, deeper** — network packs, facility cards, pack odds tuning,
+   more people variety.
+3. **Show life, deeper** — hype, better rival AI reactions, show history charts.
 4. **Calendar & marketing** — sweeps and ad pricing, premiere season, promo
    cards, hype, events, sponsors.
 5. **Rights** — Rights Market, film packages, local sports on the calendar.
