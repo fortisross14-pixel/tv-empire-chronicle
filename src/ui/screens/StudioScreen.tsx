@@ -10,7 +10,7 @@ export function StudioScreen({
   const free = state.people.filter((p) => (p.house || p.uses > 0) && !booked(p.id));
   return (
     <>
-      <section className="panel" style={{ background: 'var(--hud)', color: '#fff' }}>
+      <section className="panel">
         <div className="spread">
           <div>
             <h2 style={{ fontSize: 22 }}>🎬 Studio</h2>

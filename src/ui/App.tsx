@@ -13,6 +13,7 @@ import { EventModal } from './components/EventModal';
 import { CeremonyModal } from './components/CeremonyModal';
 import { TargetPicker } from './components/TargetPicker';
 import { Sheet } from './components/Sheet';
+import { ShowSheet } from './components/ShowSheet';
 import { ConfirmProvider, useConfirm } from './components/Confirm';
 import { WeekScreen, type Todo } from './screens/WeekScreen';
 import { ScheduleScreen } from './screens/ScheduleScreen';
@@ -23,8 +24,8 @@ import { cx, money } from './util';
 
 type Tab = 'week' | 'schedule' | 'studio' | 'cards' | 'shop';
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'week', label: 'Week', icon: '📅' },
-  { id: 'schedule', label: 'Schedule', icon: '📺' },
+  { id: 'week', label: 'Home', icon: '🏠' },
+  { id: 'schedule', label: 'Guide', icon: '📺' },
   { id: 'studio', label: 'Studio', icon: '🎬' },
   { id: 'cards', label: 'Cards', icon: '🃏' },
   { id: 'shop', label: 'Market', icon: '🛍️' },
@@ -47,9 +48,9 @@ function TitleScreen({ onStart, notice }: { onStart: (name: string) => void; not
         <p style={{ opacity: 0.8 }}>
           You just bought a tiny local TV station in {CITY}. Collect cards, make shows, win the ratings — and grow into a national network.
         </p>
-        {notice && <p className="panel small" style={{ color: 'var(--ink)' }}>{notice}</p>}
+        {notice && <p className="panel small">{notice}</p>}
         <div className="field" style={{ textAlign: 'left' }}>
-          <label htmlFor="station" style={{ color: '#fff' }}>Name your channel</label>
+          <label htmlFor="station">Name your channel</label>
           <input id="station" className="input" value={name} maxLength={24} onChange={(e) => setName(e.target.value)} />
         </div>
         <button className="btn primary block" onClick={() => onStart(name)}>Go on air</button>
@@ -63,6 +64,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   const [wizard, setWizard] = useState<{ renew?: string; spinoff?: string } | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [usingCard, setUsingCard] = useState<string | null>(null);
+  const [openShow, setOpenShow] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
 
@@ -193,14 +195,13 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
               void ask({ title: 'Buy the license?', text: 'Running costs rise a lot, but so does the audience. Make sure you have shows ready for the bigger schedule.', confirm: 'Buy license' })
                 .then((ok) => { if (ok) run(state.tier === 'local' ? expandToState : expandToNational); });
             }}
-            onAffiliate={() => run(signAffiliate, 'Affiliate signed! 📡')} />
+            onAffiliate={() => run(signAffiliate, 'Affiliate signed! 📡')}
+            onOpenShow={setOpenShow} onNewShow={() => setWizard({})} onAir={air} goTab={setTab} />
         )}
         {tab === 'schedule' && (
           <ScheduleScreen state={state}
             onSchedule={(slot, id) => run((s) => scheduleShow(s, slot, id))}
-            onRenew={(id) => setWizard({ renew: id })}
-            onSpinoff={(id) => setWizard({ spinoff: id })}
-            onCancelShow={(id) => run((s) => cancelShow(s, id), 'Show cancelled.')}
+            onOpenShow={setOpenShow}
             onAssignTeam={(rid, c, t) => run((s) => assignSportsTeam(s, rid, c, t), 'Broadcast team set.')} />
         )}
         {tab === 'studio' && (
@@ -306,6 +307,17 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
             <p className="small muted">The game goes on — keep your crown, chase more Glimmys and build more Shows for the Ages.</p>
           </div>
         </Sheet>
+      )}
+      {openShow && (
+        <ShowSheet state={state} showId={openShow} onClose={() => setOpenShow(null)}
+          onSchedule={() => { setOpenShow(null); setTab('schedule'); }}
+          onRenew={(id) => { setOpenShow(null); setWizard({ renew: id }); }}
+          onSpinoff={(id) => { setOpenShow(null); setWizard({ spinoff: id }); }}
+          onCancel={(id) => {
+            const show = state.shows.find((s) => s.id === id);
+            void ask({ title: `Cancel "${show?.name}"?`, text: 'The show is gone for good. Its sponsor deal ends too.', confirm: 'Cancel show', danger: true })
+              .then((ok) => { if (ok && run((s) => cancelShow(s, id), 'Show cancelled.')) setOpenShow(null); });
+          }} />
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>

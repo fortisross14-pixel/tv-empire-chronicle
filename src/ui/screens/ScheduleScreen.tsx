@@ -1,29 +1,26 @@
 import { useState } from 'react';
 import {
   DAYPARTS, DAYPART_ICON, DAYPART_LABEL, DAY_BLOCKS, DAY_BLOCK_LABEL, FILLER_NAME, fitStars, formatById, grade, slotLabel,
-  rightsById, inSeason, TIERS, tierSlot, canSpinOff, type GameState, type OwnedRights, type Show, type SlotId,
+  rightsById, inSeason, TIERS, tierSlot, type GameState, type OwnedRights, type Show, type SlotId,
 } from '../../engine';
 import { PersonCard, ShowCard, Stars } from '../components/Cards';
 import { RightsCard, seasonLabel } from '../components/RightsCard';
 import { Sheet } from '../components/Sheet';
 import { RivalsView } from './RivalsView';
-import { useConfirm } from '../components/Confirm';
+import { Poster, showPoster } from '../components/Poster';
 import { cx, gradeClass } from '../util';
 
 export function ScheduleScreen({
-  state, onSchedule, onRenew, onSpinoff, onCancelShow, onAssignTeam,
+  state, onSchedule, onAssignTeam, onOpenShow,
 }: {
   state: GameState;
+  onOpenShow: (id: string) => void;
   onSchedule: (slot: SlotId, id: string | null) => void;
-  onRenew: (showId: string) => void;
-  onSpinoff: (showId: string) => void;
-  onCancelShow: (showId: string) => void;
   onAssignTeam: (rightsId: string, crewId: string, talentId: string) => boolean;
 }) {
   const [picking, setPicking] = useState<SlotId | null>(null);
   const [teamFor, setTeamFor] = useState<OwnedRights | null>(null);
   const [view, setView] = useState<'ours' | 'rivals'>('ours');
-  const ask = useConfirm();
   const showIn = (slot: SlotId) => state.shows.find((s) => s.id === state.schedule[slot]);
   const filmIn = (slot: SlotId) => state.rights.find((r) => r.id === state.schedule[slot]);
   const sportsFor = (slot: SlotId) => state.rights.find((r) => tierSlot(rightsById(r.defId).slot!, state.tier) === slot);
@@ -32,13 +29,13 @@ export function ScheduleScreen({
   return (
     <>
       <div className="segmented">
-        <button className={view === 'ours' ? 'on' : ''} onClick={() => setView('ours')}>Our schedule</button>
+        <button className={view === 'ours' ? 'on' : ''} onClick={() => setView('ours')}>Your guide</button>
         <button className={view === 'rivals' ? 'on' : ''} onClick={() => setView('rivals')}>Rivals ({state.rivals.length})</button>
       </div>
       {view === 'rivals' && <RivalsView state={state} />}
       {view === 'ours' && <>
       <section>
-        <div className="section-title"><h2>Next week's schedule</h2><span className="sub">Tap a slot</span></div>
+        <div className="section-title"><h2>Next week's guide</h2><span className="sub">Tap a slot</span></div>
         <div className={cx(tier.blocks.length > 3 && 'sched-scroll')}>
         <div className={cx('sched', tier.blocks.length > 2 && 'cols-3')} style={{ gridTemplateColumns: `repeat(${tier.blocks.length}, minmax(0, 1fr))` }}>
           {tier.blocks.map((b) => <div key={b} className="sched-head">{DAY_BLOCK_LABEL[b]}</div>)}
@@ -113,21 +110,8 @@ export function ScheduleScreen({
         {state.shows.length === 0
           ? <div className="empty"><div className="big">🎬</div>Finished shows appear here. Start one in the Studio.</div>
           : (
-            <div className="grid-wide">
-              {state.shows.map((show) => (
-                <ShowCard key={show.id} show={show} state={state} actions={
-                  <div className="row wrap">
-                    {show.episodesLeft <= 0 && !state.projects.some((p) => p.showId === show.id) && (
-                      <button className="btn good small" onClick={() => onRenew(show.id)}>New season</button>
-                    )}
-                    {canSpinOff(show) && <button className="btn ghost small" onClick={() => onSpinoff(show.id)}>✨ Spin-off</button>}
-                    <button className="btn danger small" onClick={() => {
-                      void ask({ title: `Cancel "${show.name}"?`, text: 'The show is gone for good. Its sponsor deal ends too.', confirm: 'Cancel show', danger: true })
-                        .then((ok) => ok && onCancelShow(show.id));
-                    }}>Cancel show</button>
-                  </div>
-                } />
-              ))}
+            <div className="poster-grid">
+              {state.shows.map((show) => <Poster key={show.id} {...showPoster(show, state)} onClick={() => onOpenShow(show.id)} />)}
             </div>
           )}
       </section>

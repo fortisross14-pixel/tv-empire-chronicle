@@ -141,7 +141,7 @@ export function NewShowWizard({
       {step === 'level' && (
         <div className="stack">
           {levelsFor(state.tier).map((lv: ProductionLevel) => (
-            <button key={lv} className={cx('panel todo', level === lv && 'selected')} style={{ borderLeftColor: level === lv ? 'var(--accent)' : 'var(--line)' }}
+            <button key={lv} className={cx('todo', level === lv && 'selected')} style={level === lv ? { boxShadow: '0 0 0 3px var(--focus)' } : undefined}
               onClick={() => { if (lv !== level) setPoints(zeroPoints()); setLevel(lv); }}>
               <span>
                 <b>{LEVELS[lv].label}</b> {level === lv && <span className="chip good">Selected</span>}

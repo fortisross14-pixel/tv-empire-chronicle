@@ -326,6 +326,16 @@ Unlocks:
 - **#1 network:** beat every rival on average share over 13 weeks for a
   crown screen. The game continues afterwards.
 
+## 10d. Look: Living Room (built)
+
+A TV home-screen style chosen from three streaming takes: plum night background,
+solid rounded tiles, a white focus ring, pill buttons, Figtree type. Shows are
+posters (2:3 in rows, 16:9 for the billboard and productions), people are a cast row
+of portraits with rarity rings, and the schedule is the Guide. Home opens with a
+billboard for the show that needs you most. Poster art is a placeholder (format
+colours + topic icon) until the poster editor and its art library
+(`docs/POSTER_ASSETS.md`) arrive.
+
 ## 11. Screens (mobile-first, bottom tab bar)
 
 1. **Week** — calendar strip, cash, alerts, big *Air Week* button, results reveal

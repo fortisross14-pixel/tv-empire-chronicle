@@ -25,7 +25,7 @@ export function RightsCard({
             <div className="show-meta">{def.kind === 'sports' ? 'Sports rights' : 'Film package'} · {TIER_LABEL[def.tier]}</div>
           </div>
           {!locked && <span className={cx('grade', gradeClass(g))} title={`Quality ${q}`}>{g}</span>}
-          {locked && <span className="grade" style={{ background: 'var(--ink-3)' }}>🔒</span>}
+          {locked && <span className="grade g-E">🔒</span>}
         </div>
         <p className="small muted">{def.text}</p>
         <div className="row wrap">

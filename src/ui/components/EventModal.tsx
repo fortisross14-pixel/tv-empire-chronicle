@@ -7,7 +7,7 @@ export function EventModal({ event, onChoose }: { event: PendingEvent; onChoose:
       <p style={{ marginBottom: 16 }}>{event.text}</p>
       <div className="stack">
         {event.choices.map((c, i) => (
-          <button key={c.label} className="panel todo" style={{ borderLeftColor: i === 0 ? 'var(--accent)' : 'var(--ink-3)' }} onClick={() => onChoose(i)}>
+          <button key={c.label} className="todo" onClick={() => onChoose(i)}>
             <span><b>{c.label}</b><div className="small muted">{c.detail}</div></span>
             <span className="go">›</span>
           </button>

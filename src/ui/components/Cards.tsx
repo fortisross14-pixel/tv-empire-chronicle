@@ -148,7 +148,7 @@ export function Pillars({ scores, delayed = false }: { scores: Show['scores']; d
         <div key={k} className={cx('pillar', delayed && 'reveal-pillar')} style={delayed ? { animationDelay: `${0.3 + i * 0.25}s` } : undefined}>
           <span>{PILLAR_LABEL[k]}</span>
           <b>{grade(scores[k])} · {scores[k]}</b>
-          <span className="bar"><i style={{ width: `${scores[k]}%`, background: 'var(--ink-2)' }} /></span>
+          <span className="bar"><i style={{ width: `${scores[k]}%`, background: 'var(--text-2)' }} /></span>
         </div>
       ))}
     </div>
