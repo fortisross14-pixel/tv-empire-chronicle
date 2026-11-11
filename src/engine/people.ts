@@ -80,19 +80,33 @@ export function makePerson(state: GameState, kind: PersonKind, rarity: Rarity): 
   return { ...base, kind, skills: { ...skills, fame } } satisfies TalentCard;
 }
 
-/** Adds the three generalists you start the game with. */
-export function addStarterPeople(state: GameState): void {
-  const crew = makePerson(state, 'crew', 'common') as CrewCard;
-  crew.skills = { direction: 50, production: 46, sound: 38, image: 42, fx: 14, music: 26, art: 34 };
-  state.people.push(crew);
-  const writer = makePerson(state, 'writer', 'common') as WriterCard;
-  writer.skills = { factual: 48, entertainment: 46, drama: 30, comedy: 28 };
-  writer.speed = 50;
-  state.people.push(writer);
-  const talent = makePerson(state, 'talent', 'common') as TalentCard;
-  talent.skills = { hosting: 50, acting: 24, charisma: 44, fame: 8 };
-  state.people.push(talent);
+/** Uses value for house cards. They never spend it. */
+export const HOUSE_USES = 99;
+
+/**
+ * The three permanent house cards: basic staff who are always available.
+ * Everything better comes from packs.
+ */
+export function addHouseCards(state: GameState): void {
+  const base = { rarity: 'common' as const, uses: HOUSE_USES, xp: 0, level: 1, house: true };
+  state.people.push(
+    {
+      ...base, id: newId(state, 'p'), name: 'Staff Writer', hue: 210, kind: 'writer',
+      skills: { factual: 40, entertainment: 40, drama: 32, comedy: 32 }, speed: 45,
+    },
+    {
+      ...base, id: newId(state, 'p'), name: 'Studio Crew', hue: 30, kind: 'crew',
+      skills: { direction: 40, production: 38, sound: 36, image: 38, fx: 20, music: 28, art: 32 },
+    },
+    {
+      ...base, id: newId(state, 'p'), name: 'Station Host', hue: 330, kind: 'talent',
+      skills: { hosting: 40, acting: 28, charisma: 36, fame: 0 },
+    },
+  );
 }
+
+/** Rarity points for team chemistry: rare 1, epic 2, legend 3. */
+export const RARITY_POINTS: Record<Rarity, number> = { common: 0, rare: 1, epic: 2, legend: 3 };
 
 export function rollPeoplePack(state: GameState): Person[] {
   const out: Person[] = [];
@@ -117,6 +131,7 @@ export function overall(p: Person): number {
 
 /** XP: 1 per season worked; level up every 2 XP. Improves the person's best skills. */
 export function grantXp(state: GameState, person: Person): boolean {
+  if (person.house) return false;
   person.xp += 1;
   const newLevel = 1 + Math.floor(person.xp / 2);
   if (newLevel <= person.level) return false;

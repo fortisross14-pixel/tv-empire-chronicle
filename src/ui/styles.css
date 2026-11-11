@@ -153,6 +153,11 @@ button.card:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(
 .card.rarity-rare { border-color: var(--rare); }
 .card.rarity-epic { border-color: var(--epic); }
 .card.rarity-legend { border-color: var(--legend); background: linear-gradient(160deg, #fffaf0, #fff 40%); }
+.card.house { border-style: dashed; background: #fbf9f5; }
+.card.house .rarity-tag { color: var(--ink-3); }
+.card.show.classic { border: 3px solid var(--legend); background: linear-gradient(160deg, #fff6dc, #fff 45%); }
+.classic-chip { background: linear-gradient(90deg, #f2a900, #ff8a3c); color: #fff; justify-self: start; }
+.ages-banner { text-align: center; padding: 14px; border-radius: 14px; color: #fff; background: linear-gradient(135deg, #f2a900, #ff5a3c); font-family: var(--display); font-weight: 700; font-size: 20px; animation: pop 0.6s 1.8s both; }
 
 /* Person card */
 .person { width: 100%; min-width: 0; padding: 10px; display: grid; gap: 7px; }

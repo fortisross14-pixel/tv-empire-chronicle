@@ -1,11 +1,11 @@
 import type {
-  Area, CrewCard, GameState, Person, Project, Scores, Show, Stage, TalentCard, WriterCard,
+  Area, CrewCard, GameState, Person, Project, Scores, ScriptTime, Show, Stage, TalentCard, WriterCard,
 } from './types';
 import { ART_AREAS, AREAS, FOCUS_POINTS, TECH_AREAS, formatById, type Format } from './data/formats';
 import { FIT_MULT, topicById } from './data/topics';
 import { CITY, TITLE_TEMPLATES } from './data/names';
 import { clamp, pick, randInt } from './rng';
-import { grantXp, newId } from './people';
+import { grantXp, newId, RARITY_POINTS } from './people';
 
 export class GameError extends Error {}
 
@@ -23,6 +23,38 @@ export interface ShowPlan {
   /** Renewal of this show, if set. */
   showId?: string | null;
   twist?: boolean;
+  scriptTime?: ScriptTime;
+}
+
+/** Writing time: weeks added to the script stage and the effect on the script. */
+export const SCRIPT_TIME: Record<ScriptTime, { label: string; weeks: number; mult: number; blurb: string }> = {
+  rush: { label: 'Rush', weeks: -1, mult: 0.85, blurb: '1 week faster, weaker script' },
+  standard: { label: 'Standard', weeks: 0, mult: 1, blurb: 'Normal writing time' },
+  polish: { label: 'Polish', weeks: 2, mult: 1.12, blurb: '2 extra weeks, stronger script' },
+};
+
+/** Show quality needed to become a Show for the Ages. */
+export const CLASSIC_QUALITY = 85;
+
+/** Script score (0–100) to 1–5 stars. */
+export function scriptStars(score: number): number {
+  if (score >= 75) return 5;
+  if (score >= 60) return 4;
+  if (score >= 45) return 3;
+  if (score >= 30) return 2;
+  return 1;
+}
+
+/** Expected script score before luck. */
+export function scriptBase(formatId: string, topicId: string, writer: WriterCard, time: ScriptTime): number {
+  const format = formatById(formatId);
+  const stars = topicById(topicId).fits[formatId] ?? 1;
+  return writer.skills[format.genre] * FIT_MULT[stars] * SCRIPT_TIME[time].mult;
+}
+
+/** Rare, epic and legend cards on one team add quality: +1 per 2 rarity points. */
+export function teamBonus(people: Person[]): number {
+  return Math.floor(people.reduce((s, p) => s + RARITY_POINTS[p.rarity], 0) / 2);
 }
 
 export interface ScoreBreakdown {
@@ -30,6 +62,7 @@ export interface ScoreBreakdown {
   base: number;
   focusMatch: number;
   focusBonus: number;
+  teamBonus: number;
   quality: number;
 }
 
@@ -63,11 +96,12 @@ export function focusBonus(match: number): number {
 
 export function computeScores(
   formatId: string, topicId: string, writer: WriterCard, crew: CrewCard, talent: TalentCard, points: Record<Area, number>,
+  /** Final script score once written; otherwise the expected score is used. */
+  script?: number, time: ScriptTime = 'standard',
 ): ScoreBreakdown {
   const format = formatById(formatId);
-  const stars = topicById(topicId).fits[formatId] ?? 1;
   const scores: Scores = {
-    script: writer.skills[format.genre] * FIT_MULT[stars],
+    script: clamp(script ?? scriptBase(formatId, topicId, writer, time), 0, 100),
     technical: pillarFromAreas(format, crew, points, TECH_AREAS),
     art: pillarFromAreas(format, crew, points, ART_AREAS),
     screen: talent.skills[format.screenSkill] * 0.65 + talent.skills.charisma * 0.35,
@@ -76,13 +110,16 @@ export function computeScores(
   const base = (Object.keys(scores) as (keyof Scores)[]).reduce((s, k) => s + scores[k] * format.weights[k], 0);
   const match = focusMatch(format, points);
   const bonus = focusBonus(match);
-  return { scores, base, focusMatch: match, focusBonus: bonus, quality: clamp(Math.round(base + bonus), 1, 99) };
+  const team = teamBonus([writer, crew, talent]);
+  return { scores, base, focusMatch: match, focusBonus: bonus, teamBonus: team, quality: clamp(Math.round(base + bonus + team), 1, 99) };
 }
 
-export function stageDurations(format: Format, writer: WriterCard, crew: CrewCard, renewal: boolean): Record<Stage, number> {
+export function stageDurations(
+  format: Format, writer: WriterCard, crew: CrewCard, renewal: boolean, time: ScriptTime = 'standard',
+): Record<Stage, number> {
   const cut = renewal ? 1 : 0;
   return {
-    script: Math.max(1, Math.round(format.weeks.script * (1.3 - writer.speed / 200)) - cut),
+    script: Math.max(1, Math.round(format.weeks.script * (1.3 - writer.speed / 200)) - cut + SCRIPT_TIME[time].weeks),
     production: Math.max(1, Math.round(format.weeks.production * (1.25 - crew.skills.production / 200)) - cut),
     post: format.weeks.post,
   };
@@ -116,7 +153,7 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
   const writer = findPerson(state, plan.writerId, 'writer');
   const crew = findPerson(state, plan.crewId, 'crew');
   const talent = findPerson(state, plan.talentId, 'talent');
-  for (const p of [writer, crew, talent]) if (p.uses <= 0) throw new GameError(`${p.name} has no uses left.`);
+  for (const p of [writer, crew, talent]) if (!p.house && p.uses <= 0) throw new GameError(`${p.name} has no uses left.`);
   const total = AREAS.reduce((s, a) => s + (plan.points[a] ?? 0), 0);
   if (total !== FOCUS_POINTS) throw new GameError(`Spend exactly ${FOCUS_POINTS} focus points.`);
   if (AREAS.some((a) => plan.points[a] < 0 || plan.points[a] > MAX_POINTS_PER_AREA)) {
@@ -130,9 +167,10 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
     if (state.projects.some((p) => p.showId === show.id)) throw new GameError('A new season is already in production.');
   }
   if (plan.twist && !(state.twists[plan.topicId] > 0)) throw new GameError('No Twist token for this topic.');
+  const time = plan.scriptTime ?? 'standard';
   const cost = productionCost(format, crew, renewal);
-  const durations = stageDurations(format, writer, crew, renewal);
-  const breakdown = computeScores(plan.formatId, plan.topicId, writer, crew, talent, plan.points);
+  const durations = stageDurations(format, writer, crew, renewal, time);
+  const breakdown = computeScores(plan.formatId, plan.topicId, writer, crew, talent, plan.points, undefined, time);
   return { format, topic, writer, crew, talent, cost, durations, breakdown, renewal };
 }
 
@@ -141,7 +179,7 @@ export function startProject(state: GameState, plan: ShowPlan): void {
   if (state.cash < cost) throw new GameError('Not enough cash for this production.');
   const show = renewal ? state.shows.find((s) => s.id === plan.showId)! : null;
   state.cash = Math.round((state.cash - cost) * 10) / 10;
-  for (const p of [writer, crew, talent]) p.uses -= 1;
+  for (const p of [writer, crew, talent]) if (!p.house) p.uses -= 1;
   if (plan.twist) state.twists[plan.topicId] -= 1;
   const project: Project = {
     id: newId(state, 'pr'),
@@ -159,6 +197,8 @@ export function startProject(state: GameState, plan: ShowPlan): void {
     points: { ...plan.points },
     cost,
     twist: !!plan.twist,
+    scriptTime: plan.scriptTime ?? 'standard',
+    script: null,
     waitingOn: null,
   };
   state.projects.push(project);
@@ -174,9 +214,10 @@ export const STAGE_LABEL: Record<Stage, string> = { script: 'Script', production
 const NEXT_STAGE: Record<Stage, Stage | null> = { script: 'production', production: 'post', post: null };
 
 /** Advance all projects one week. People can only work one stage per week, first project first. */
-export function advanceProjects(state: GameState): Show[] {
+export function advanceProjects(state: GameState): { finished: Show[]; scripts: Project[] } {
   const working = new Set<string>();
   const finished: Show[] = [];
+  const scripts: Project[] = [];
   for (const project of [...state.projects]) {
     const roles = STAGE_ROLES[project.stage].map((r) => project[r]);
     const busy = roles.find((id) => working.has(id));
@@ -188,6 +229,13 @@ export function advanceProjects(state: GameState): Show[] {
     roles.forEach((id) => working.add(id));
     project.weeksLeft -= 1;
     if (project.weeksLeft > 0) continue;
+    if (project.stage === 'script') {
+      // The script is done: skill, writing time and a bit of luck.
+      const writer = findPerson(state, project.writerId, 'writer');
+      const score = clamp(Math.round(scriptBase(project.formatId, project.topicId, writer, project.scriptTime) + randInt(state, -8, 8)), 1, 100);
+      project.script = { score, stars: scriptStars(score) };
+      scripts.push(project);
+    }
     const next = NEXT_STAGE[project.stage];
     if (next) {
       project.stage = next;
@@ -196,7 +244,7 @@ export function advanceProjects(state: GameState): Show[] {
       finished.push(finishProject(state, project));
     }
   }
-  return finished;
+  return { finished, scripts };
 }
 
 function finishProject(state: GameState, project: Project): Show {
@@ -205,7 +253,7 @@ function finishProject(state: GameState, project: Project): Show {
   const crew = findPerson(state, project.crewId, 'crew');
   const talent = findPerson(state, project.talentId, 'talent');
   const format = formatById(project.formatId);
-  const result = computeScores(project.formatId, project.topicId, writer, crew, talent, project.points);
+  const result = computeScores(project.formatId, project.topicId, writer, crew, talent, project.points, project.script?.score, project.scriptTime);
   // A little production luck.
   const quality = clamp(result.quality + randInt(state, -3, 3), 1, 99);
   [writer, crew, talent].forEach((p) => grantXp(state, p));
@@ -226,6 +274,9 @@ function finishProject(state: GameState, project: Project): Show {
       scores: result.scores,
       quality,
       focusMatch: result.focusMatch,
+      scriptStars: 0,
+      teamBonus: 0,
+      classic: false,
       fame: 0,
       talentName: '',
       episodesTotal: format.episodes,
@@ -242,6 +293,9 @@ function finishProject(state: GameState, project: Project): Show {
     scores: result.scores,
     quality,
     focusMatch: result.focusMatch,
+    scriptStars: project.script?.stars ?? scriptStars(result.scores.script),
+    teamBonus: result.teamBonus,
+    classic: quality >= CLASSIC_QUALITY,
     fame: talent.skills.fame,
     talentName: talent.name,
     episodesTotal: format.episodes,

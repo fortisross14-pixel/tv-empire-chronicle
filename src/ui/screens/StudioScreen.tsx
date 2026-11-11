@@ -5,14 +5,14 @@ export function StudioScreen({
   state, onNewShow, onCancelProject,
 }: { state: GameState; onNewShow: () => void; onCancelProject: (id: string) => void }) {
   const booked = (id: string) => state.projects.find((pr) => [pr.writerId, pr.crewId, pr.talentId].includes(id));
-  const free = state.people.filter((p) => p.uses > 0 && !booked(p.id));
+  const free = state.people.filter((p) => (p.house || p.uses > 0) && !booked(p.id));
   return (
     <>
       <section className="panel" style={{ background: 'var(--hud)', color: '#fff' }}>
         <div className="spread">
           <div>
             <h2 style={{ fontSize: 22 }}>🎬 Studio</h2>
-            <p className="small" style={{ opacity: 0.75 }}>Script → Production → Post. Each show uses 1 season from each person.</p>
+            <p className="small" style={{ opacity: 0.75 }}>Script → Production → Post. Pack cards spend 1 use per season; house staff are free.</p>
           </div>
           <button className="btn primary" onClick={onNewShow} disabled={state.formats.length === 0}>+ New show</button>
         </div>

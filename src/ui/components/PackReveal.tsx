@@ -4,7 +4,7 @@ import { FormatCard, PersonCard, TopicCard } from './Cards';
 import { Sheet } from './Sheet';
 import { cx } from '../util';
 
-const PACK_TITLE = { starter: 'Free starter pack', program: 'Program pack', people: 'People pack' };
+const PACK_TITLE = { starter: 'Free program pack', 'starter-people': 'Free people pack', program: 'Program pack', people: 'People pack' };
 
 function Face({ card }: { card: PackCard }) {
   if (card.type === 'format') return <FormatCard format={formatById(card.id)} />;

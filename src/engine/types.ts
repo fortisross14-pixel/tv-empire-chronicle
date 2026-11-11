@@ -25,6 +25,8 @@ interface PersonBase {
   xp: number;
   level: number;
   hue: number;
+  /** Permanent station staff: never run out of uses, never level up. */
+  house?: boolean;
 }
 
 export interface CrewCard extends PersonBase {
@@ -49,6 +51,9 @@ export type PersonKind = Person['kind'];
 
 export type Stage = 'script' | 'production' | 'post';
 
+/** How long the writer gets: shorter is faster, longer writes a better script. */
+export type ScriptTime = 'rush' | 'standard' | 'polish';
+
 export interface Project {
   id: string;
   name: string;
@@ -66,6 +71,9 @@ export interface Project {
   points: Record<Area, number>;
   cost: number;
   twist: boolean;
+  scriptTime: ScriptTime;
+  /** Set when the script stage finishes. */
+  script: { score: number; stars: number } | null;
   /** Week the project was waiting on someone busy (for UI). */
   waitingOn: string | null;
 }
@@ -90,6 +98,11 @@ export interface Show {
   quality: number;
   /** Bonus quality points from matching the format's ideal focus. */
   focusMatch: number;
+  scriptStars: number;
+  /** Quality bonus from high-rarity cards working together. */
+  teamBonus: number;
+  /** A "Show for the Ages": quality 85+. Ages slower and draws more viewers. */
+  classic: boolean;
   fame: number;
   talentName: string;
   episodesTotal: number;
@@ -146,7 +159,7 @@ export interface WeekResult {
   reputationDelta: number;
 }
 
-export type PackKind = 'program' | 'people' | 'starter';
+export type PackKind = 'program' | 'people' | 'starter' | 'starter-people';
 
 export type PackCard =
   | { type: 'format'; id: string; duplicate: boolean }

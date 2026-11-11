@@ -3,7 +3,7 @@ import { clamp } from './rng';
 import { dateLabel, isFallPremiere, isSweeps, periodOf } from './calendar';
 import { formatById } from './data/formats';
 import { CITY } from './data/names';
-import { addStarterPeople, newId } from './people';
+import { addHouseCards, newId } from './people';
 import { applyPack, makePack, PRICES } from './packs';
 import { advanceProjects, GameError, startProject, type ShowPlan } from './production';
 import { advanceRivals, makeRivals } from './rivals';
@@ -12,7 +12,7 @@ import {
   AIRINGS, CPM, DAYPARTS, DAY_BLOCKS, FILLER_APPEAL, FILLER_NAME, HUT, MARKET_HOUSEHOLDS, OTHER_APPEAL, OVERHEAD, SLOTS,
 } from './schedule';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 export const START_CASH = 120;
 export const LOAN = { amount: 100, total: 125, payment: 2.5 };
 
@@ -50,10 +50,10 @@ export function newGame(seed: number, stationName: string): GameState {
     gameOver: null,
     nextId: 0,
   };
-  addStarterPeople(state);
+  addHouseCards(state);
   state.rivals = makeRivals(state);
-  state.unopened.push(makePack(state, 'starter'));
-  addNews(state, `${state.stationName} goes on air in ${CITY}! Open your free program pack to plan a first show.`, 'good');
+  state.unopened.push(makePack(state, 'starter'), makePack(state, 'starter-people'));
+  addNews(state, `${state.stationName} goes on air in ${CITY}! Open your two free packs to plan a first show.`, 'good');
   return state;
 }
 
@@ -82,7 +82,7 @@ export const openPack = (state: GameState, packId: string) =>
 
 export const dismissReveal = (state: GameState) => produce(state, (s) => void (s.reveal = null));
 
-export const buyPack = (state: GameState, kind: Exclude<PackKind, 'starter'>) =>
+export const buyPack = (state: GameState, kind: Extract<PackKind, 'program' | 'people'>) =>
   produce(state, (s) => {
     if (!s.shopUnlocked) throw new GameError('The shop opens after your first show airs.');
     const price = PRICES[kind];
@@ -107,6 +107,7 @@ export const useBusinessCard = (state: GameState, personId: string) =>
     if (s.businessCards <= 0) throw new GameError('You have no Business Cards.');
     const person = s.people.find((p) => p.id === personId);
     if (!person) throw new GameError('Person not found.');
+    if (person.house) throw new GameError('House staff never run out of uses.');
     person.uses += BUSINESS_CARD_USES;
     s.businessCards -= 1;
     addNews(s, `${person.name} signs on for ${BUSINESS_CARD_USES} more seasons.`, 'good');
@@ -181,6 +182,7 @@ export const airWeek = (state: GameState) =>
         if (show) {
           ours = appeal({ quality: show.quality, novelty: show.novelty, fame: show.fame, formatId: show.formatId, block, part });
           if (rerun) ours *= 0.55;
+          if (show.classic) ours *= 1.1;
           if (premiere) ours *= fall ? 1.3 : 1.15;
           ours *= 1 + clamp((prevShare - 0.15) * 0.8, -0.06, 0.12);
         }
@@ -212,7 +214,7 @@ export const airWeek = (state: GameState) =>
       if (aired.has(show.id)) {
         const res = slots.find((r) => r.showId === show.id)!;
         const rerun = res.rerun;
-        const decay = formatById(show.formatId).decay * (1 + 0.45 * saturation(s, show)) * (rerun ? 1.5 : 1);
+        const decay = formatById(show.formatId).decay * (1 + 0.45 * saturation(s, show)) * (rerun ? 1.5 : 1) * (show.classic ? 0.6 : 1);
         show.novelty = Math.max(0, round1(show.novelty - decay));
         show.history.push({ week: s.week, year: s.year, slot: res.slot, viewers: res.viewers, share: res.share });
         show.history = show.history.slice(-26);
@@ -276,8 +278,13 @@ export const airWeek = (state: GameState) =>
     } satisfies WeekResult;
 
     // Studio work happens during the week too.
-    for (const show of advanceProjects(s)) {
-      addNews(s, `"${show.name}"${show.season > 1 ? ` season ${show.season}` : ''} is ready to air. Quality ${show.quality}.`, 'good');
+    const { finished, scripts } = advanceProjects(s);
+    for (const p of scripts) {
+      addNews(s, `Script done for "${p.name}": ${'★'.repeat(p.script!.stars)}${'☆'.repeat(5 - p.script!.stars)}. On to production.`, p.script!.stars >= 4 ? 'good' : 'neutral');
+    }
+    for (const show of finished) {
+      if (show.classic) addNews(s, `🏆 Critics rave: "${show.name}" is a Show for the Ages! Quality ${show.quality}.`, 'good');
+      else addNews(s, `"${show.name}"${show.season > 1 ? ` season ${show.season}` : ''} is ready to air. Quality ${show.quality}.`, 'good');
     }
 
     // Next week.

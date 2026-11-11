@@ -28,7 +28,7 @@ function programCards(state: GameState, starter: boolean): PackCard[] {
 
 export function makePack(state: GameState, kind: PackKind): Pack {
   const cards: PackCard[] =
-    kind === 'people'
+    kind === 'people' || kind === 'starter-people'
       ? rollPeoplePack(state).map((person) => ({ type: 'person' as const, person }))
       : programCards(state, kind === 'starter');
   return { id: newId(state, 'pk'), kind, cards };

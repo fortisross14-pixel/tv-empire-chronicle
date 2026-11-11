@@ -105,10 +105,16 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   // To-do list on the Week tab.
   const todos: Todo[] = [];
   for (const pack of state.unopened) {
-    todos.push({ emoji: '🎁', title: 'Open your free program pack', detail: 'See which format and topics you start with.', onClick: () => run((s) => openPack(s, pack.id)) });
+    const people = pack.kind === 'starter-people';
+    todos.push({
+      emoji: people ? '👥' : '🎁',
+      title: people ? 'Open your free people pack' : 'Open your free program pack',
+      detail: people ? 'Meet 3 new people to join your house staff.' : 'See which format and topics you start with.',
+      onClick: () => run((s) => openPack(s, pack.id)),
+    });
   }
   const booked = (id: string) => state.projects.some((pr) => [pr.writerId, pr.crewId, pr.talentId].includes(id));
-  const freeKinds = new Set(state.people.filter((p) => p.uses > 0 && !booked(p.id)).map((p) => p.kind));
+  const freeKinds = new Set(state.people.filter((p) => (p.house || p.uses > 0) && !booked(p.id)).map((p) => p.kind));
   if (state.formats.length > 0 && freeKinds.size === 3) {
     todos.push({
       emoji: '✍️',

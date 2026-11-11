@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import {
-  AREAS, AREA_LABEL, FOCUS_POINTS, MAX_POINTS_PER_AREA, formatById, topicById, topicsForFormat, previewPlan,
-  suggestTitle, grade, keyAreas, type Area, type GameState, type Person, type PersonKind, type ShowPlan,
+  AREAS, AREA_LABEL, FOCUS_POINTS, MAX_POINTS_PER_AREA, SCRIPT_TIME, formatById, topicById, topicsForFormat, previewPlan,
+  suggestTitle, grade, keyAreas, scriptStars, type Area, type GameState, type Person, type PersonKind, type ScriptTime, type ShowPlan,
 } from '../../engine';
-import { FormatCard, PersonCard, Stars, TopicCard } from './Cards';
+import { FormatCard, PersonCard, ScriptStars, Stars, TopicCard } from './Cards';
 import { Sheet } from './Sheet';
 import { cx, gradeClass, money } from '../util';
 
@@ -28,6 +28,7 @@ export function NewShowWizard({
   const [points, setPoints] = useState<Record<Area, number>>(zeroPoints);
   const [name, setName] = useState('');
   const [twist, setTwist] = useState(false);
+  const [scriptTime, setScriptTime] = useState<ScriptTime>('standard');
 
   const format = formatId ? formatById(formatId) : null;
   const known = !!formatId && state.knownFormats.includes(formatId);
@@ -36,7 +37,7 @@ export function NewShowWizard({
   const crew = state.people.find((p) => p.id === team.crew);
 
   const plan: ShowPlan | null = formatId && topicId && team.writer && team.crew && team.talent
-    ? { name, formatId, topicId, writerId: team.writer, crewId: team.crew, talentId: team.talent, points, showId: renewShowId ?? null, twist }
+    ? { name, formatId, topicId, writerId: team.writer, crewId: team.crew, talentId: team.talent, points, showId: renewShowId ?? null, twist, scriptTime }
     : null;
 
   const preview = useMemo(() => {
@@ -120,7 +121,9 @@ export function NewShowWizard({
       {step === 'team' && format && (
         <div className="stack">
           {(['writer', 'crew', 'talent'] as PersonKind[]).map((kind) => {
-            const people = state.people.filter((p) => p.kind === kind);
+            // Pack cards first (best first), house staff last.
+            const people = state.people.filter((p) => p.kind === kind)
+              .sort((a, b) => Number(!!a.house) - Number(!!b.house) || (b.uses > 0 ? 1 : 0) - (a.uses > 0 ? 1 : 0));
             return (
               <div key={kind}>
                 <div className="section-title">
@@ -136,7 +139,7 @@ export function NewShowWizard({
                     const b = booked(p);
                     return (
                       <div key={p.id} style={{ width: 190 }}>
-                        <PersonCard person={p} selected={team[kind] === p.id} disabled={p.uses <= 0}
+                        <PersonCard person={p} selected={team[kind] === p.id} disabled={!p.house && p.uses <= 0}
                           highlight={highlightFor(kind)} note={b ? `Booked on “${b.name}” — will queue` : undefined}
                           onClick={() => setTeam({ ...team, [kind]: p.id })} />
                       </div>
@@ -191,13 +194,24 @@ export function NewShowWizard({
               </div>
             </div>
           )}
+          <div className="field">
+            <label>Writing time</label>
+            <div className="segmented">
+              {(Object.keys(SCRIPT_TIME) as ScriptTime[]).map((t) => (
+                <button key={t} className={scriptTime === t ? 'on' : ''} onClick={() => setScriptTime(t)}>{SCRIPT_TIME[t].label}</button>
+              ))}
+            </div>
+            <p className="tiny muted">{SCRIPT_TIME[scriptTime].blurb}. The final script also depends on the writer and a bit of luck.</p>
+          </div>
           <div className="panel stack-sm">
             <div className="spread"><span>{format.icon} {format.name} · {topicById(topicId).icon} {topicById(topicId).name}</span><Stars n={topicById(topicId).fits[format.id] ?? 0} /></div>
             {preview && <>
               <div className="spread small"><span>Schedule</span><b>Script {preview.durations.script}w → Production {preview.durations.production}w → Post {preview.durations.post}w</b></div>
               <div className="spread small"><span>{format.episodes > 1 ? `${format.episodes} episodes` : 'One film'}</span><b>{money(preview.cost)}</b></div>
               <div className="spread small"><span>Cash after</span><b className={state.cash - preview.cost < 0 ? 'neg' : ''}>{money(state.cash - preview.cost)}</b></div>
-              <div className="spread small"><span>Uses</span><b>1 season from each team member</b></div>
+              <div className="spread small"><span>Expected script</span><span><ScriptStars n={scriptStars(preview.breakdown.scores.script)} /> <span className="tiny muted">± luck</span></span></div>
+              {preview.breakdown.teamBonus > 0 && <div className="spread small"><span>Dream team</span><b className="pos">+{preview.breakdown.teamBonus} quality</b></div>}
+              <div className="spread small"><span>Uses</span><b>1 season from each pack card · house staff free</b></div>
               {known && (
                 <div className="spread small"><span>Expected quality</span>
                   <span className={cx('grade', gradeClass(grade(preview.breakdown.quality)))} style={{ minWidth: 36, height: 36, fontSize: 17 }}>{grade(preview.breakdown.quality)}</span>

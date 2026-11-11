@@ -51,7 +51,7 @@ export function CardsScreen({ state, onUseBusinessCard }: { state: GameState; on
 
       {live && (
         <Sheet title={live.name} onClose={() => setSelected(null)}
-          footer={
+          footer={live.house ? undefined :
             <button className="btn good" disabled={state.businessCards <= 0}
               onClick={() => onUseBusinessCard(live.id)}>
               💼 Use Business Card (+{BUSINESS_CARD_USES} uses) · {state.businessCards} left
@@ -59,7 +59,9 @@ export function CardsScreen({ state, onUseBusinessCard }: { state: GameState; on
           }>
           <div style={{ maxWidth: 320, margin: '0 auto' }}><PersonCard person={live} all /></div>
           <p className="small muted" style={{ marginTop: 12, textAlign: 'center' }}>
-            Level {live.level} · {live.xp} XP. People level up every 2 seasons worked. Buy Business Cards in the shop.
+            {live.house
+              ? 'House staff are permanent and always available, but they never improve. Better people come from packs.'
+              : `Level ${live.level} · ${live.xp} XP. People level up every 2 seasons worked. Buy Business Cards in the shop.`}
           </p>
         </Sheet>
       )}

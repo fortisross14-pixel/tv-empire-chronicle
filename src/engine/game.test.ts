@@ -1,7 +1,7 @@
 import { airWeek, buyPack, createShow, newGame, openPack, scheduleShow } from './game';
 import { FORMATS } from './data/formats';
 import { topicsForFormat } from './data/topics';
-import { computeScores, previewPlan, type ShowPlan } from './production';
+import { CLASSIC_QUALITY, computeScores, previewPlan, scriptStars, teamBonus, type ShowPlan } from './production';
 import type { GameState, SlotId } from './types';
 
 const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
@@ -32,7 +32,8 @@ function firstPlan(s: GameState): ShowPlan {
 test('a new game starts small', () => {
   const s = newGame(1, 'Test 8');
   expect(s.people.map((p) => p.kind).sort()).toEqual(['crew', 'talent', 'writer']);
-  expect(s.unopened).toHaveLength(1);
+  expect(s.people.every((p) => p.house)).toBe(true);
+  expect(s.unopened.map((p) => p.kind)).toEqual(['starter', 'starter-people']);
   expect(s.formats).toHaveLength(0);
 });
 
@@ -117,4 +118,41 @@ test('computeScores is deterministic', () => {
   const t = s.people.find((x) => x.id === p.talentId)!;
   // @ts-expect-error kinds are checked at runtime in previewPlan
   expect(computeScores(p.formatId, p.topicId, w, c, t, p.points)).toEqual(computeScores(p.formatId, p.topicId, w, c, t, p.points));
+});
+
+test('house cards never spend uses, and the script gets stars', () => {
+  let s = newGame(11, 'X');
+  s = openPack(s, s.unopened[0].id);
+  const plan = { ...firstPlan(s), scriptTime: 'polish' as const };
+  const before = s.people.map((p) => p.uses);
+  s = createShow(s, plan);
+  expect(s.people.map((p) => p.uses)).toEqual(before);
+  expect(s.projects[0].durations.script).toBeGreaterThanOrEqual(3);
+  for (let i = 0; i < 10 && !s.projects[0]?.script && s.projects.length; i++) s = airWeek(s);
+  const stars = s.projects[0]?.script?.stars ?? s.shows[0]?.scriptStars;
+  expect(stars).toBeGreaterThanOrEqual(1);
+  expect(stars).toBeLessThanOrEqual(5);
+});
+
+test('rare cards together give a dream team bonus', () => {
+  const s = newGame(2, 'X');
+  const [w, c, t] = s.people;
+  expect(teamBonus([w, c, t])).toBe(0);
+  expect(teamBonus([{ ...w, rarity: 'epic' }, { ...c, rarity: 'legend' }, { ...t, rarity: 'rare' }])).toBe(3);
+  expect(scriptStars(80)).toBe(5);
+  expect(scriptStars(50)).toBe(3);
+});
+
+test('legend team can make a Show for the Ages', () => {
+  let s = newGame(9, 'X');
+  s = openPack(s, s.unopened[0].id);
+  const plan = firstPlan(s);
+  for (const p of s.people) {
+    p.rarity = 'legend';
+    for (const k of Object.keys(p.skills)) (p.skills as Record<string, number>)[k] = 97;
+  }
+  s = createShow(s, { ...plan, scriptTime: 'polish' });
+  for (let i = 0; i < 12 && s.shows.length === 0; i++) s = airWeek(s);
+  expect(s.shows[0].quality).toBeGreaterThanOrEqual(CLASSIC_QUALITY);
+  expect(s.shows[0].classic).toBe(true);
 });

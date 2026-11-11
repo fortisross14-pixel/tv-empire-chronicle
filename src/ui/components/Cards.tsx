@@ -15,6 +15,10 @@ export function Avatar({ person, showLevel = true }: { person: Person; showLevel
   );
 }
 
+export function ScriptStars({ n }: { n: number }) {
+  return <span className="stars" title={`${n}-star script`}>{'★'.repeat(n)}<span className="off">{'★'.repeat(5 - n)}</span></span>;
+}
+
 export function Stars({ n, max = 3 }: { n: number; max?: number }) {
   return (
     <span className="stars" aria-label={`${n} of ${max} stars`}>
@@ -55,7 +59,7 @@ export function PersonCard({
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
-      className={cx('card person', `rarity-${person.rarity}`, selected && 'selected', (disabled || person.uses <= 0) && 'disabled')}
+      className={cx('card person', `rarity-${person.rarity}`, person.house && 'house', selected && 'selected', (disabled || (!person.house && person.uses <= 0)) && 'disabled')}
       onClick={onClick}
       disabled={onClick ? disabled : undefined}
     >
@@ -72,15 +76,15 @@ export function PersonCard({
         {person.kind === 'writer' && all && <SkillRow label="Speed" value={person.speed} />}
       </div>
       <div className="spread">
-        <span className={cx('rarity-tag', person.rarity)}>{person.rarity}</span>
-        <span className="uses" title={`${person.uses} seasons left`}>
+        <span className={cx('rarity-tag', person.rarity)}>{person.house ? 'House · permanent' : person.rarity}</span>
+        {person.house ? <span className="uses" title="Never runs out">∞</span> : <span className="uses" title={`${person.uses} seasons left`}>
           {Array.from({ length: Math.min(person.uses, 5) }, (_, i) => <i key={i} className="pip" />)}
           {person.uses === 0 && <i className="pip off" />}
           <span>×{person.uses}</span>
-        </span>
+        </span>}
       </div>
       {note && <div className="busy-band">{note}</div>}
-      {person.uses <= 0 && <div className="retired-band">NO USES LEFT</div>}
+      {!person.house && person.uses <= 0 && <div className="retired-band">NO USES LEFT</div>}
     </Tag>
   );
 }
@@ -163,7 +167,7 @@ export function ShowCard({
   let status = slot ? 'On air' : 'Not scheduled';
   if (show.episodesLeft <= 0) status = slot ? 'Reruns' : 'Season over';
   return (
-    <Tag className="card show" onClick={onClick}>
+    <Tag className={cx('card show', show.classic && 'classic')} onClick={onClick}>
       <span className="show-stripe" style={{ background: format.color }} />
       <div className="show-body">
         <div className="show-head">
@@ -174,7 +178,9 @@ export function ShowCard({
           </div>
           <span className={cx('grade', gradeClass(g))} title={`Quality ${show.quality}`}>{g}</span>
         </div>
+        {show.classic && <span className="chip classic-chip">🏆 Show for the Ages</span>}
         {!compact && <Pillars scores={show.scores} />}
+        {!compact && <div className="row small"><span className="muted">Script</span><ScriptStars n={show.scriptStars} />{show.teamBonus > 0 && <span className="chip info">Dream team +{show.teamBonus}</span>}</div>}
         <div className="novelty">
           <span>Novelty</span>
           <span className="bar"><i style={{ width: `${show.novelty}%` }} /></span>
@@ -229,6 +235,7 @@ export function ProjectCard({ project, state, onCancel }: { project: Project; st
       </div>
       <div className="spread">
         <div className="team">{team.map((p) => <Avatar key={p.id} person={p} showLevel={false} />)}</div>
+        {project.script && <ScriptStars n={project.script.stars} />}
         {project.waitingOn
           ? <span className="chip warn">Waiting for {project.waitingOn}</span>
           : onCancel && <button className="btn danger small" onClick={onCancel}>Scrap</button>}

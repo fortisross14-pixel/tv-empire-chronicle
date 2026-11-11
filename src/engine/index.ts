@@ -7,6 +7,7 @@ export * from './people';
 export * from './packs';
 export {
   computeScores, previewPlan, suggestTitle, grade, focusMatch, STAGE_LABEL, STAGE_ROLES, MAX_POINTS_PER_AREA,
+  SCRIPT_TIME, CLASSIC_QUALITY, scriptStars, teamBonus,
   type ShowPlan, type ScoreBreakdown,
 } from './production';
 export * from './data/formats';

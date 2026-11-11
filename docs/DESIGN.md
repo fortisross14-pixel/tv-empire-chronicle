@@ -26,6 +26,11 @@ Status: agreed. Waves 0–1 are built (see §13).
 ## 3. Card families
 
 ### 3.1 People cards
+**House cards:** you always own 3 permanent common cards: *Staff Writer*,
+*Studio Crew* and *Station Host*. They have basic skills, never run out of
+uses and never level up, so you can always make a show even with no money.
+Everything better comes from packs, at four rarity levels.
+
 Three kinds:
 
 | Kind | Skills (0–100) | Used in |
@@ -99,6 +104,18 @@ Content you buy instead of produce. It **expires**, unlike program cards.
 Pick Format + Topic, build the team, split the **focus points**, then
 Script → Production → Post. A finished show becomes a **Show card**
 (4 score bars, novelty meter, episodes left, last rating).
+
+### Script stars
+The script stage ends with a **1–5 star script**. It depends on:
+- **Writing time** chosen when green-lighting: Rush (−1 week, ×0.85),
+  Standard, Polish (+2 weeks, ×1.12)
+- the writer's skill in the format's genre and the topic fit
+- a bit of luck (±8)
+
+### Dream team and Shows for the Ages
+- **Dream team:** rarity points on the team (rare 1, epic 2, legend 3) add
+  +1 quality per 2 points. Epic director + legend star + rare writer = +3.
+- **Show for the Ages:** quality 85+. Gold card, +10% appeal, novelty fades 40% slower.
 
 ### Production tiers
 
@@ -245,11 +262,18 @@ Unlocks:
    Cards), duplicates → Twist tokens, album, uses, XP/levels, rarities,
    novelty + saturation, seasons/renewals/reruns, lead-in, daypart fit.
    *Test: is making a show and seeing it rate fun within 20 minutes?*
-2. **Card economy, deeper** — network packs, facility cards, pack odds tuning,
-   more people variety.
+2. **Cards, deeper** ✅ (started) — permanent house cards, script stars with
+   writing time and luck, dream-team rarity bonus, Shows for the Ages.
+   Next: network packs, facility cards, more people variety.
 3. **Show life, deeper** — hype, better rival AI reactions, show history charts.
 4. **Calendar & marketing** — sweeps and ad pricing, premiere season, promo
    cards, hype, events, sponsors.
 5. **Rights** — Rights Market, film packages, local sports on the calendar.
 6. **State tier** — license, more slots, second rival, new formats.
-7. **National + payoff** — national tier, Glimmy Awards, franchises, balance pass.
+7. **National + payoff** — national tier, Glimmy Awards, franchises.
+
+The last three waves are always:
+
+8. **Game dev best practices** — code quality, tests, architecture.
+9. **Visual and navigation upscale** — GUI/UX polish.
+10. **Balancing** — economy, odds, difficulty curve.
