@@ -351,10 +351,15 @@ colours + topic icon) until the poster editor and its art library
 - Data files hold formats, topics, fit tables, name generators and parody content.
 - Versioned localStorage save.
 
-## 14. Game modes: Beginner, Campaign, Sandbox (planned)
+## 14. Game modes: Beginner, Campaign, Sandbox (built)
 
-Main menu: **Beginner** → **Campaign** → **Sandbox**. Progress (which scenarios are
-done, stars) lives in a profile, separate from save slots.
+**Title screen:** three save slots (each holds one station: a mission or a Sandbox game;
+Continue or delete) and the **mission roadmap**: the Beginner path, three Campaign lanes
+(Local, State, National, 6 numbered steps each) and the Sandbox. Most nodes start locked;
+tap one to read its brief, goals and why it is locked. Tap an empty slot, then a mission.
+Progress (best stars per mission) lives in a profile shared by all slots. In a game,
+Home shows the mission card (goals ticked as you reach them, weeks left), and a result
+screen appears on a win (keep playing or back to the menu) or when time runs out (retry).
 
 **A scenario** = a preset station (tier, cash, loan, people, shows with their novelty,
 rights, rivals, reputation) + 1–3 goals + a deadline in weeks. Fail the deadline →
@@ -463,9 +468,10 @@ Next (planned):
 
 11. **Movie packs + IP** ✅ — movie packs in the Shop, licensed IP in the Rights
     Market, shows based on IP, own hits become IP, IP ratings grow and shrink.
-12. **Scenario engine + Beginner** — main menu, profile, preset starts, goals,
-    deadlines, stars, the 6 Beginner scenarios.
-13. **Campaign + Sandbox** — the 18 campaign scenarios, unlock rules, Sandbox setup.
+12. **Scenario engine + Beginner** ✅ — title screen with 3 save slots, mission roadmap,
+    profile, preset starts, goals, deadlines, stars, all 24 missions and their unlocks.
+13. **Campaign polish + Sandbox setup** — playtest each mission's preset and deadline,
+    Sandbox difficulty and optional goals.
 
 The last three waves are always:
 

@@ -21,6 +21,7 @@ import {
 } from './schedule';
 import { addNews, round1 } from './news';
 import { expireIps, settleSeasonIp } from './ip';
+import { trackMission } from './mission';
 import { MOVIE_NOVELTY } from './rights';
 
 const TIER_ORDER = ['local', 'state', 'national'] as const;
@@ -370,4 +371,5 @@ export function simulateWeek(s: GameState): void {
   awardSeason(s);
   nextWeek(s, ctx);
   checkBankruptcy(s);
+  trackMission(s);
 }

@@ -1,9 +1,13 @@
 import type { GameState } from './types';
+import { emptyProfile, type Profile } from './mission';
 import { SAVE_VERSION } from './game';
 
-const KEY = 'tv-empire-chronicle-save';
-/** The previous good save, kept in case the newest write is ever unreadable. */
-const BACKUP_KEY = 'tv-empire-chronicle-save-backup';
+/** Three save slots. Slot 0 keeps the original key, so older single saves land there. */
+export const SLOT_COUNT = 3;
+const keyOf = (slot: number) => (slot === 0 ? 'tv-empire-chronicle-save' : `tv-empire-chronicle-save-${slot + 1}`);
+/** The previous good save of a slot, kept in case the newest write is ever unreadable. */
+const backupOf = (slot: number) => `${keyOf(slot)}-backup`;
+const PROFILE_KEY = 'tv-empire-chronicle-profile';
 
 /** Oldest save version we can still upgrade. Older saves start a new game, with a message. */
 export const OLDEST_MIGRATABLE = 9;
@@ -38,6 +42,8 @@ const MIGRATIONS: Record<number, (s: RawSave) => RawSave> = {
       version: 12,
     };
   },
+  // 12 → 13: missions; existing games are Sandbox games.
+  12: (s) => ({ ...s, mission: null, version: 13 }),
 };
 
 export interface LoadResult {
@@ -73,42 +79,68 @@ function read(key: string): RawSave | null {
   }
 }
 
-export function loadGame(): LoadResult {
+export function loadGame(slot = 0): LoadResult {
+  const KEY = keyOf(slot);
   let raw: RawSave | null;
   try {
-    raw = read(KEY) ?? read(BACKUP_KEY);
+    raw = read(KEY) ?? read(backupOf(slot));
   } catch {
     return { state: null, notice: null };
   }
   if (!raw) {
     const hadSomething = (() => { try { return !!localStorage.getItem(KEY); } catch { return false; } })();
-    return { state: null, notice: hadSomething ? 'Your saved game could not be read, so a new game starts.' : null };
+    return { state: null, notice: hadSomething ? 'This saved game could not be read.' : null };
   }
   if (raw.version > SAVE_VERSION) return { state: null, notice: 'This save is from a newer version of the game.' };
   if (raw.version < OLDEST_MIGRATABLE) {
-    return { state: null, notice: 'Your save is from an early test version and can’t be upgraded. Start a new station!' };
+    return { state: null, notice: 'This save is from an early test version and can’t be upgraded.' };
   }
   const state = migrate(raw);
-  return state ? { state, notice: null } : { state: null, notice: 'Your saved game could not be upgraded, so a new game starts.' };
+  return state ? { state, notice: null } : { state: null, notice: 'This saved game could not be upgraded.' };
 }
 
-/** Saves the game. Returns false when the browser refused (storage full or blocked). */
-export function saveGame(state: GameState): boolean {
+/** Saves the game in a slot. Returns false when the browser refused (storage full or blocked). */
+export function saveGame(state: GameState, slot = 0): boolean {
   try {
-    const previous = localStorage.getItem(KEY);
-    localStorage.setItem(KEY, JSON.stringify(state));
-    if (previous) localStorage.setItem(BACKUP_KEY, previous);
+    const previous = localStorage.getItem(keyOf(slot));
+    localStorage.setItem(keyOf(slot), JSON.stringify(state));
+    if (previous) localStorage.setItem(backupOf(slot), previous);
     return true;
   } catch {
     return false;
   }
 }
 
-export function clearSave(): void {
+export function clearSave(slot = 0): void {
   try {
-    localStorage.removeItem(KEY);
-    localStorage.removeItem(BACKUP_KEY);
+    localStorage.removeItem(keyOf(slot));
+    localStorage.removeItem(backupOf(slot));
   } catch {
     // ignore
   }
+}
+
+/** What each slot holds, for the title screen. */
+export function loadSlots(): LoadResult[] {
+  return Array.from({ length: SLOT_COUNT }, (_, i) => loadGame(i));
+}
+
+// ---------- Profile (mission progress, shared by all slots) ----------
+
+export function loadProfile(): Profile {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    const p = raw ? (JSON.parse(raw) as Profile) : null;
+    return p && typeof p.stars === 'object' && p.stars ? { stars: { ...p.stars } } : emptyProfile();
+  } catch {
+    return emptyProfile();
+  }
+}
+
+/** Record a finished mission; keeps the best stars. Returns the new profile. */
+export function recordMission(missionId: string, stars: number): Profile {
+  const p = loadProfile();
+  p.stars[missionId] = Math.max(p.stars[missionId] ?? 0, stars);
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { /* ignore */ }
+  return p;
 }

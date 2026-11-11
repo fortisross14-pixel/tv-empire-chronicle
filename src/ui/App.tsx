@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  CITY, GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, clearSave, createShow,
-  dateLabel, dismissFinished, dismissReveal, loadGame, newGame, openPack, saveGame, scheduleShow, useBusinessCard,
+  GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, createShow, ackMission, newMissionGame, recordMission,
+  dateLabel, dismissFinished, dismissReveal, openPack, saveGame, scheduleShow, useBusinessCard,
   rightsById, setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, projectPeople, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
   reachOf, type GameState, type ShowPlan,
 } from '../engine';
@@ -21,6 +21,8 @@ import { ScheduleScreen } from './screens/ScheduleScreen';
 import { StudioScreen } from './screens/StudioScreen';
 import { CardsScreen } from './screens/CardsScreen';
 import { ShopScreen } from './screens/ShopScreen';
+import { MenuScreen } from './screens/MenuScreen';
+import { MissionResult } from './components/MissionCard';
 import { cx, money } from './util';
 
 type Tab = 'week' | 'schedule' | 'studio' | 'cards' | 'shop';
@@ -32,35 +34,40 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'shop', label: 'Market', icon: '🛍️' },
 ];
 
-export function App() {
-  const [loaded] = useState(() => loadGame());
-  const [state, setState] = useState<GameState | null>(loaded.state);
-  if (!state) return <TitleScreen notice={loaded.notice} onStart={(name) => setState(newGame((Math.random() * 2 ** 31) | 0, name))} />;
-  return <ConfirmProvider><Game state={state} setState={setState} /></ConfirmProvider>;
-}
+const seed = () => (Math.random() * 2 ** 31) | 0;
 
-function TitleScreen({ onStart, notice }: { onStart: (name: string) => void; notice: string | null }) {
-  const [name, setName] = useState('Ellison 8');
+export function App() {
+  // Null: the title screen with save slots and the mission map.
+  const [play, setPlay] = useState<{ slot: number; state: GameState; gen: number } | null>(null);
+  const [menuKey, setMenuKey] = useState(0);
+  if (!play) {
+    return (
+      <ConfirmProvider>
+        <MenuScreen key={menuKey} onPlay={(slot, state, start) => {
+          const s = state ?? newMissionGame(seed(), start?.name ?? 'Ellison 8', start?.missionId ?? null);
+          saveGame(s, slot);
+          setPlay({ slot, state: s, gen: Date.now() });
+        }} />
+      </ConfirmProvider>
+    );
+  }
+  const toMenu = () => { setPlay(null); setMenuKey((k) => k + 1); window.scrollTo({ top: 0 }); };
+  const retry = () => {
+    const s = newMissionGame(seed(), play.state.stationName, play.state.mission?.id ?? null);
+    saveGame(s, play.slot);
+    setPlay({ slot: play.slot, state: s, gen: Date.now() });
+  };
   return (
-    <div className="title-screen">
-      <div className="title-card">
-        <div className="tv">📺</div>
-        <h1>TV Empire Chronicle</h1>
-        <p style={{ opacity: 0.8 }}>
-          You just bought a tiny local TV station in {CITY}. Collect cards, make shows, win the ratings — and grow into a national network.
-        </p>
-        {notice && <p className="panel small">{notice}</p>}
-        <div className="field" style={{ textAlign: 'left' }}>
-          <label htmlFor="station">Name your channel</label>
-          <input id="station" className="input" value={name} maxLength={24} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <button className="btn primary block" onClick={() => onStart(name)}>Go on air</button>
-      </div>
-    </div>
+    <ConfirmProvider>
+      <Game key={play.gen} slot={play.slot} state={play.state}
+        setState={(s) => setPlay({ ...play, state: s })} onMenu={toMenu} onRetry={retry} />
+    </ConfirmProvider>
   );
 }
 
-function Game({ state, setState }: { state: GameState; setState: (s: GameState | null) => void }) {
+function Game({ state, setState, slot, onMenu, onRetry }: {
+  state: GameState; setState: (s: GameState) => void; slot: number; onMenu: () => void; onRetry: () => void;
+}) {
   const [tab, setTab] = useState<Tab>('week');
   const [wizard, setWizard] = useState<{ renew?: string; spinoff?: string } | null>(null);
   const [showResults, setShowResults] = useState(false);
@@ -73,7 +80,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   const ask = useConfirm();
   const saveWarned = useRef(false);
   useEffect(() => {
-    if (!saveGame(state) && !saveWarned.current) {
+    if (!saveGame(state, slot) && !saveWarned.current) {
       saveWarned.current = true;
       say('Your browser blocked saving: progress will be lost when you close this page.');
     }
@@ -105,19 +112,21 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
     if (run(airWeek)) setShowResults(true);
   };
 
-  const newGameConfirm = () => {
-    void ask({ title: 'Start a new game?', text: 'Your current station will be lost for good.', confirm: 'Start over', danger: true })
-      .then((ok) => { if (ok) { clearSave(); setState(null); } });
-  };
+  // A finished mission: record the stars once (the profile keeps the best).
+  const mission = state.mission;
+  useEffect(() => {
+    if (mission?.status === 'won') recordMission(mission.id, mission.stars);
+  }, [mission?.status, mission?.id, mission?.stars]);
+  const showMissionResult = !!mission && (mission.status !== 'playing' || !!state.gameOver) && !mission.counters.resultSeen;
 
-  if (state.gameOver) {
+  if (state.gameOver && !mission) {
     return (
       <div className="title-screen">
         <div className="title-card">
           <div className="tv">📉</div>
           <h1>Off the air</h1>
           <p style={{ opacity: 0.8 }}>{state.gameOver}</p>
-          <button className="btn primary block" onClick={() => { clearSave(); setState(null); }}>Try again</button>
+          <button className="btn primary block" onClick={onMenu}>Back to the menu</button>
         </div>
       </div>
     );
@@ -192,7 +201,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
 
       <main className="main">
         {tab === 'week' && (
-          <WeekScreen state={state} todos={todos} onNewGame={newGameConfirm}
+          <WeekScreen state={state} todos={todos} onMenu={onMenu}
             onExpand={() => {
               void ask({ title: 'Buy the license?', text: 'Running costs rise a lot, but so does the audience. Make sure you have shows ready for the bigger schedule.', confirm: 'Buy license' })
                 .then((ok) => { if (ok) run(state.tier === 'local' ? expandToState : expandToNational); });
@@ -243,6 +252,10 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
       {wizard && (
         <NewShowWizard state={state} renewShowId={wizard.renew} spinoffOf={wizard.spinoff} onClose={() => setWizard(null)}
           onCreate={(plan: ShowPlan) => run((s) => createShow(s, plan), `"${plan.name || 'New season'}" is in production!`)} />
+      )}
+      {showMissionResult && (
+        <MissionResult state={state} onMenu={onMenu} onRetry={onRetry}
+          onContinue={() => run(ackMission)} />
       )}
       {state.reveal && <PackReveal key={state.reveal.id} pack={state.reveal} onDone={() => run(dismissReveal)} />}
       {!state.reveal && showResults && state.lastResult && (

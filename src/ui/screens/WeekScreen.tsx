@@ -1,3 +1,4 @@
+import { MissionCard } from '../components/MissionCard';
 import { Fragment } from 'react';
 import {
   AFFILIATE_MAX, CHAMPION_WEEKS, DAYPART_LABEL, TIERS, affiliateCost, dateLabel, formatById, grade, isSweeps, licenseGaps,
@@ -26,9 +27,9 @@ function featured(state: GameState): Featured {
 }
 
 export function WeekScreen({
-  state, todos, onNewGame, onExpand, onAffiliate, onOpenShow, onNewShow, onAir, goTab,
+  state, todos, onMenu, onExpand, onAffiliate, onOpenShow, onNewShow, onAir, goTab,
 }: {
-  state: GameState; todos: Todo[]; onNewGame: () => void; onExpand: () => void; onAffiliate: () => void;
+  state: GameState; todos: Todo[]; onMenu: () => void; onExpand: () => void; onAffiliate: () => void;
   onOpenShow: (id: string) => void; onNewShow: () => void; onAir: () => void; goTab: (tab: 'schedule' | 'studio' | 'cards' | 'shop') => void;
 }) {
   const lic = nextLicense(state);
@@ -45,6 +46,7 @@ export function WeekScreen({
 
   return (
     <>
+      <MissionCard state={state} />
       {feat ? (
         <section className="billboard" style={artStyle(feat.show.formatId)}>
           <div className="art"><PosterArt spec={feat.show.poster ?? autoPoster(feat.show)} title={feat.show.name} hideTitle /></div>
@@ -248,7 +250,7 @@ export function WeekScreen({
       </section>
 
       <div style={{ textAlign: 'center' }}>
-        <button className="btn danger small" onClick={onNewGame}>Start a new game</button>
+        <button className="btn ghost small" onClick={onMenu}>🏠 Menu &amp; save slots</button>
       </div>
     </>
   );

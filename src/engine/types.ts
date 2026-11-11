@@ -400,8 +400,24 @@ export interface Loan {
   payment: number;
 }
 
+/** A mission being played in this save. Null in the Sandbox. */
+export interface MissionRun {
+  id: string;
+  /** Absolute weeks (year * 52 + week). */
+  startAt: number;
+  deadlineAt: number;
+  status: 'playing' | 'won' | 'lost';
+  stars: number;
+  /** Which goals have been reached (they stay reached). */
+  met: boolean[];
+  bonusMet: boolean;
+  /** Running counts: games aired, weeks in a row, profitable months… */
+  counters: Record<string, number>;
+}
+
 export interface GameState {
   version: number;
+  mission: MissionRun | null;
   rng: number;
   stationName: string;
   tier: Tier;

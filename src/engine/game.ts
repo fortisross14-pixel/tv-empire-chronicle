@@ -11,8 +11,17 @@ import { assignTeam, onSportsTeam, placeBid, refreshMarketLocks } from './rights
 import { AFFILIATE_MAX, affiliateCost, emptySchedule, reachOf, slotsOf, tierSlot } from './schedule';
 import { addNews, round1 } from './news';
 import { simulateWeek, CHAMPION_WEEKS, LOAN } from './sim';
+import { applyMission } from './mission';
+import { missionById } from './data/missions';
 
-export const SAVE_VERSION = 12;
+/** A new game set up for a mission (or a plain Sandbox game without one). */
+export function newMissionGame(seed: number, stationName: string, missionId: string | null): GameState {
+  const s = newGame(seed, stationName);
+  if (missionId) applyMission(s, missionById(missionId));
+  return s;
+}
+
+export const SAVE_VERSION = 13;
 
 /** What it takes to become a State network. */
 export const STATE_LICENSE = { reputation: 35, cash: 250, fee: 200 };
@@ -25,6 +34,7 @@ export { CHAMPION_WEEKS, LOAN };
 export function newGame(seed: number, stationName: string): GameState {
   const state: GameState = {
     version: SAVE_VERSION,
+    mission: null,
     rng: seed | 0,
     stationName: stationName.trim() || 'Channel 8',
     tier: 'local',
@@ -278,6 +288,10 @@ export const expandToState = (state: GameState) =>
     moveUp(s);
     addNews(s, `🎉 ${s.stationName} is now a State network! 15 slots, 2.4M households, and new rivals: ${s.rivals.map((r) => r.short).join(' and ')}.`, 'good');
   });
+
+/** The player has seen the mission's result screen. */
+export const ackMission = (state: GameState) =>
+  produce(state, (s) => { if (s.mission) s.mission.counters.resultSeen = 1; }, { duringEvent: true });
 
 export const dismissCeremony = (state: GameState) => produce(state, (s) => void (s.ceremony = null), { duringEvent: true });
 
