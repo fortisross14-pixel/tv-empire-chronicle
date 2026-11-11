@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { BUSINESS_CARD_USES, PRICES, type GameState } from '../../engine';
+import { RightsMarket } from './RightsMarket';
 import { money } from '../util';
 
 const ITEMS = [
@@ -8,21 +10,28 @@ const ITEMS = [
 ];
 
 export function ShopScreen({
-  state, onBuyPack, onBuyBusinessCard,
-}: { state: GameState; onBuyPack: (kind: 'program' | 'people' | 'network') => void; onBuyBusinessCard: () => void }) {
-  if (!state.shopUnlocked) {
-    return (
-      <div className="panel locked-panel">
-        <div className="big">🔒</div>
-        <h2>Card shop</h2>
-        <p className="muted">Opens after your first show airs.</p>
-      </div>
-    );
-  }
+  state, onBuyPack, onBuyBusinessCard, onBid,
+}: {
+  state: GameState; onBuyPack: (kind: 'program' | 'people' | 'network') => void; onBuyBusinessCard: () => void;
+  onBid: (lotId: string, amount: number | null) => void;
+}) {
+  const [tab, setTab] = useState<'packs' | 'rights'>(state.rightsMarket ? 'rights' : 'packs');
   return (
     <>
-      <div className="section-title"><h2>Card shop</h2><span className="sub">Cash {money(state.cash)}</span></div>
-      <div className="stack">
+      <div className="section-title"><h2>Market</h2><span className="sub">Cash {money(state.cash)}</span></div>
+      <div className="segmented">
+        <button className={tab === 'packs' ? 'on' : ''} onClick={() => setTab('packs')}>Card packs</button>
+        <button className={tab === 'rights' ? 'on' : ''} onClick={() => setTab('rights')}>Rights {state.rightsMarket ? '· OPEN' : ''}</button>
+      </div>
+      {tab === 'rights' && <RightsMarket state={state} onBid={onBid} />}
+      {tab === 'packs' && !state.shopUnlocked && (
+        <div className="panel locked-panel">
+          <div className="big">🔒</div>
+          <h2>Card packs</h2>
+          <p className="muted">Open after your first show airs.</p>
+        </div>
+      )}
+      {tab === 'packs' && state.shopUnlocked && <div className="stack">
         {ITEMS.map((it) => (
           <div key={it.kind} className="panel shop-item">
             <div className="pack-art" style={{ background: it.color }}>{it.art}</div>
@@ -44,8 +53,8 @@ export function ShopScreen({
               Buy · {money(PRICES.business)}
             </button>
           </div>
-        </div>
-      </div>
+                </div>
+      </div>}
     </>
   );
 }

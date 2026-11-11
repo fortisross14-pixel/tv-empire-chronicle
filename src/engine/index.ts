@@ -18,3 +18,5 @@ export * from './data/network';
 export { NETWORK_PACK_SIZE, HYPE_POWER } from './network';
 export { AWARD_LEVELS, AWARD_WEEKS, eligibleShows } from './awards';
 export { startEvent } from './events';
+export * from './data/rights';
+export { absWeek, sportsInSlot, sportsQuality } from './rights';

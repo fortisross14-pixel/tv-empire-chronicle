@@ -1,4 +1,4 @@
-import { airWeek, answerEvent, buyPack, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
+import { airWeek, answerEvent, bidOnRights, buyPack, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
 import { startEvent } from './events';
 import { holdCeremony } from './awards';
 import { makeReviews } from './reviews';
@@ -250,4 +250,57 @@ test('network pack: facilities go to the studio, others to the hand', () => {
   s.cash = 1000;
   for (let i = 0; i < 10; i++) { s = buyPack(s, 'network'); s.reveal = null; }
   expect(s.networkCards.length + s.facilities.length).toBeGreaterThan(0);
+});
+
+describe('rights', () => {
+  const advanceTo = (s: GameState, week: number) => {
+    for (let i = 0; i < 60 && s.week !== week; i++) {
+      if (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
+      s = airWeek(s);
+    }
+    return s;
+  };
+
+  test('market opens in week 30 with football, films and a locked big lot', () => {
+    let s = newGame(5, 'X');
+    s = advanceTo(s, 30);
+    expect(s.rightsMarket).not.toBeNull();
+    const lots = s.rightsMarket!.lots;
+    expect(lots.some((l) => l.defId === 'friday-football')).toBe(true);
+    expect(lots.some((l) => l.locked)).toBe(true);
+    expect(() => bidOnRights(s, lots.find((l) => l.locked)!.id, 100)).toThrow();
+  });
+
+  test('winning football: games take over weekday prime in season and pay well', () => {
+    let s = newGame(5, 'X');
+    s = advanceTo(s, 30);
+    s.cash = 500;
+    const lot = s.rightsMarket!.lots.find((l) => l.defId === 'friday-football')!;
+    s = bidOnRights(s, lot.id, 200);
+    s = advanceTo(s, 33);
+    expect(s.rights.some((r) => r.defId === 'friday-football')).toBe(true);
+    s = advanceTo(s, 36);
+    s = airWeek(s.pendingEvent ? answerEvent(s, s.pendingEvent.choices.length - 1) : s);
+    const game = s.lastResult!.slots.find((r) => r.slot === 'weekday-prime')!;
+    expect(game.kind).toBe('sports');
+    expect(game.viewers).toBeGreaterThan(s.lastResult!.slots.find((r) => r.slot === 'weekday-morning')!.viewers);
+  });
+
+  test('film packages can be scheduled and run out of airings', () => {
+    let s = newGame(6, 'X');
+    s = advanceTo(s, 30);
+    s.cash = 500;
+    const lot = s.rightsMarket!.lots.find((l) => !l.locked && l.defId !== 'friday-football')!;
+    s = bidOnRights(s, lot.id, 300);
+    s = advanceTo(s, 33);
+    const film = s.rights.find((r) => r.defId === lot.defId)!;
+    s = scheduleShow(s, 'weekday-evening', film.id);
+    s = airWeek(s.pendingEvent ? answerEvent(s, s.pendingEvent.choices.length - 1) : s);
+    expect(s.lastResult!.slots.find((r) => r.slot === 'weekday-evening')!.kind).toBe('film');
+    const left = s.rights.find((r) => r.id === film.id)!.airingsLeft;
+    expect(left).toBe(film.airingsLeft - 1);
+    for (let i = 0; i < left; i++) s = airWeek(s.pendingEvent ? answerEvent(s, s.pendingEvent.choices.length - 1) : s);
+    expect(s.rights.some((r) => r.id === film.id)).toBe(false);
+    expect(s.schedule['weekday-evening']).toBeNull();
+  });
 });

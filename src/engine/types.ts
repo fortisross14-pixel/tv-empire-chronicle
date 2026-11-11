@@ -155,6 +155,43 @@ export interface SponsorDeal {
   minShare: number;
 }
 
+// ---------- Rights ----------
+
+export interface RightsLot {
+  id: string;
+  defId: string;
+  minBid: number;
+  /** Your sealed bid, if placed. */
+  bid: number | null;
+  /** Visible but only for bigger networks. */
+  locked: boolean;
+}
+
+export interface RightsMarket {
+  closesWeek: number;
+  lots: RightsLot[];
+}
+
+export interface OwnedRights {
+  id: string;
+  defId: string;
+  /** Films: airings left. */
+  airingsLeft: number;
+  novelty: number;
+  /** Absolute week (year * 52 + week) after which the rights end. */
+  expires: number;
+  /** Sports: the broadcast team. */
+  crewId: string | null;
+  talentId: string | null;
+  games: number;
+}
+
+export interface RivalRights {
+  defId: string;
+  rivalId: string;
+  expires: number;
+}
+
 // ---------- Events ----------
 
 export interface PendingEvent {
@@ -214,6 +251,7 @@ export interface Rival {
 }
 
 export interface SlotResult {
+  kind?: 'show' | 'film' | 'sports';
   /** Set on a premiere: the reviews it got. */
   reviews?: Reviews;
   sponsorPay?: number;
@@ -310,6 +348,9 @@ export interface GameState {
   trophies: { title: string; showName: string; year: number; level: AwardLevel }[];
   /** Weeks since the last event, to keep them rare. */
   eventCooldown: number;
+  rightsMarket: RightsMarket | null;
+  rights: OwnedRights[];
+  rivalRights: RivalRights[];
   /** Shows that finished production this week, for the reveal screen. */
   newlyFinished: string[];
   gameOver: string | null;

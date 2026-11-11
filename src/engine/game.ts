@@ -13,11 +13,16 @@ import { makeReviews, wordOfMouth } from './reviews';
 import { maybeStartEvent, resolvePendingEvent } from './events';
 import { AWARD_LEVELS, AWARD_WEEKS, holdCeremony } from './awards';
 import { networkById } from './data/network';
+import { rightsById, weeksToSeasonEnd } from './data/rights';
+import {
+  assignTeam, excitement, expireRights, maybeCloseMarket, maybeOpenMarket, opponent, placeBid, rivalSportsInSlot,
+  sportsInSlot, sportsQuality, SPORTS_AIRINGS, SPORTS_CPM_BONUS,
+} from './rights';
 import {
   AIRINGS, CPM, DAYPARTS, DAY_BLOCKS, FILLER_APPEAL, FILLER_NAME, HUT, MARKET_HOUSEHOLDS, OTHER_APPEAL, OVERHEAD, SLOTS,
 } from './schedule';
 
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 export const START_CASH = 120;
 export const LOAN = { amount: 100, total: 125, payment: 2.5 };
 
@@ -59,6 +64,9 @@ export function newGame(seed: number, stationName: string): GameState {
     ceremony: null,
     trophies: [],
     eventCooldown: 4,
+    rightsMarket: null,
+    rights: [],
+    rivalRights: [],
     newlyFinished: [],
     gameOver: null,
     nextId: 0,
@@ -140,7 +148,9 @@ export const cancelProject = (state: GameState, projectId: string) =>
 
 export const scheduleShow = (state: GameState, slot: SlotId, showId: string | null) =>
   produce(state, (s) => {
-    if (showId && !s.shows.some((x) => x.id === showId)) throw new GameError('Show not found.');
+    const film = showId ? s.rights.find((r) => r.id === showId) : null;
+    if (film && rightsById(film.defId).kind !== 'film') throw new GameError('Sports air automatically in their own slot.');
+    if (showId && !film && !s.shows.some((x) => x.id === showId)) throw new GameError('Show not found.');
     for (const other of SLOTS) if (showId && s.schedule[other] === showId) s.schedule[other] = null;
     s.schedule[slot] = showId;
   });
@@ -166,6 +176,12 @@ export const useSponsor = (state: GameState, cardId: string, showId: string) =>
 
 export const answerEvent = (state: GameState, choice: number) =>
   produce(state, (s) => addNews(s, resolvePendingEvent(s, choice), 'neutral'));
+
+export const bidOnRights = (state: GameState, lotId: string, amount: number | null) =>
+  produce(state, (s) => placeBid(s, lotId, amount));
+
+export const assignSportsTeam = (state: GameState, rightsId: string, crewId: string, talentId: string) =>
+  produce(state, (s) => assignTeam(s, rightsId, crewId, talentId));
 
 export const dismissCeremony = (state: GameState) => produce(state, (s) => void (s.ceremony = null));
 
@@ -214,20 +230,51 @@ export const airWeek = (state: GameState) =>
       let prevShare = 0.1;
       for (const part of DAYPARTS) {
         const slot = `${block}-${part}` as SlotId;
-        const show = s.shows.find((x) => x.id === s.schedule[slot]) ?? null;
+        // Sports games take over their slot; otherwise the scheduled show or film airs.
+        const sports = sportsInSlot(s, slot);
+        const film = sports ? null : s.rights.find((x) => x.id === s.schedule[slot]) ?? null;
+        const show = sports || film ? null : s.shows.find((x) => x.id === s.schedule[slot]) ?? null;
         const rerun = !!show && show.episodesLeft <= 0;
         const premiere = !!show && !rerun && !show.premiered;
         let ours = FILLER_APPEAL;
+        let entryName = FILLER_NAME;
+        let kind: SlotResult['kind'] = undefined;
+        let airings: number = AIRINGS[block];
+        let cpmBonus = 1;
         if (show) {
+          kind = 'show';
+          entryName = show.name;
           ours = appeal({ quality: show.quality, novelty: show.novelty, fame: show.fame, formatId: show.formatId, block, part });
           if (rerun) ours *= 0.55;
           if (show.classic) ours *= 1.1;
           if (premiere) ours *= fall ? 1.3 : 1.15;
           ours *= 1 + (show.hype / 100) * HYPE_POWER;
           ours *= wordOfMouth(show.reviews);
-          ours *= 1 + clamp((prevShare - 0.15) * 0.8, -0.06, 0.12);
+        } else if (film) {
+          kind = 'film';
+          const def = rightsById(film.defId);
+          entryName = def.name;
+          ours = appeal({ quality: def.quality, novelty: film.novelty, fame: def.fame, formatId: 'movie', block, part });
+          if (def.boostWeeks && s.week >= def.boostWeeks[0] && s.week <= def.boostWeeks[1]) ours *= 1.3;
+        } else if (sports) {
+          kind = 'sports';
+          const def = rightsById(sports.defId);
+          const q = sportsQuality(s, sports);
+          entryName = `${def.short} vs ${opponent(s, def)}`;
+          const playoffs = weeksToSeasonEnd(def, s.week) <= 2;
+          ours = appeal({ quality: q.quality, novelty: clamp(80 + excitement(s), 0, 100), fame: q.fame, formatId: 'sports', block, part });
+          if (playoffs) { ours *= 1.25; entryName += ' · Playoffs!'; }
+          airings = SPORTS_AIRINGS;
+          cpmBonus = SPORTS_CPM_BONUS;
+          sports.games += 1;
         }
-        const rivalShows = s.rivals.map((r) => r.schedule[slot]);
+        if (kind) ours *= 1 + clamp((prevShare - 0.15) * 0.8, -0.06, 0.12);
+        const rivalShows = s.rivals.map((r) => {
+          const sport = rivalSportsInSlot(s, slot, r.id);
+          return sport
+            ? { name: `${sport.short} on ${r.short}`, formatId: 'sports', topicId: 'sports', quality: sport.quality + 5, novelty: 85, fame: sport.fame, weeksLeft: 1 }
+            : r.schedule[slot];
+        });
         const rivalAppeals = rivalShows.map((r) =>
           appeal({ quality: r.quality, novelty: r.novelty, fame: r.fame, formatId: r.formatId, block, part }));
         const total = ours + rivalAppeals.reduce((a, b) => a + b, 0) + OTHER_APPEAL;
@@ -235,15 +282,19 @@ export const airWeek = (state: GameState) =>
         const rivalShare = rivalAppeals[0] / total;
         const watching = MARKET_HOUSEHOLDS * HUT[block][part] * period.viewing;
         const viewers = round1(watching * share * viewerMod);
-        const revenue = round1((viewers * AIRINGS[block] * CPM[part] * period.adPrice * s.rateCard) / 1000);
-        const won = !!show && share > rivalShare;
+        const revenue = round1((viewers * airings * CPM[part] * cpmBonus * period.adPrice * s.rateCard) / 1000);
+        const won = !!kind && share > rivalShare;
         slots.push({
-          slot, showId: show?.id ?? null, showName: show?.name ?? FILLER_NAME, rerun, premiere,
+          kind, slot, showId: show?.id ?? film?.id ?? sports?.id ?? null, showName: entryName, rerun, premiere,
           viewers, share, revenue, rivalName: rivalShows[0].name, rivalShare, won,
         });
         prevShare = share;
-        if (show) {
-          aired.add(show.id);
+        if (film) {
+          film.airingsLeft -= 1;
+          film.novelty = Math.max(0, film.novelty - (rightsById(film.defId).decay ?? 6));
+        }
+        if (kind) {
+          if (show) aired.add(show.id);
           const weight = part === 'prime' ? 1.5 : 1;
           reputationDelta += ((share - 0.12) + (won ? 0.12 : 0)) * weight;
         }
@@ -374,6 +425,10 @@ export const airWeek = (state: GameState) =>
       addNews(s, `Happy new year! Year ${s.year} begins.`, 'neutral');
     }
     for (const line of advanceRivals(s, s.week === 36)) addNews(s, line, 'bad');
+    for (const line of maybeCloseMarket(s)) addNews(s, line, line.startsWith('You win') ? 'good' : 'neutral');
+    const opened = maybeOpenMarket(s);
+    if (opened) addNews(s, opened, 'good');
+    for (const line of expireRights(s)) addNews(s, line, 'neutral');
     if (s.week === 36) addNews(s, 'Fall premiere season starts! New shows get a big boost for the next 5 weeks.', 'neutral');
 
     // Money trouble: one bank loan, then game over.

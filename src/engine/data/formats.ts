@@ -113,7 +113,18 @@ export const FORMATS: Format[] = [
   }),
 ];
 
-export const FORMAT_BY_ID: Record<string, Format> = Object.fromEntries(FORMATS.map((x) => [x.id, x]));
+/** Live sports broadcasts. Not a collectible card: it comes from sports rights. */
+export const SPORTS_FORMAT: Format = f({
+  id: 'sports', name: 'Live Sports', icon: '🏟️', color: '#0e7a4f',
+  blurb: 'Live games. Fans tune in whatever the novelty.',
+  genre: 'factual', screenSkill: 'hosting',
+  weights: { script: 0, technical: 0.45, art: 0.15, screen: 0.4 },
+  ideal: { direction: 3, sound: 3, image: 4, fx: 0, music: 0, art: 0 },
+  weeks: { script: 0, production: 0, post: 0 }, episodes: 1, costPerEpisode: 0, decay: 0,
+  fit: { morning: 0.8, evening: 1.15, prime: 1.15 }, weekendFit: 1.1,
+});
+
+export const FORMAT_BY_ID: Record<string, Format> = Object.fromEntries([...FORMATS, SPORTS_FORMAT].map((x) => [x.id, x]));
 export const formatById = (id: string) => FORMAT_BY_ID[id];
 
 /** Formats that can appear in the free starter pack: cheap and forgiving. */

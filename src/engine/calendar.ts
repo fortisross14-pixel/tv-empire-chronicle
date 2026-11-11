@@ -69,6 +69,9 @@ export function upcomingMarkers(week: number, count = 3): CalendarMarker[] {
     { week: 44, label: 'Nov sweeps' },
     { week: 49, label: 'Holidays' },
     { week: 12, label: '🏆 Indie Awards' },
+    { week: 10, label: '📜 Rights Market' },
+    { week: 30, label: '📜 Rights Market' },
+    { week: 42, label: '📜 Rights Market' },
     { week: 25, label: '🏆 State Awards' },
     { week: 38, label: '🏆 Glimmys' },
   ];

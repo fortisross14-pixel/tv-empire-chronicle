@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   CITY, GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, clearSave, createShow,
   dateLabel, dismissFinished, dismissReveal, loadGame, newGame, openPack, saveGame, scheduleShow, useBusinessCard,
-  answerEvent, dismissCeremony, releasePerson, usePromo, useSponsor, networkById,
+  rightsById, answerEvent, dismissCeremony, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
   type GameState, type ShowPlan,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
@@ -25,7 +25,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'schedule', label: 'Schedule', icon: '📺' },
   { id: 'studio', label: 'Studio', icon: '🎬' },
   { id: 'cards', label: 'Cards', icon: '🃏' },
-  { id: 'shop', label: 'Shop', icon: '🛍️' },
+  { id: 'shop', label: 'Market', icon: '🛍️' },
 ];
 
 export function App() {
@@ -134,6 +134,15 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   if (promoTargets > 0 && state.networkCards.some((c) => networkById(c.defId).kind === 'promo')) {
     todos.push({ emoji: '📣', title: 'Build hype before the premiere', detail: 'You have promo cards. Use them in Cards → Network.', onClick: () => setTab('cards') });
   }
+  if (state.rightsMarket && state.rightsMarket.lots.every((l) => !l.bid)) {
+    todos.push({ emoji: '📜', title: 'The Rights Market is open', detail: `Films and sports. Bids close in ${state.rightsMarket.closesWeek - state.week} weeks.`, onClick: () => setTab('shop') });
+  }
+  for (const r of state.rights) {
+    const def = rightsById(r.defId);
+    if (def.kind === 'film' && !Object.values(state.schedule).includes(r.id)) {
+      todos.push({ emoji: def.icon, title: `Schedule ${def.name}`, detail: `${r.airingsLeft} airings left before the license runs out.`, onClick: () => setTab('schedule') });
+    }
+  }
   const scheduled = new Set(Object.values(state.schedule));
   for (const show of state.shows) {
     if (show.episodesLeft > 0 && !scheduled.has(show.id)) {
@@ -145,7 +154,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   }
 
   const finishedShows = state.newlyFinished.map((id) => state.shows.find((s) => s.id === id)).filter(Boolean) as GameState['shows'];
-  const shopDot = state.shopUnlocked && state.cash >= 40 && state.unopened.length === 0;
+  const shopDot = (state.shopUnlocked && state.cash >= 40 && state.unopened.length === 0) || !!state.rightsMarket;
   const scheduleDot = state.shows.some((s) => s.episodesLeft > 0 && !scheduled.has(s.id));
 
   return (
@@ -169,7 +178,8 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
           <ScheduleScreen state={state}
             onSchedule={(slot, id) => run((s) => scheduleShow(s, slot, id))}
             onRenew={(id) => setWizard({ renew: id })}
-            onCancelShow={(id) => run((s) => cancelShow(s, id))} />
+            onCancelShow={(id) => run((s) => cancelShow(s, id))}
+            onAssignTeam={(rid, c, t) => run((s) => assignSportsTeam(s, rid, c, t), 'Broadcast team set.')} />
         )}
         {tab === 'studio' && (
           <StudioScreen state={state} onNewShow={() => setWizard({})}
@@ -184,7 +194,8 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
         {tab === 'shop' && (
           <ShopScreen state={state}
             onBuyPack={(kind) => run((s) => buyPack(s, kind))}
-            onBuyBusinessCard={() => run(buyBusinessCard, 'Business Card added to your collection.')} />
+            onBuyBusinessCard={() => run(buyBusinessCard, 'Business Card added to your collection.')}
+            onBid={(lot, amount) => run((s) => bidOnRights(s, lot, amount), amount === null ? 'Bid withdrawn.' : 'Sealed bid placed.')} />
         )}
       </main>
 
@@ -195,8 +206,8 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
       <nav className="tabbar">
         <div className="tabbar-inner">
           {TABS.map((t) => (
-            <button key={t.id} className={cx('tab', tab === t.id && 'active', t.id === 'shop' && !state.shopUnlocked && 'locked')} onClick={() => setTab(t.id)}>
-              <span className="tab-icon">{t.id === 'shop' && !state.shopUnlocked ? '🔒' : t.icon}</span>
+            <button key={t.id} className={cx('tab', tab === t.id && 'active', t.id === 'shop' && !state.shopUnlocked && !state.rightsMarket && 'locked')} onClick={() => setTab(t.id)}>
+              <span className="tab-icon">{t.id === 'shop' && !state.shopUnlocked && !state.rightsMarket ? '🔒' : t.icon}</span>
               {t.label}
               {((t.id === 'week' && state.unopened.length > 0) || (t.id === 'shop' && shopDot) || (t.id === 'schedule' && scheduleDot)) && <span className="dot" />}
             </button>

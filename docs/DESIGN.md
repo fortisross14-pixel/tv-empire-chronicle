@@ -101,6 +101,22 @@ Content you buy instead of produce. It **expires**, unlike program cards.
   Gridiron League) is shown **locked** until State/National — something to aim for.
 - **Later:** your own hits become **Franchise cards** (spin-offs, syndication sales).
 
+### 3.5 Rights Market (built)
+- Opens in weeks **10, 30 and 42** for 2 weeks: the sports rights for the
+  coming season, 2 film packages, and 1 big locked lot as a teaser.
+- **Sealed bids** (minimum 60% of the typical price). The rival bids too (or
+  skips). Highest bid wins; you only pay if you win.
+- **Film packages** (Monster Matinee, Kung Fu Theater, Holiday Bundle…):
+  scheduled like shows, a set number of airings, a license that expires.
+- **Local sports** (Pelicans baseball Apr–Sep on Weekend Evening, Friday Night
+  Football Sep–Nov on Weekday Prime, Ice Hawks hockey Nov–Mar on Weekend Prime):
+  games take over their slot in season. A crew card and a commentator are
+  assigned (house staff by default); on game weeks they can't work in the
+  studio. Broadcasts count as 2.5 airings at a 20% ad premium; the last 2 weeks
+  are playoffs. Rival-owned sports compete in their slot.
+- Locked IP: Detective Noir Library, State College Football (State);
+  Galaxy Wars Saga, National Gridiron League (National).
+
 ## 4. Making a show (studio pipeline)
 
 Pick Format + Topic, build the team, split the **focus points**, then
@@ -294,8 +310,10 @@ Unlocks:
 3. **Reviews, marketing, events, awards** ✅ — audience + critic reviews,
    network packs (promos/hype, sponsors, studio upgrades), 8 events,
    Indie/State/Glimmy awards with trophy cabinet, release a card.
-4. **Calendar depth** — sports seasons, election years, holiday specials.
-5. **Rights** — Rights Market, film packages, local sports on the calendar.
+4. **Rights** ✅ — Rights Market, film packages, local sports on the calendar,
+   rival-owned rights, broadcast teams.
+5. **Rivals & AI** — a reactive rival (counter-programming, smarter bids),
+   a second local rival.
 6. **State tier** — license, more slots, second rival, new formats.
 7. **National + payoff** — national tier, Glimmy Awards, franchises.
 

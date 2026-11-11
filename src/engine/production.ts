@@ -7,6 +7,7 @@ import { CITY, TITLE_TEMPLATES } from './data/names';
 import { clamp, pick, randInt } from './rng';
 import { grantXp, newId, RARITY_POINTS } from './people';
 import { withFacilities } from './network';
+import { sportsWorkers } from './rights';
 
 import { GameError } from './errors';
 export { GameError };
@@ -221,7 +222,8 @@ const NEXT_STAGE: Record<Stage, Stage | null> = { script: 'production', producti
 
 /** Advance all projects one week. People can only work one stage per week, first project first. */
 export function advanceProjects(state: GameState): { finished: Show[]; scripts: Project[] } {
-  const working = new Set<string>();
+  // People calling sports games this week can't also work in the studio.
+  const working = new Set<string>(sportsWorkers(state));
   const finished: Show[] = [];
   const scripts: Project[] = [];
   for (const project of [...state.projects]) {
