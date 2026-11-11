@@ -19,6 +19,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MANIFEST = os.path.join(ROOT, 'art', 'posters', 'manifest.json')
 SHEETS = os.path.join(ROOT, 'art', 'posters', 'sheets')
 OUT = os.path.join(ROOT, 'public', 'posters')
+# Alpha below this counts as haze and is removed on transparent sheets.
+HAZE = 60
 
 
 def main() -> int:
@@ -33,6 +35,10 @@ def main() -> int:
             print(f"skip  {sheet['file']} (not found)")
             continue
         img = Image.open(path).convert('RGBA')
+        if sheet['transparent']:
+            # ChatGPT often leaves a faint haze or soft shadow; make it fully clear.
+            r, g, b, a = img.split()
+            img = Image.merge('RGBA', (r, g, b, a.point(lambda v: 0 if v < HAZE else v)))
         w, h = img.size
         cw, ch = w / cols, h / rows
         group_dir = os.path.join(OUT, sheet['group'])
