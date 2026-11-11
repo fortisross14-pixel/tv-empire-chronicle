@@ -3,7 +3,6 @@ import { Sheet } from './Sheet';
 import { money, pct, signedMoney, viewers } from '../util';
 
 export function WeekResults({ result, state, onClose }: { result: WeekResult; state: GameState; onClose: () => void }) {
-  const rival = state.rivals[0];
   const ordered = [...result.slots].sort((a, b) => Number(!!b.showId) - Number(!!a.showId));
   const delay = (i: number) => ({ animationDelay: `${i * 0.18}s` });
   return (
@@ -21,9 +20,11 @@ export function WeekResults({ result, state, onClose }: { result: WeekResult; st
               {viewers(r.viewers)}
               <div className="tiny muted">{money(r.revenue)}</div>
             </div>
-            <div className="share-duel" title={`You ${pct(r.share)} · ${rival?.short} ${pct(r.rivalShare)}`}>
+            <div className="share-duel">
               <span className="us" style={{ width: `${r.share * 100}%` }} />
-              <span className="them" style={{ width: `${r.rivalShare * 100}%` }} />
+              {r.rivals.map((rv) => (
+                <span key={rv.id} style={{ width: `${rv.share * 100}%`, background: `${state.rivals.find((x) => x.id === rv.id)?.color ?? '#999'}66` }} />
+              ))}
             </div>
             {r.reviews && (
               <div className="review-box" style={{ gridColumn: '1 / -1' }}>
@@ -34,7 +35,7 @@ export function WeekResults({ result, state, onClose }: { result: WeekResult; st
             <div className="row tiny muted" style={{ gridColumn: '1 / -1' }}>
               {r.sponsorPay ? <span className="chip good">Sponsor +{money(r.sponsorPay)}</span> : null}
               <span>You {pct(r.share)}</span>
-              <span>· {rival?.short} {pct(r.rivalShare)} <i>“{r.rivalName}”</i></span>
+              {r.rivals.map((rv) => <span key={rv.id}>· {rv.short} {pct(rv.share)} <i>“{rv.name}”</i></span>)}
               {r.won && <span className="win" style={{ marginLeft: 'auto' }}>WIN</span>}
             </div>
           </div>

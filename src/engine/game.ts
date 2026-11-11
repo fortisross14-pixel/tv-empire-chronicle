@@ -6,7 +6,7 @@ import { CITY } from './data/names';
 import { addHouseCards, newId } from './people';
 import { applyPack, makePack, PRICES } from './packs';
 import { advanceProjects, GameError, startProject, type ShowPlan } from './production';
-import { advanceRivals, makeRivals } from './rivals';
+import { advanceRivals, makeRivals, recordRivalShares } from './rivals';
 import { appeal } from './appeal';
 import { applyPromo, applySponsor, HYPE_POWER } from './network';
 import { makeReviews, wordOfMouth } from './reviews';
@@ -22,7 +22,7 @@ import {
   AIRINGS, CPM, DAYPARTS, DAY_BLOCKS, FILLER_APPEAL, FILLER_NAME, HUT, MARKET_HOUSEHOLDS, OTHER_APPEAL, OVERHEAD, SLOTS,
 } from './schedule';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 export const START_CASH = 120;
 export const LOAN = { amount: 100, total: 125, payment: 2.5 };
 
@@ -224,7 +224,6 @@ export const airWeek = (state: GameState) =>
     const slots: SlotResult[] = [];
     const aired = new Set<string>();
     let reputationDelta = 0;
-    const rival = s.rivals[0];
 
     for (const block of DAY_BLOCKS) {
       let prevShare = 0.1;
@@ -279,14 +278,16 @@ export const airWeek = (state: GameState) =>
           appeal({ quality: r.quality, novelty: r.novelty, fame: r.fame, formatId: r.formatId, block, part }));
         const total = ours + rivalAppeals.reduce((a, b) => a + b, 0) + OTHER_APPEAL;
         const share = ours / total;
-        const rivalShare = rivalAppeals[0] / total;
+        const rivalsHere = s.rivals.map((r, i) => ({ id: r.id, short: r.short, name: rivalShows[i].name, share: rivalAppeals[i] / total }))
+          .sort((a, b) => b.share - a.share);
+        const rivalShare = rivalsHere[0]?.share ?? 0;
         const watching = MARKET_HOUSEHOLDS * HUT[block][part] * period.viewing;
         const viewers = round1(watching * share * viewerMod);
         const revenue = round1((viewers * airings * CPM[part] * cpmBonus * period.adPrice * s.rateCard) / 1000);
         const won = !!kind && share > rivalShare;
         slots.push({
           kind, slot, showId: show?.id ?? film?.id ?? sports?.id ?? null, showName: entryName, rerun, premiere,
-          viewers, share, revenue, rivalName: rivalShows[0].name, rivalShare, won,
+          viewers, share, revenue, rivalName: rivalsHere[0]?.name ?? '', rivalShare, won, rivals: rivalsHere,
         });
         prevShare = share;
         if (film) {
@@ -383,8 +384,9 @@ export const airWeek = (state: GameState) =>
     reputationDelta -= s.reputation * 0.02;
     s.reputation = round1(clamp(s.reputation + reputationDelta, 0, 100));
 
+    recordRivalShares(s, slots);
     const wins = slots.filter((r) => r.won).length;
-    if (wins > 0 && rival) addNews(s, `${s.stationName} beats ${rival.short} in ${wins} of ${slots.length} slots this week.`, 'good');
+    if (wins > 0) addNews(s, `${s.stationName} wins ${wins} of ${slots.length} slots this week.`, 'good');
 
     s.lastResult = {
       week: s.week, year: s.year, slots, revenue, sponsors, overhead: OVERHEAD, loanPayment, net, reputationDelta: round1(reputationDelta),
@@ -423,8 +425,9 @@ export const airWeek = (state: GameState) =>
       s.week = 1;
       s.year += 1;
       addNews(s, `Happy new year! Year ${s.year} begins.`, 'neutral');
+      for (const r of s.rivals) r.winsVsYou = 0;
     }
-    for (const line of advanceRivals(s, s.week === 36)) addNews(s, line, 'bad');
+    for (const line of advanceRivals(s, s.week === 36, slots)) addNews(s, line, 'bad');
     for (const line of maybeCloseMarket(s)) addNews(s, line, line.startsWith('You win') ? 'good' : 'neutral');
     const opened = maybeOpenMarket(s);
     if (opened) addNews(s, opened, 'good');

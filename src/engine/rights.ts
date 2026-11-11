@@ -1,19 +1,18 @@
 import type { GameState, OwnedRights, RightsLot } from './types';
-import { clamp, pick, random, randInt, shuffle } from './rng';
+import { clamp, pick, randInt, shuffle } from './rng';
 import {
   MARKET_OPEN_WEEKS, MARKET_WEEKS, RIGHTS, SPORTS_AT_MARKET, inSeason, rightsById, weeksToSeasonEnd, weeksToSeasonStart,
   type RightsDef,
 } from './data/rights';
 import { GameError } from './errors';
 import { newId } from './people';
+import { rivalBids } from './rivals';
 
 export const absWeek = (s: Pick<GameState, 'week' | 'year'>) => s.year * 52 + s.week;
 
 /** Sports broadcasts count as a big event: more ad time than one airing. */
 export const SPORTS_AIRINGS = 2.5;
 export const SPORTS_CPM_BONUS = 1.2;
-/** Share of the minimum bid a rival bids around, and how often it skips. */
-const RIVAL_SKIP = 0.35;
 
 const owned = (s: GameState, defId: string) =>
   s.rights.some((r) => r.defId === defId) || s.rivalRights.some((r) => r.defId === defId);
@@ -55,10 +54,11 @@ export function maybeCloseMarket(s: GameState): string[] {
   const m = s.rightsMarket;
   if (!m || s.week < m.closesWeek) return [];
   const news: string[] = [];
-  const rival = s.rivals[0];
   for (const lot of m.lots.filter((l) => !l.locked)) {
     const def = rightsById(lot.defId);
-    const rivalBid = random(s) < RIVAL_SKIP ? 0 : Math.round(def.value * (0.7 + random(s) * 0.65));
+    const top = rivalBids(s, def.value, def.kind === 'sports')[0];
+    const rival = top?.rival;
+    const rivalBid = top?.bid ?? 0;
     if (lot.bid && lot.bid >= rivalBid && lot.bid <= s.cash) {
       s.cash = Math.round((s.cash - lot.bid) * 10) / 10;
       s.rights.push(acquire(s, def));

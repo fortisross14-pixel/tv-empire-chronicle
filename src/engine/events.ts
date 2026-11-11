@@ -217,7 +217,7 @@ const EVENTS: EventDef[] = [
       const rival = s.rivals[0];
       if (rival) {
         const slot = pick(s, SLOTS);
-        const copy = makeRivalShow(s, slot, rival.strength);
+        const copy = makeRivalShow(s, slot, rival);
         rival.schedule[slot] = { ...copy, formatId: sh.formatId, topicId: sh.topicId, name: `${sh.name.split(' ')[0]} Too`, novelty: 100 };
       }
       if (c === 0) {

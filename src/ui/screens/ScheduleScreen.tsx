@@ -6,6 +6,7 @@ import {
 import { PersonCard, ShowCard, Stars } from '../components/Cards';
 import { RightsCard, seasonLabel } from '../components/RightsCard';
 import { Sheet } from '../components/Sheet';
+import { RivalsView } from './RivalsView';
 import { cx, gradeClass } from '../util';
 
 export function ScheduleScreen({
@@ -19,13 +20,19 @@ export function ScheduleScreen({
 }) {
   const [picking, setPicking] = useState<SlotId | null>(null);
   const [teamFor, setTeamFor] = useState<OwnedRights | null>(null);
-  const rival = state.rivals[0];
+  const [view, setView] = useState<'ours' | 'rivals'>('ours');
   const showIn = (slot: SlotId) => state.shows.find((s) => s.id === state.schedule[slot]);
   const filmIn = (slot: SlotId) => state.rights.find((r) => r.id === state.schedule[slot]);
   const sportsFor = (slot: SlotId) => state.rights.find((r) => rightsById(r.defId).slot === slot);
 
   return (
     <>
+      <div className="segmented">
+        <button className={view === 'ours' ? 'on' : ''} onClick={() => setView('ours')}>Our schedule</button>
+        <button className={view === 'rivals' ? 'on' : ''} onClick={() => setView('rivals')}>Rivals ({state.rivals.length})</button>
+      </div>
+      {view === 'rivals' && <RivalsView state={state} />}
+      {view === 'ours' && <>
       <section>
         <div className="section-title"><h2>Next week's schedule</h2><span className="sub">Tap a slot</span></div>
         <div className="sched">
@@ -37,7 +44,6 @@ export function ScheduleScreen({
             const sport = sportsFor(slot);
             const sportDef = sport ? rightsById(sport.defId) : null;
             const live = !!sportDef && inSeason(sportDef, state.week);
-            const r = rival?.schedule[slot];
             const filled = show || film;
             return (
               <button key={slot} className={cx('slot', !filled && !live && 'filler')} onClick={() => setPicking(slot)}>
@@ -60,7 +66,9 @@ export function ScheduleScreen({
                 )}
                 {film && !live && <div className="tiny muted">{film.airingsLeft} airings left</div>}
                 {sportDef && !live && <div className="tiny muted">{sportDef.icon} Games from {seasonLabel(sportDef.season!)}</div>}
-                {r && <div className="slot-vs">vs <b>{rival.short}</b>: {formatById(r.formatId).icon} {r.name}</div>}
+                <div className="slot-vs">{state.rivals.map((rv) => (
+                  <div key={rv.id}>vs <b style={{ color: rv.color }}>{rv.short}</b>: {formatById(rv.schedule[slot].formatId).icon} {rv.schedule[slot].name}</div>
+                ))}</div>
               </button>
             );
           }))}
@@ -116,6 +124,7 @@ export function ScheduleScreen({
           )}
       </section>
 
+      </>}
       {picking && (
         <SlotPicker state={state} slot={picking}
           onPick={(id) => { onSchedule(picking, id); setPicking(null); }} onClose={() => setPicking(null)} />
@@ -132,7 +141,6 @@ function SlotPicker({
   state, slot, onPick, onClose,
 }: { state: GameState; slot: SlotId; onPick: (id: string | null) => void; onClose: () => void }) {
   const [block, part] = slot.split('-') as [typeof DAY_BLOCKS[number], typeof DAYPARTS[number]];
-  const r = state.rivals[0]?.schedule[slot];
   const where = (id: string) => Object.entries(state.schedule).find(([, sid]) => sid === id)?.[0] as SlotId | undefined;
   const shows = [...state.shows].sort((a, b) => fitStars(b.formatId, block, part) - fitStars(a.formatId, block, part) || b.quality - a.quality);
   const films = state.rights.filter((x) => rightsById(x.defId).kind === 'film');
@@ -144,11 +152,12 @@ function SlotPicker({
   };
   return (
     <Sheet title={slotLabel(slot)} onClose={onClose}>
-      {r && (
-        <div className="panel flat small" style={{ marginBottom: 12 }}>
-          Rival {state.rivals[0].short} airs <b>{formatById(r.formatId).icon} {r.name}</b> · {formatById(r.formatId).name} · quality {grade(r.quality)}
-        </div>
-      )}
+      <div className="panel flat small stack-sm" style={{ marginBottom: 12 }}>
+        {state.rivals.map((rv) => {
+          const r = rv.schedule[slot];
+          return <div key={rv.id}><b style={{ color: rv.color }}>{rv.short}</b> airs <b>{formatById(r.formatId).icon} {r.name}</b> · {formatById(r.formatId).name} · quality {grade(r.quality)}</div>;
+        })}
+      </div>
       {sport && (
         <div className="panel flat small" style={{ marginBottom: 12 }}>
           {rightsById(sport.defId).icon} {rightsById(sport.defId).name} games take over this slot {seasonLabel(rightsById(sport.defId).season!)}. Whatever you schedule here waits on game weeks.

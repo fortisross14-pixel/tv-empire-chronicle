@@ -304,3 +304,45 @@ describe('rights', () => {
     expect(s.schedule['weekday-evening']).toBeNull();
   });
 });
+
+describe('rival AI', () => {
+  test('WAVE 12 launches in the first fall', () => {
+    let s = newGame(14, 'X');
+    expect(s.rivals.map((r) => r.id)).toEqual(['kpel']);
+    for (let i = 0; i < 10; i++) {
+      if (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
+      s = airWeek(s);
+    }
+    expect(s.rivals.map((r) => r.id)).toEqual(['kpel', 'wave']);
+    expect(s.lastResult!.slots[0].rivals.length).toBe(2);
+  });
+
+  test('a rival counter-programs a slot you dominate', () => {
+    let countered = 0;
+    for (let seed = 1; seed <= 10; seed++) {
+      let s = readyShow(seed * 7);
+      s.shows[0].quality = 95;
+      s.shows[0].fame = 90;
+      s = scheduleShow(s, 'weekday-evening', s.shows[0].id);
+      for (let i = 0; i < 10; i++) {
+        s.pendingEvent = null;
+        s.shows[0].novelty = 100;
+        s.shows[0].episodesLeft = 10;
+        s = airWeek(s);
+        if (s.rivals[0].schedule['weekday-evening'].counter) { countered++; break; }
+      }
+    }
+    expect(countered).toBeGreaterThanOrEqual(5);
+  });
+
+  test('rivals cancel flops', () => {
+    let s = readyShow(17);
+    s.pendingEvent = null;
+    const slot = 'weekday-morning';
+    s.rivals[0].shares[slot] = [0.05, 0.05];
+    Object.assign(s.rivals[0].schedule[slot], { quality: 1, fame: 0, novelty: 30, weeksLeft: 13 });
+    const name = s.rivals[0].schedule[slot].name;
+    s = airWeek(s);
+    expect(s.news.some((n) => n.text.includes(`cancels "${name}"`))).toBe(true);
+  });
+});

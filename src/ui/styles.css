@@ -275,6 +275,7 @@ button.card:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(
 .period .emoji { font-size: 32px; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
 .kpi { background: var(--card); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); }
+.kpi.flat { box-shadow: none; background: var(--paper); }
 .kpi .label { font-size: 11px; color: var(--ink-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 .kpi .value { font-family: var(--display); font-weight: 700; font-size: 24px; }
 .kpi .delta { font-size: 12px; font-weight: 600; }

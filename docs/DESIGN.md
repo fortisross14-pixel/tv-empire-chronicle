@@ -243,6 +243,20 @@ writer's block, a rival copying your show.
 | State TV Awards | 25 (Jun) | state networks | Best Show, Writing, Performance | Program pack, $10K, +7 rep |
 | The Glimmy Awards | 38 (Sep) | national | Best Indie Production only | Network pack, $25K, +15 rep |
 
+## 7c. Rivals (built)
+
+| Station | Style | Counter-programs | Rights appetite | On air |
+|---|---|---|---|---|
+| KPEL 5 | News, sports, a bit of everything | 60% chance | Normal, loves sports | From the start |
+| WAVE 12 | Young: reality, contests, sitcoms, cheap | 35% chance | Low | Launches in week 36 of year 1 |
+
+Each week every rival: ages its shows; **cancels flops** (under 12% share for 3
+weeks); **renews hits** (over 32% share) instead of replacing them; and, when
+off cooldown, may **counter-program** a slot where your show held 30%+ share
+two weeks running, launching a stronger show there (then a 6-week cooldown).
+Rivals bid on rights by personality. The Schedule tab has a **Rivals** view:
+lineup, shares, trend, rights owned and slots won against you.
+
 ## 8. Economy
 
 - **In:** ad revenue (rating × slot ad price, adjusted by sweeps), sponsor deals,
@@ -312,8 +326,8 @@ Unlocks:
    Indie/State/Glimmy awards with trophy cabinet, release a card.
 4. **Rights** ✅ — Rights Market, film packages, local sports on the calendar,
    rival-owned rights, broadcast teams.
-5. **Rivals & AI** — a reactive rival (counter-programming, smarter bids),
-   a second local rival.
+5. **Rivals & AI** ✅ — reactive KPEL 5, second rival WAVE 12, personality
+   bids, Rivals view.
 6. **State tier** — license, more slots, second rival, new formats.
 7. **National + payoff** — national tier, Glimmy Awards, franchises.
 

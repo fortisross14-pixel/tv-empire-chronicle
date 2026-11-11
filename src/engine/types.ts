@@ -239,6 +239,8 @@ export interface RivalShow {
   novelty: number;
   fame: number;
   weeksLeft: number;
+  /** Launched to counter one of your shows. */
+  counter?: boolean;
 }
 
 export interface Rival {
@@ -248,10 +250,20 @@ export interface Rival {
   color: string;
   strength: number;
   schedule: Record<SlotId, RivalShow>;
+  /** Last few weekly shares per slot, newest last. */
+  shares: Record<SlotId, number[]>;
+  /** Average share across all slots per week, newest last (up to 26). */
+  history: number[];
+  /** Weeks until it may counter-program again. */
+  counterCooldown: number;
+  /** Slots it won against you this year. */
+  winsVsYou: number;
 }
 
 export interface SlotResult {
   kind?: 'show' | 'film' | 'sports';
+  /** Every rival in this slot, strongest first. */
+  rivals: { id: string; short: string; name: string; share: number }[];
   /** Set on a premiere: the reviews it got. */
   reviews?: Reviews;
   sponsorPay?: number;

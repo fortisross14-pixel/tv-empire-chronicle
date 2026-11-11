@@ -21,11 +21,42 @@ export interface RivalDef {
   name: string;
   short: string;
   color: string;
-  strength: number;
+  blurb: string;
+  /** Show quality range in year 1. */
+  quality: [number, number];
+  /** Chance (0–1) to counter-program a slot you are dominating. */
+  aggression: number;
+  /** Multiplier on rights bids; low = rarely bids high. */
+  appetite: number;
+  /** Extra bid multiplier for sports rights. */
+  sportsLove: number;
+  /** Formats it likes per daypart. */
+  formats: Record<'morning' | 'evening' | 'prime', string[]>;
+  /** Week of year 1 it goes on air (0 = from the start). */
+  launchWeek: number;
 }
 
 export const LOCAL_RIVALS: RivalDef[] = [
-  { id: 'kpel', name: 'KPEL Pelican 5', short: 'KPEL 5', color: '#e04f4f', strength: 1 },
+  {
+    id: 'kpel', name: 'KPEL Pelican 5', short: 'KPEL 5', color: '#e04f4f',
+    blurb: 'The old local giant. News at six, sports, and it hates losing a slot.',
+    quality: [30, 52], aggression: 0.6, appetite: 1, sportsLove: 1.15, launchWeek: 0,
+    formats: {
+      morning: ['news', 'talk', 'magazine'],
+      evening: ['news', 'contest', 'sitcom', 'magazine'],
+      prime: ['series', 'reality', 'contest', 'movie', 'sitcom', 'documentary'],
+    },
+  },
+  {
+    id: 'wave', name: 'WAVE 12 Harbor', short: 'WAVE 12', color: '#2fa3c4',
+    blurb: 'A cheeky new channel for young viewers. Reality, contests and comedy, on a budget.',
+    quality: [26, 48], aggression: 0.35, appetite: 0.6, sportsLove: 0.8, launchWeek: 36,
+    formats: {
+      morning: ['talk', 'magazine'],
+      evening: ['contest', 'sitcom', 'reality'],
+      prime: ['reality', 'contest', 'sitcom'],
+    },
+  },
 ];
 
 /** Title templates per format. {w} = topic word, {c} = city, {h} = host last name. */
