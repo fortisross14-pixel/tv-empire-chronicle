@@ -392,8 +392,10 @@ The easiest of each tier is open at once; each win opens the next in that tier.
 
 ### Sandbox (opens after one win in each campaign tier)
 Today's game: a new station from scratch, Local → State → National. Pick a
-difficulty (cash, rival strength, event rate) and optional goals from the scenario
-goal list, or none. Existing saves become Sandbox saves.
+difficulty (Relaxed $220K and softer rivals, Normal, Tough $70K and sharper rivals) and
+optional goals (become State/National, #1 in prime time, a Show for the Ages, an IP rated
+60, an Indie Award, a Glimmy, 10 affiliates, $5M). No deadline; Home tracks the goals.
+Existing saves become Sandbox saves. National rank goals count prime-time share.
 
 ## 15. IP: licensed and your own (built)
 
@@ -470,8 +472,9 @@ Next (planned):
     Market, shows based on IP, own hits become IP, IP ratings grow and shrink.
 12. **Scenario engine + Beginner** ✅ — title screen with 3 save slots, mission roadmap,
     profile, preset starts, goals, deadlines, stars, all 24 missions and their unlocks.
-13. **Campaign polish + Sandbox setup** — playtest each mission's preset and deadline,
-    Sandbox difficulty and optional goals.
+13. **Campaign polish + Sandbox setup** ✅ — every mission playtested by a bot and tuned
+    (docs/audits/2026-11-11-missions-playtest.md), Sandbox difficulty (Relaxed, Normal,
+    Tough) and optional goals with no deadline.
 
 The last three waves are always:
 

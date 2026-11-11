@@ -3,7 +3,7 @@ import {
   GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, createShow, ackMission, newMissionGame, recordMission,
   dateLabel, dismissFinished, dismissReveal, openPack, saveGame, scheduleShow, useBusinessCard,
   rightsById, setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, projectPeople, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
-  reachOf, type GameState, type ShowPlan,
+  reachOf, SANDBOX_GOALS, type GameState, type Goal, type ShowPlan,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
 import { PackReveal } from './components/PackReveal';
@@ -35,6 +35,8 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 ];
 
 const seed = () => (Math.random() * 2 ** 31) | 0;
+/** The Sandbox goal ids for a list of goals (to start the same Sandbox again). */
+const sandboxGoalIds = (goals: Goal[]) => SANDBOX_GOALS.filter((g) => goals.some((x) => JSON.stringify(x) === JSON.stringify(g.goal))).map((g) => g.id);
 
 export function App() {
   // Null: the title screen with save slots and the mission map.
@@ -44,7 +46,7 @@ export function App() {
     return (
       <ConfirmProvider>
         <MenuScreen key={menuKey} onPlay={(slot, state, start) => {
-          const s = state ?? newMissionGame(seed(), start?.name ?? 'Ellison 8', start?.missionId ?? null);
+          const s = state ?? newMissionGame(seed(), start?.name ?? 'Ellison 8', start?.missionId ?? null, start?.sandbox);
           saveGame(s, slot);
           setPlay({ slot, state: s, gen: Date.now() });
         }} />
@@ -53,7 +55,9 @@ export function App() {
   }
   const toMenu = () => { setPlay(null); setMenuKey((k) => k + 1); window.scrollTo({ top: 0 }); };
   const retry = () => {
-    const s = newMissionGame(seed(), play.state.stationName, play.state.mission?.id ?? null);
+    const run = play.state.mission;
+    const s = newMissionGame(seed(), play.state.stationName, run?.id ?? null,
+      run?.custom ? { difficulty: run.custom.difficulty, goals: sandboxGoalIds(run.custom.goals) } : undefined);
     saveGame(s, play.slot);
     setPlay({ slot: play.slot, state: s, gen: Date.now() });
   };
@@ -115,7 +119,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
   // A finished mission: record the stars once (the profile keeps the best).
   const mission = state.mission;
   useEffect(() => {
-    if (mission?.status === 'won') recordMission(mission.id, mission.stars);
+    if (mission?.status === 'won' && !mission.custom) recordMission(mission.id, mission.stars);
   }, [mission?.status, mission?.id, mission?.stars]);
   const showMissionResult = !!mission && (mission.status !== 'playing' || !!state.gameOver) && !mission.counters.resultSeen;
 

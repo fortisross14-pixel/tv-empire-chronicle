@@ -11,13 +11,18 @@ import { assignTeam, onSportsTeam, placeBid, refreshMarketLocks } from './rights
 import { AFFILIATE_MAX, affiliateCost, emptySchedule, reachOf, slotsOf, tierSlot } from './schedule';
 import { addNews, round1 } from './news';
 import { simulateWeek, CHAMPION_WEEKS, LOAN } from './sim';
-import { applyMission } from './mission';
+import { applyMission, applySandbox } from './mission';
+import type { SandboxDifficulty } from './types';
 import { missionById } from './data/missions';
 
 /** A new game set up for a mission (or a plain Sandbox game without one). */
-export function newMissionGame(seed: number, stationName: string, missionId: string | null): GameState {
+export function newMissionGame(
+  seed: number, stationName: string, missionId: string | null,
+  sandbox?: { difficulty: SandboxDifficulty; goals: string[] },
+): GameState {
   const s = newGame(seed, stationName);
-  if (missionId) applyMission(s, missionById(missionId));
+  if (missionId && missionId !== 'sandbox') applyMission(s, missionById(missionId));
+  else if (sandbox) applySandbox(s, sandbox.difficulty, sandbox.goals);
   return s;
 }
 

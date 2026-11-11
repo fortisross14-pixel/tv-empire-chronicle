@@ -1,5 +1,5 @@
-import type { GameState, MissionRun, Show, SlotId, Tier } from './types';
-import { MISSIONS, missionById, BEGINNER_TO_UNLOCK, type Goal, type MissionDef, type MissionGroup, type PresetShow } from './data/missions';
+import type { GameState, MissionRun, SandboxDifficulty, Show, SlotId, Tier } from './types';
+import { MISSIONS, missionById, BEGINNER_TO_UNLOCK, SANDBOX_DIFFICULTY, SANDBOX_GOALS, type Goal, type MissionDef, type MissionGroup, type PresetShow } from './data/missions';
 import { formatById } from './data/formats';
 import { monthOf } from './calendar';
 import { emptySchedule, slotsOf } from './schedule';
@@ -9,7 +9,9 @@ import { rightsById } from './data/rights';
 import { ipDefById } from './data/ips';
 import { licenseIp } from './ip';
 import { addNews } from './news';
-import { clamp } from './rng';
+import { clamp, randInt } from './rng';
+import { topicById } from './data/topics';
+import { suggestTitle } from './production';
 
 const absWeek = (s: Pick<GameState, 'week' | 'year'>) => s.year * 52 + s.week;
 const TIER_ORDER: Tier[] = ['local', 'state', 'national'];
@@ -50,7 +52,7 @@ function presetShow(s: GameState, p: PresetShow): Show {
     id: newId(s, 's'), name: p.name, formatId: p.formatId, topicId: p.topicId, topic2Id: null, level: s.tier === 'local' ? 'basic' : 'advanced',
     season, scores: { script: p.quality, technical: p.quality, art: p.quality, screen: p.quality }, quality: p.quality, focusMatch: 0,
     scriptStars: clamp(Math.round(p.quality / 20), 1, 5), teamBonus: 0, classic: false, fame: Math.round(p.quality / 3), talentName: 'House host',
-    episodesTotal: format.episodes, episodesLeft: Math.ceil(format.episodes / 2), novelty: p.novelty ?? 80,
+    episodesTotal: format.episodes, episodesLeft: format.episodes, novelty: p.novelty ?? 80,
     noveltyCap: Math.max(40, 100 - 12 * (season - 1)), premiered: true, history: [], bestViewers: 0, hype: 0, reviews: null,
     awards: [], premieredAt: null, lastPlan: null, poster: null, ipId: null,
   };
@@ -84,6 +86,19 @@ export function applyMission(s: GameState, def: MissionDef): void {
   }
   if (x.skipStarterPacks && !(x.formats?.length)) { s.formats.push('talk', 'news'); s.topics.push('local-life', 'local-news'); }
   for (const p of x.shows ?? []) presetShow(s, p);
+  if (x.fillLineup) {
+    const f = x.fillLineup;
+    const combos = s.formats.flatMap((fid) => s.topics.filter((t) => topicById(t).fits[fid]).map((t) => [fid, t] as const));
+    let i = 0;
+    for (const slot of slotsOf(s)) {
+      if (s.schedule[slot] || !combos.length) continue;
+      const [formatId, topicId] = combos[i++ % combos.length];
+      presetShow(s, {
+        name: suggestTitle(s, formatId, topicId, 'House Host'), formatId, topicId, slot,
+        quality: randInt(s, ...f.quality), novelty: randInt(s, ...f.novelty), season: randInt(s, ...f.season),
+      });
+    }
+  }
   for (const id of x.rights ?? []) {
     const house = (k: string) => s.people.find((p) => p.house && p.kind === k)?.id ?? null;
     s.rights.push({ id: newId(s, 'r'), defId: id, airingsLeft: 0, novelty: 100, expires: absWeek(s) + 60, crewId: house('crew'), talentId: house('talent'), games: 0 });
@@ -100,12 +115,44 @@ export function applyMission(s: GameState, def: MissionDef): void {
   addNews(s, `🎯 Mission: ${def.title}. ${def.brief}`, 'good');
 }
 
+/** A Sandbox game: difficulty plus the player's own goals (optional, no deadline). */
+export function applySandbox(s: GameState, difficulty: SandboxDifficulty, goalIds: string[]): void {
+  const d = SANDBOX_DIFFICULTY[difficulty];
+  s.cash = d.cash;
+  if (d.rivals !== 1) {
+    for (const r of s.rivals) {
+      r.strength = d.rivals;
+      for (const show of Object.values(r.schedule)) show.quality = clamp(Math.round(show.quality * d.rivals), 10, 95);
+    }
+  }
+  const goals = SANDBOX_GOALS.filter((g) => goalIds.includes(g.id)).map((g) => g.goal);
+  if (!goals.length && difficulty === 'normal') return;
+  s.mission = {
+    id: 'sandbox', startAt: absWeek(s), deadlineAt: 0, status: 'playing', stars: 0,
+    met: goals.map(() => false), bonusMet: false, counters: {}, custom: { goals, difficulty },
+  };
+}
+
+/** The goals and bonus of a run: the mission's, or the Sandbox player's own. */
+export function goalsOf(run: MissionRun): { goals: Goal[]; bonus: Goal | null; title: string; icon: string } {
+  if (run.custom) return { goals: run.custom.goals, bonus: null, title: 'Your goals', icon: '🎯' };
+  const def = missionById(run.id);
+  return { goals: def.goals, bonus: def.bonus, title: def.title, icon: def.icon };
+}
+
 // ---------- Checking goals ----------
 
-const rankOf = (s: GameState) => {
-  const ours = s.shareHistory[s.shareHistory.length - 1] ?? 0;
-  return 1 + s.rivals.filter((r) => (r.history[r.history.length - 1] ?? 0) > ours).length;
-};
+/** Our place among the networks last week: by average share, or prime-time share only. */
+export function rankOf(s: GameState, prime = false): number {
+  if (!prime) {
+    const ours = s.shareHistory[s.shareHistory.length - 1] ?? 0;
+    return 1 + s.rivals.filter((r) => (r.history[r.history.length - 1] ?? 0) > ours).length;
+  }
+  const slots = s.lastResult?.slots.filter((x) => x.slot.endsWith('-prime')) ?? [];
+  if (!slots.length) return s.rivals.length + 1;
+  const ours = slots.reduce((a, x) => a + x.share, 0) / slots.length;
+  return 1 + s.rivals.filter((r) => slots.reduce((a, x) => a + (x.rivals.find((y) => y.id === r.id)?.share ?? 0), 0) / slots.length > ours).length;
+}
 
 const scheduledShows = (s: GameState) =>
   slotsOf(s).map((slot) => s.shows.find((x) => x.id === s.schedule[slot])).filter((x): x is Show => !!x);
@@ -121,7 +168,7 @@ function countWeek(s: GameState, run: MissionRun, goal: Goal, key: string): void
     case 'sportsGames': c[key] = (c[key] ?? 0) + r.slots.filter((x) => x.kind === 'sports').length; break;
     case 'movies': c[key] = (c[key] ?? 0) + r.slots.filter((x) => x.kind === 'film').length; break;
     case 'fullSchedule': c[key] = r.slots.every((x) => !!x.kind) ? (c[key] ?? 0) + 1 : 0; break;
-    case 'rank': c[key] = rankOf(s) <= goal.place ? (c[key] ?? 0) + 1 : 0; break;
+    case 'rank': c[key] = rankOf(s, goal.prime) <= goal.place ? (c[key] ?? 0) + 1 : 0; break;
     default: break;
   }
 }
@@ -145,7 +192,7 @@ export function goalReached(s: GameState, goal: Goal, key: string): boolean {
     case 'ownIp': return s.ips.some((x) => x.defId === null && x.rating >= goal.rating);
     case 'ips': return s.ips.filter((x) => x.rating >= goal.rating).length >= goal.n;
     case 'affiliates': return s.affiliates >= goal.n;
-    case 'rights': return goal.ids.every((id) => s.rights.some((x) => x.defId === id));
+    case 'rights': return goal.ids.every((id) => (c[`held:${id}`] ?? 0) > 0 || s.rights.some((x) => x.defId === id));
     case 'loanFree': return !s.loan;
     case 'primeSweep': {
       const prime = r?.slots.filter((x) => x.slot.endsWith('-prime')) ?? [];
@@ -172,14 +219,18 @@ export function goalLabel(goal: Goal): string {
     case 'positiveMonths': return goal.n === 1 ? 'End a month in profit' : `End ${goal.n} months in profit${goal.inARow ? ' in a row' : ''}`;
     case 'fullSchedule': return `No Filler for ${goal.weeks} weeks in a row`;
     case 'season': return `Air season ${goal.n} of a show`;
-    case 'rank': return goal.place === 1 ? `#1 network for ${goal.weeks} week${goal.weeks > 1 ? 's' : ''} in a row` : `Top ${goal.place} for ${goal.weeks} weeks in a row`;
+    case 'rank': {
+      const where = goal.prime ? ' in prime time' : '';
+      const run = `${goal.weeks} week${goal.weeks > 1 ? 's' : ''} in a row`;
+      return goal.place === 1 ? `#1${where} for ${run}` : `Top ${goal.place}${where} for ${run}`;
+    }
     case 'tier': return `Become a ${goal.tier === 'state' ? 'State' : 'National'} network`;
     case 'award': return `Win ${goal.n && goal.n > 1 ? `${goal.n} awards` : 'an award'} at the ${goal.level === 'indie' ? 'Indie Awards' : goal.level === 'state' ? 'State Awards' : 'Glimmys'}`;
     case 'classic': return 'Make a Show for the Ages';
     case 'ownIp': return goal.rating <= 1 ? 'Turn a show into your own IP' : `Grow your own IP to rating ${goal.rating}`;
     case 'ips': return `Hold ${goal.n} IP${goal.n > 1 ? 's' : ''} rated ${goal.rating}+`;
     case 'affiliates': return `Sign ${goal.n} affiliates`;
-    case 'rights': return goal.ids.length === 1 ? `Hold the ${rightsById(goal.ids[0]).name} rights` : `Hold ${goal.ids.map((id) => rightsById(id).short ?? rightsById(id).name).join(', ')} at once`;
+    case 'rights': return goal.ids.length === 1 ? `Win the ${rightsById(goal.ids[0]).name} rights` : `Win the rights to ${goal.ids.map((id) => rightsById(id).short ?? rightsById(id).name).join(', ')}`;
     case 'loanFree': return 'Pay off the bank loan';
     case 'primeSweep': return 'Win every prime-time slot in one week';
     case 'freshLineup': return `Scheduled shows average ${goal.novelty}+ novelty`;
@@ -203,13 +254,14 @@ export function goalProgress(s: GameState, goal: Goal, i: number | 'bonus'): str
   }
 }
 
-export const missionWeeksLeft = (s: GameState) => (s.mission ? s.mission.deadlineAt - absWeek(s) : 0);
+export const missionWeeksLeft = (s: GameState) => (s.mission && s.mission.deadlineAt ? s.mission.deadlineAt - absWeek(s) : Infinity);
 
 /** After each aired week: update counters, tick goals, decide win or loss. */
 export function trackMission(s: GameState): void {
   const run = s.mission;
   if (!run || run.status !== 'playing') return;
-  const def = missionById(run.id);
+  const def = goalsOf(run);
+  if (!def.goals.length) return;
   // Months: lastResult is the week that just aired; s.week has moved on.
   const r = s.lastResult;
   if (r) {
@@ -221,17 +273,23 @@ export function trackMission(s: GameState): void {
       run.counters.monthNet = 0;
     }
   }
+  // Sports rights held at any point count (seasons don't overlap, so you can't hold all at once).
+  for (const r of s.rights) run.counters[`held:${r.defId}`] = 1;
   def.goals.forEach((g, i) => { countWeek(s, run, g, counterKey(i)); if (goalReached(s, g, counterKey(i))) run.met[i] = true; });
-  countWeek(s, run, def.bonus, counterKey('bonus'));
-  if (goalReached(s, def.bonus, counterKey('bonus'))) run.bonusMet = true;
+  if (def.bonus) {
+    countWeek(s, run, def.bonus, counterKey('bonus'));
+    if (goalReached(s, def.bonus, counterKey('bonus'))) run.bonusMet = true;
+  }
 
   const now = absWeek(s);
   if (run.met.every(Boolean)) {
-    const fast = run.deadlineAt - now >= def.weeks / 3;
     run.status = 'won';
+    if (run.custom) { addNews(s, '🏁 All your Sandbox goals are done! Keep building.', 'good'); return; }
+    const weeks = run.deadlineAt - run.startAt;
+    const fast = run.deadlineAt - now >= weeks / 3;
     run.stars = 1 + (fast ? 1 : 0) + (run.bonusMet ? 1 : 0);
     addNews(s, `🏁 Mission complete: ${def.title}! ${'★'.repeat(run.stars)}${'☆'.repeat(3 - run.stars)}`, 'good');
-  } else if (now >= run.deadlineAt) {
+  } else if (run.deadlineAt && now >= run.deadlineAt) {
     run.status = 'lost';
     addNews(s, `⏰ Time is up for "${def.title}".`, 'bad');
   }

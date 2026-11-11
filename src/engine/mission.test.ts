@@ -99,3 +99,25 @@ test('version 12 saves upgrade to sandbox games', () => {
   expect(up.version).toBe(SAVE_VERSION);
   expect(up.mission).toBeNull();
 });
+
+test('a sandbox can have a difficulty and its own goals, with no deadline', () => {
+  const easy = newMissionGame(5, 'T', null, { difficulty: 'easy', goals: ['state', 'classic'] });
+  expect(easy.cash).toBe(220);
+  expect(easy.mission).toMatchObject({ id: 'sandbox', deadlineAt: 0 });
+  expect(easy.mission!.custom!.goals).toHaveLength(2);
+  let s = easy;
+  s.year += 5; // far in the future: still no loss
+  trackMission(s);
+  expect(s.mission!.status).toBe('playing');
+  s.tier = 'state';
+  s.shows.push({ ...structuredClone(s.shows[0] ?? {}), classic: true } as never);
+  trackMission(s);
+  expect(s.mission!.status).toBe('won');
+  expect(s.mission!.stars).toBe(0);
+  const plain = newMissionGame(5, 'T', null, { difficulty: 'normal', goals: [] });
+  expect(plain.mission).toBeNull();
+  const hard = newMissionGame(5, 'T', null, { difficulty: 'hard', goals: [] });
+  expect(hard.cash).toBe(70);
+  expect(week(hard).mission!.status).toBe('playing');
+  void s;
+});

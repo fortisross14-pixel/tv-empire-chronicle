@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import {
   CITY, GROUP_LABEL, MISSIONS, TIERS, clearSave, dateLabel, goalLabel, loadProfile, loadSlots, lockReason, missionById,
-  sandboxLockReason, campaignOpen, BEGINNER_TO_UNLOCK, type GameState, type MissionDef, type MissionGroup, type Profile,
+  sandboxLockReason, campaignOpen, BEGINNER_TO_UNLOCK, SANDBOX_DIFFICULTY, SANDBOX_GOALS,
+  type GameState, type MissionDef, type MissionGroup, type Profile, type SandboxDifficulty,
 } from '../../engine';
 import { Sheet } from '../components/Sheet';
 import { useConfirm } from '../components/Confirm';
@@ -10,7 +11,9 @@ import { cx } from '../util';
 const Stars = ({ n }: { n: number }) => <span className="m-stars" aria-label={`${n} of 3 stars`}>{'★'.repeat(n)}<i>{'★'.repeat(3 - n)}</i></span>;
 
 /** Title screen: three save slots and the mission roadmap. */
-export function MenuScreen({ onPlay }: { onPlay: (slot: number, state: GameState | null, start?: { missionId: string | null; name: string }) => void }) {
+type Start = { missionId: string | null; name: string; sandbox?: { difficulty: SandboxDifficulty; goals: string[] } };
+
+export function MenuScreen({ onPlay }: { onPlay: (slot: number, state: GameState | null, start?: Start) => void }) {
   const [slots, setSlots] = useState(() => loadSlots());
   const [profile] = useState<Profile>(() => loadProfile());
   const [picking, setPicking] = useState<number | null>(null);
@@ -41,7 +44,7 @@ export function MenuScreen({ onPlay }: { onPlay: (slot: number, state: GameState
             const s = slot.state;
             if (!s) {
               return (
-                <button key={i} className="slot empty" onClick={() => setPicking(i)}>
+                <button key={i} className="save-slot empty" onClick={() => setPicking(i)}>
                   <span className="slot-n">Slot {i + 1}</span>
                   <span className="slot-plus">＋</span>
                   <b>New game</b>
@@ -52,7 +55,7 @@ export function MenuScreen({ onPlay }: { onPlay: (slot: number, state: GameState
             const def = s.mission ? missionById(s.mission.id) : null;
             const status = s.gameOver ? 'Off the air' : s.mission?.status === 'won' ? 'Complete' : s.mission?.status === 'lost' ? 'Time up' : null;
             return (
-              <div key={i} className="slot">
+              <div key={i} className="save-slot">
                 <span className="slot-n">Slot {i + 1}</span>
                 <span className="slot-icon">{def?.icon ?? '🏗️'}</span>
                 <b className="slot-title">{s.stationName}</b>
@@ -68,7 +71,7 @@ export function MenuScreen({ onPlay }: { onPlay: (slot: number, state: GameState
         </div>
       </section>
 
-      <Roadmap profile={profile} onPick={picking === null ? undefined : (missionId, name) => onPlay(picking, null, { missionId, name })}
+      <Roadmap profile={profile} onPick={picking === null ? undefined : (start) => onPlay(picking, null, start)}
         hint={picking === null ? 'Tap an empty slot to start a mission.' : `Choose what to play in slot ${picking + 1}.`} />
 
       {picking !== null && (
@@ -82,7 +85,7 @@ export function MenuScreen({ onPlay }: { onPlay: (slot: number, state: GameState
 }
 
 /** The mission map: Beginner path, three campaign lanes, then the Sandbox. Most start locked. */
-function Roadmap({ profile, onPick, hint }: { profile: Profile; onPick?: (missionId: string | null, name: string) => void; hint: string }) {
+function Roadmap({ profile, onPick, hint }: { profile: Profile; onPick?: (start: Start) => void; hint: string }) {
   const [open, setOpen] = useState<MissionDef | 'sandbox' | null>(null);
   const beginnerDone = MISSIONS.filter((m) => m.group === 'beginner' && (profile.stars[m.id] ?? 0) > 0).length;
   const lane = (g: MissionGroup) => MISSIONS.filter((m) => m.group === g);
@@ -122,7 +125,7 @@ function Roadmap({ profile, onPick, hint }: { profile: Profile; onPick?: (missio
         <span className="m-dot big">{sandboxLocked ? '🔒' : '🏗️'}</span>
         <div style={{ textAlign: 'left' }}>
           <h3>Sandbox</h3>
-          <p className="small muted">{sandboxLocked ?? 'Your own station from scratch, Local to State to National. No deadline.'}</p>
+          <p className="small muted">{sandboxLocked ?? 'Your own station from scratch, Local to State to National. Your difficulty, your goals, no deadline.'}</p>
         </div>
       </button>
 
@@ -131,24 +134,46 @@ function Roadmap({ profile, onPick, hint }: { profile: Profile; onPick?: (missio
   );
 }
 
-function MissionSheet({ def, profile, onClose, onPick }: { def: MissionDef | null; profile: Profile; onClose: () => void; onPick?: (missionId: string | null, name: string) => void }) {
+function MissionSheet({ def, profile, onClose, onPick }: { def: MissionDef | null; profile: Profile; onClose: () => void; onPick?: (start: Start) => void }) {
   const [name, setName] = useState('Ellison 8');
+  const [difficulty, setDifficulty] = useState<SandboxDifficulty>('normal');
+  const [goals, setGoals] = useState<string[]>([]);
+  const toggle = (id: string) => setGoals(goals.includes(id) ? goals.filter((g) => g !== id) : [...goals, id]);
   const locked = def ? lockReason(profile, def.id) : sandboxLockReason(profile);
   const stars = def ? profile.stars[def.id] ?? 0 : 0;
   return (
     <Sheet title={def ? `${def.icon} ${def.title}` : '🏗️ Sandbox'} onClose={onClose}
       footer={onPick && !locked
-        ? <button className="btn primary block" onClick={() => onPick(def?.id ?? null, name)}>{def ? 'Start mission' : 'Start sandbox'}</button>
+        ? <button className="btn primary block" onClick={() => onPick(def ? { missionId: def.id, name } : { missionId: null, name, sandbox: { difficulty, goals } })}>{def ? 'Start mission' : 'Start sandbox'}</button>
         : undefined}>
       <div className="stack">
         {def && <p className="tiny muted">{GROUP_LABEL[def.group]}{def.group !== 'beginner' && ' campaign'} · {def.weeks} weeks{stars > 0 && ' · '}{stars > 0 && <Stars n={stars} />}</p>}
-        <p>{def ? def.brief : 'Build your own network from scratch: Local, then State, then National. No goals, no deadline.'}</p>
+        <p>{def ? def.brief : 'Build your own network from scratch: Local, then State, then National. Pick a difficulty and, if you like, your own goals. No deadline.'}</p>
         {def && (
           <div className="panel stack-sm small">
             <b>Goals</b>
             {def.goals.map((g, i) => <div key={i}>🎯 {goalLabel(g)}</div>)}
             <div className="muted">★ Win · ★★ with a third of the time left · ★★★ also: {goalLabel(def.bonus)}</div>
           </div>
+        )}
+        {!def && !locked && (
+          <>
+            <div className="field"><label>Difficulty</label>
+              <div className="segmented">
+                {(Object.keys(SANDBOX_DIFFICULTY) as SandboxDifficulty[]).map((d) => (
+                  <button key={d} className={difficulty === d ? 'on' : ''} onClick={() => setDifficulty(d)}>{SANDBOX_DIFFICULTY[d].label}</button>
+                ))}
+              </div>
+              <p className="tiny muted">{SANDBOX_DIFFICULTY[difficulty].text} Starting cash ${SANDBOX_DIFFICULTY[difficulty].cash}K.</p>
+            </div>
+            <div className="field"><label>Your goals (optional, no deadline)</label>
+              <div className="stack-sm">
+                {SANDBOX_GOALS.map((g) => (
+                  <label key={g.id} className="row small sb-goal"><input type="checkbox" checked={goals.includes(g.id)} onChange={() => toggle(g.id)} /> {goalLabel(g.goal)}</label>
+                ))}
+              </div>
+            </div>
+          </>
         )}
         {locked && <p className="panel small">🔒 {locked}</p>}
         {!locked && !onPick && <p className="small muted">Tap an empty save slot first, then pick this mission.</p>}

@@ -25,6 +25,6 @@ export { IP_FIT, ipBonus, ipFit, usableIps, seasonScore, OWN_IP_MIN } from './ip
 export { MOVIE_PACK_PRICE, MOVIE_PACK_SIZE } from './packs';
 export * from './data/missions';
 export {
-  campaignOpen, sandboxOpen, lockReason, sandboxLockReason, goalLabel, goalProgress, goalReached, missionWeeksLeft, emptyProfile,
+  campaignOpen, sandboxOpen, lockReason, goalsOf, sandboxLockReason, goalLabel, goalProgress, goalReached, missionWeeksLeft, emptyProfile,
   type Profile,
 } from './mission';

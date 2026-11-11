@@ -10,7 +10,7 @@ export type Goal =
   | { kind: 'positiveMonths'; n: number; inARow?: boolean }
   | { kind: 'fullSchedule'; weeks: number }      // no Filler, weeks in a row
   | { kind: 'season'; n: number }                // a show reaches this season and airs it
-  | { kind: 'rank'; place: number; weeks: number } // our place among networks, weeks in a row
+  | { kind: 'rank'; place: number; weeks: number; prime?: boolean } // our place among networks (prime time only if set), weeks in a row
   | { kind: 'tier'; tier: Tier }
   | { kind: 'award'; level: AwardLevel; n?: number }
   | { kind: 'classic' }                          // a Show for the Ages
@@ -47,6 +47,8 @@ export interface MissionSetup {
   formats?: string[];
   topics?: string[];
   shows?: PresetShow[];
+  /** Fill every empty slot with an older show from the owned formats and topics. */
+  fillLineup?: { quality: [number, number]; novelty: [number, number]; season: [number, number] };
   rights?: string[];
   ips?: string[];
   affiliates?: number;
@@ -79,32 +81,32 @@ export const MISSIONS: MissionDef[] = [
     goals: [{ kind: 'share', min: 0.08 }], bonus: { kind: 'share', min: 0.12 }, setup: {} }),
   m({ id: 'b2-play-ball', group: 'beginner', icon: '⚾', title: 'Play Ball', weeks: 30,
     brief: 'The Rights Market opens in two weeks with the Pelicans baseball rights. Win them and broadcast a game.',
-    goals: [{ kind: 'sportsGames', n: 1 }], bonus: { kind: 'sportsGames', n: 8 },
+    goals: [{ kind: 'sportsGames', n: 1 }], bonus: { kind: 'share', min: 0.2 },
     setup: { week: 8, cash: 220, shopUnlocked: true } }),
   m({ id: 'b3-movie-night', group: 'beginner', icon: '🎞️', title: 'Movie Night', weeks: 12,
     brief: 'No time to produce? Buy a movie pack in the Market and put movies on air.',
     goals: [{ kind: 'movies', n: 4 }], bonus: { kind: 'movieWin' }, setup: { cash: 150, shopUnlocked: true } }),
   m({ id: 'b4-in-the-black', group: 'beginner', icon: '💵', title: 'In the Black', weeks: 26,
     brief: 'End a calendar month with more money coming in than going out.',
-    goals: [{ kind: 'positiveMonths', n: 1 }], bonus: { kind: 'positiveMonths', n: 3 }, setup: {} }),
+    goals: [{ kind: 'positiveMonths', n: 1 }], bonus: { kind: 'cash', min: 150 }, setup: {} }),
   m({ id: 'b5-no-filler', group: 'beginner', icon: '📅', title: 'No Filler', weeks: 30,
     brief: 'Fill all six slots with your own shows or movies for 4 weeks in a row.',
-    goals: [{ kind: 'fullSchedule', weeks: 4 }], bonus: { kind: 'fullSchedule', weeks: 10 }, setup: { cash: 160, shopUnlocked: true } }),
+    goals: [{ kind: 'fullSchedule', weeks: 4 }], bonus: { kind: 'avgShare', min: 0.12 }, setup: { cash: 160, shopUnlocked: true } }),
   m({ id: 'b6-back-for-more', group: 'beginner', icon: '🔁', title: 'Back for More', weeks: 40,
     brief: 'Viewers want more. Make season 2 of a show and put it on air.',
     goals: [{ kind: 'season', n: 2 }], bonus: { kind: 'ownIp', rating: 1 }, setup: {} }),
 
   // ---------- Campaign: Local ----------
-  m({ id: 'l1-zero-to-hero', group: 'local', icon: '🦸', title: 'Zero to Hero', weeks: 52,
-    brief: 'Nobody watches Channel 0. Become the #1 station in Port Ellison for 4 weeks in a row.',
-    goals: [{ kind: 'rank', place: 1, weeks: 4 }], bonus: { kind: 'reputation', min: 30 },
+  m({ id: 'l1-zero-to-hero', group: 'local', icon: '🦸', title: 'Zero to Hero', weeks: 60,
+    brief: 'Nobody watches this station. Win prime time in Port Ellison: be #1 in prime-time share for 2 weeks in a row.',
+    goals: [{ kind: 'rank', place: 1, weeks: 2, prime: true }], bonus: { kind: 'reputation', min: 30 },
     setup: { cash: 90, reputation: 0 } }),
   m({ id: 'l2-shoestring', group: 'local', icon: '🪙', title: 'Shoestring', weeks: 40,
     brief: 'The last owner spent everything and took the bank loan. Turn a profit 3 months in a row.',
-    goals: [{ kind: 'positiveMonths', n: 3, inARow: true }], bonus: { kind: 'loanFree' },
-    setup: { cash: 20, loan: { balance: 125, payment: 2.5 }, skipStarterPacks: true, shopUnlocked: true } }),
+    goals: [{ kind: 'positiveMonths', n: 3, inARow: true }], bonus: { kind: 'cash', min: 120 },
+    setup: { cash: 50, loan: { balance: 80, payment: 2 }, skipStarterPacks: true, shopUnlocked: true } }),
   m({ id: 'l3-sports-town', group: 'local', icon: '🏟️', title: 'Sports Town', weeks: 52,
-    brief: 'Port Ellison loves its teams. Hold the rights to all three local sports at once.',
+    brief: 'Port Ellison loves its teams. Win the rights to all three local sports: Pelicans baseball, Friday Night Football and Ice Hawks hockey.',
     goals: [{ kind: 'rights', ids: ['pelicans', 'friday-football', 'ice-hawks'] }], bonus: { kind: 'reputation', min: 30 },
     setup: { week: 8, cash: 260, shopUnlocked: true, skipStarterPacks: true } }),
   m({ id: 'l4-critics-darling', group: 'local', icon: '🎭', title: "Critics' Darling", weeks: 60,
@@ -132,7 +134,7 @@ export const MISSIONS: MissionDef[] = [
     brief: 'A State network with great rights and licenses, but almost no cash and losing money every month. Make it profitable.',
     goals: [{ kind: 'positiveMonths', n: 3, inARow: true }], bonus: { kind: 'cash', min: 400 },
     setup: {
-      tier: 'state', week: 20, cash: 60, reputation: 40, skipStarterPacks: true, shopUnlocked: true,
+      tier: 'state', week: 20, cash: 90, reputation: 40, loan: { balance: 400, payment: 14 }, skipStarterPacks: true, shopUnlocked: true,
       formats: ['news', 'talk', 'series', 'contest'], topics: ['local-news', 'police', 'sports', 'celebrity', 'trivia'],
       rights: ['state-college'], ips: ['chef-blaze'], people: [['crew', 'rare'], ['writer', 'rare'], ['talent', 'rare']],
       shows: [
@@ -149,14 +151,14 @@ export const MISSIONS: MissionDef[] = [
   m({ id: 's3-rights-rush', group: 'state', icon: '🏈', title: 'Rights Rush', weeks: 30,
     brief: 'State College Football goes on the market in a few weeks. Win it and broadcast 6 games.',
     goals: [{ kind: 'rights', ids: ['state-college'] }, { kind: 'sportsGames', n: 6 }], bonus: { kind: 'reputation', min: 50 },
-    setup: { tier: 'state', week: 27, cash: 450, reputation: 40, skipStarterPacks: true, shopUnlocked: true } }),
+    setup: { tier: 'state', week: 27, cash: 650, reputation: 40, skipStarterPacks: true, shopUnlocked: true } }),
   m({ id: 's4-house-rules', group: 'state', icon: '🏠', title: 'House Rules', weeks: 78,
     brief: 'No stars, just the house staff and whatever packs you buy. Make a Show for the Ages.',
     goals: [{ kind: 'classic' }], bonus: { kind: 'award', level: 'state' },
     setup: { tier: 'state', cash: 400, reputation: 40, houseOnly: true, shopUnlocked: true, formats: ['series', 'documentary'], topics: ['history', 'nature', 'police'] } }),
   m({ id: 's5-franchise-builder', group: 'state', icon: '🧱', title: 'Franchise Builder', weeks: 104,
-    brief: 'License a small IP or start your own, and grow one of your own shows into an IP rated 60.',
-    goals: [{ kind: 'ownIp', rating: 60 }], bonus: { kind: 'ips', n: 2, rating: 40 },
+    brief: 'License a small IP or start your own, and grow one of your own shows into an IP rated 70.',
+    goals: [{ kind: 'ownIp', rating: 70 }], bonus: { kind: 'ips', n: 2, rating: 55 },
     setup: { tier: 'state', cash: 450, reputation: 40, skipStarterPacks: true, shopUnlocked: true,
       formats: ['sitcom', 'series', 'movie', 'animation'], topics: ['family', 'workplace', 'teen', 'scifi'],
       people: [['writer', 'rare'], ['crew', 'rare'], ['talent', 'rare']] } }),
@@ -166,49 +168,76 @@ export const MISSIONS: MissionDef[] = [
     setup: { tier: 'state', cash: 350, reputation: 38, skipStarterPacks: true, shopUnlocked: true } }),
 
   // ---------- Campaign: National ----------
-  m({ id: 'n1-stale-giant', group: 'national', icon: '🦕', title: 'The Stale Giant', weeks: 40,
-    brief: 'The #1 network in the country, with a lineup out of novelty. Renew, replace and stay #1 for 12 weeks in a row.',
-    goals: [{ kind: 'freshLineup', novelty: 55 }, { kind: 'rank', place: 1, weeks: 12 }], bonus: { kind: 'classic' },
+  m({ id: 'n1-stale-giant', group: 'national', icon: '🦕', title: 'The Stale Giant', weeks: 52,
+    brief: 'The #1 network in the country, with a lineup out of novelty. Renew and replace before the rivals catch up: freshen the schedule and stay #1 in prime time for 6 weeks in a row.',
+    goals: [{ kind: 'freshLineup', novelty: 55 }, { kind: 'rank', place: 1, weeks: 6, prime: true }], bonus: { kind: 'classic' },
     setup: {
       tier: 'national', week: 30, cash: 3000, reputation: 75, skipStarterPacks: true, shopUnlocked: true, affiliates: 4,
       formats: ['series', 'sitcom', 'contest', 'news', 'late-show'], topics: ['police', 'family', 'trivia', 'political-news', 'celebrity', 'medical'],
       people: [['writer', 'epic'], ['crew', 'epic'], ['talent', 'epic'], ['writer', 'rare'], ['crew', 'rare'], ['talent', 'rare']],
       shows: [
-        { name: 'Precinct Nine', formatId: 'series', topicId: 'police', quality: 74, season: 8, novelty: 18, slot: 'montue-prime' },
-        { name: 'The Hendersons', formatId: 'sitcom', topicId: 'family', quality: 72, season: 10, novelty: 12, slot: 'wedthu-prime' },
-        { name: 'Million Dollar Minute', formatId: 'contest', topicId: 'trivia', quality: 70, season: 7, novelty: 15, slot: 'fri-prime' },
-        { name: 'Nightly National', formatId: 'news', topicId: 'political-news', quality: 70, season: 12, novelty: 25, slot: 'montue-evening' },
-        { name: 'Late with Lou', formatId: 'late-show', topicId: 'celebrity', quality: 68, season: 9, novelty: 14, slot: 'weekend-late' },
+        { name: 'Precinct Nine', formatId: 'series', topicId: 'police', quality: 88, season: 8, novelty: 45, slot: 'montue-prime' },
+        { name: 'The Hendersons', formatId: 'sitcom', topicId: 'family', quality: 86, season: 10, novelty: 40, slot: 'wedthu-prime' },
+        { name: 'Million Dollar Minute', formatId: 'contest', topicId: 'trivia', quality: 85, season: 7, novelty: 42, slot: 'fri-prime' },
+        { name: 'Nightly National', formatId: 'news', topicId: 'political-news', quality: 84, season: 12, novelty: 45, slot: 'montue-evening' },
+        { name: 'Late with Lou', formatId: 'late-show', topicId: 'celebrity', quality: 84, season: 9, novelty: 40, slot: 'weekend-late' },
       ],
+      fillLineup: { quality: [82, 90], novelty: [38, 55], season: [4, 9] },
     } }),
-  m({ id: 'n2-glimmy-night', group: 'national', icon: '✨', title: 'Glimmy Night', weeks: 60,
-    brief: 'The Glimmys are the biggest night in TV. Take one home.',
+  m({ id: 'n2-glimmy-night', group: 'national', icon: '✨', title: 'Glimmy Night', weeks: 92,
+    brief: 'The Glimmys are the biggest night in TV, every September. You have two tries: take one home.',
     goals: [{ kind: 'award', level: 'glimmy' }], bonus: { kind: 'award', level: 'glimmy', n: 3 },
-    setup: { tier: 'national', cash: 2500, reputation: 65, skipStarterPacks: true, shopUnlocked: true,
-      formats: ['series', 'documentary', 'movie'], topics: ['history', 'medical', 'politics'],
-      people: [['writer', 'epic'], ['crew', 'rare'], ['talent', 'rare']] } }),
+    setup: { tier: 'national', week: 1, cash: 2500, reputation: 65, skipStarterPacks: true, shopUnlocked: true,
+      formats: ['series', 'documentary', 'movie', 'contest'], topics: ['history', 'medical', 'politics', 'trivia'],
+      people: [['writer', 'epic'], ['crew', 'epic'], ['talent', 'rare'], ['writer', 'rare']],
+      fillLineup: { quality: [62, 72], novelty: [40, 70], season: [1, 4] } } }),
   m({ id: 'n3-coast-to-coast', group: 'national', icon: '📡', title: 'Coast to Coast', weeks: 78,
     brief: 'A national license but a thin map. Sign 10 affiliate stations.',
-    goals: [{ kind: 'affiliates', n: 10 }], bonus: { kind: 'rank', place: 2, weeks: 4 },
+    goals: [{ kind: 'affiliates', n: 10 }], bonus: { kind: 'rank', place: 2, weeks: 4, prime: true },
     setup: { tier: 'national', cash: 1500, reputation: 62, skipStarterPacks: true, shopUnlocked: true,
-      formats: ['news', 'talk', 'contest'], topics: ['political-news', 'celebrity', 'trivia'] } }),
+      formats: ['news', 'talk', 'contest'], topics: ['political-news', 'celebrity', 'trivia'],
+      fillLineup: { quality: [58, 68], novelty: [40, 70], season: [1, 4] } } }),
   m({ id: 'n4-big-gamble', group: 'national', icon: '🎰', title: 'The Big Gamble', weeks: 104,
     brief: 'The board borrowed big to license Galaxy Wars. Make it pay and clear the loan.',
     goals: [{ kind: 'loanFree' }], bonus: { kind: 'ips', n: 1, rating: 97 },
-    setup: { tier: 'national', cash: 400, reputation: 62, loan: { balance: 1800, payment: 22 }, ips: ['galaxy-wars-ip'], skipStarterPacks: true, shopUnlocked: true,
+    setup: { tier: 'national', cash: 1500, reputation: 62, loan: { balance: 1000, payment: 12 }, ips: ['galaxy-wars-ip'], skipStarterPacks: true, shopUnlocked: true,
       formats: ['series', 'animation', 'movie', 'documentary'], topics: ['scifi', 'family', 'history'],
-      people: [['writer', 'rare'], ['crew', 'rare'], ['talent', 'rare']] } }),
+      people: [['writer', 'rare'], ['crew', 'rare'], ['talent', 'rare']],
+      fillLineup: { quality: [60, 70], novelty: [35, 65], season: [1, 4] } } }),
   m({ id: 'n5-underdog', group: 'national', icon: '🐕', title: 'Underdog', weeks: 78,
-    brief: 'The smallest of four national networks, against tough rivals. Climb into the top two for 4 weeks.',
-    goals: [{ kind: 'rank', place: 2, weeks: 4 }], bonus: { kind: 'rank', place: 1, weeks: 1 },
-    setup: { tier: 'national', cash: 1200, reputation: 60, rivalStrength: 1.08, skipStarterPacks: true, shopUnlocked: true,
-      formats: ['reality', 'contest', 'sitcom'], topics: ['survival', 'dating', 'trivia', 'workplace'] } }),
+    brief: 'The smallest of four national networks. Climb into the top two in prime time and stay there for 4 weeks.',
+    goals: [{ kind: 'rank', place: 2, weeks: 4, prime: true }], bonus: { kind: 'rank', place: 1, weeks: 2, prime: true },
+    setup: { tier: 'national', cash: 1500, reputation: 60, skipStarterPacks: true, shopUnlocked: true,
+      formats: ['reality', 'contest', 'sitcom'], topics: ['survival', 'dating', 'trivia', 'workplace'],
+      people: [['writer', 'rare'], ['crew', 'rare'], ['talent', 'rare']],
+      fillLineup: { quality: [58, 68], novelty: [35, 65], season: [1, 4] } } }),
   m({ id: 'n6-empire', group: 'national', icon: '👑', title: 'Empire', weeks: 156,
-    brief: 'The final test: hold three IPs rated 70+ and be the #1 network in the country.',
-    goals: [{ kind: 'ips', n: 3, rating: 70 }, { kind: 'rank', place: 1, weeks: 8 }], bonus: { kind: 'award', level: 'glimmy', n: 2 },
+    brief: 'The final test: hold three IPs rated 70+ and be the #1 network in prime time.',
+    goals: [{ kind: 'ips', n: 3, rating: 70 }, { kind: 'rank', place: 1, weeks: 4, prime: true }], bonus: { kind: 'award', level: 'glimmy', n: 2 },
     setup: { tier: 'national', cash: 2500, reputation: 62, skipStarterPacks: true, shopUnlocked: true,
       formats: ['series', 'sitcom', 'animation', 'movie', 'contest'], topics: ['family', 'scifi', 'medieval', 'trivia'],
-      people: [['writer', 'rare'], ['crew', 'rare'], ['talent', 'rare']] } }),
+      people: [['writer', 'rare'], ['crew', 'rare'], ['talent', 'rare']],
+      fillLineup: { quality: [64, 74], novelty: [40, 70], season: [1, 4] } } }),
+];
+
+/** Sandbox difficulty: starting cash and how strong the rivals are. */
+export const SANDBOX_DIFFICULTY = {
+  easy: { label: 'Relaxed', cash: 220, rivals: 0.9, text: 'More cash, softer rivals.' },
+  normal: { label: 'Normal', cash: 120, rivals: 1, text: 'The standard start.' },
+  hard: { label: 'Tough', cash: 70, rivals: 1.12, text: 'Little cash, sharper rivals.' },
+} as const;
+
+/** Goals a Sandbox player can pick (any number, no deadline). */
+export const SANDBOX_GOALS: { id: string; goal: Goal }[] = [
+  { id: 'state', goal: { kind: 'tier', tier: 'state' } },
+  { id: 'national', goal: { kind: 'tier', tier: 'national' } },
+  { id: 'prime1', goal: { kind: 'rank', place: 1, weeks: 4, prime: true } },
+  { id: 'classic', goal: { kind: 'classic' } },
+  { id: 'ownip', goal: { kind: 'ownIp', rating: 60 } },
+  { id: 'indie', goal: { kind: 'award', level: 'indie' } },
+  { id: 'glimmy', goal: { kind: 'award', level: 'glimmy' } },
+  { id: 'affiliates', goal: { kind: 'affiliates', n: 10 } },
+  { id: 'rich', goal: { kind: 'cash', min: 5000 } },
 ];
 
 export const MISSION_BY_ID: Record<string, MissionDef> = Object.fromEntries(MISSIONS.map((x) => [x.id, x]));

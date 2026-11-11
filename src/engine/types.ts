@@ -413,7 +413,11 @@ export interface MissionRun {
   bonusMet: boolean;
   /** Running counts: games aired, weeks in a row, profitable months… */
   counters: Record<string, number>;
+  /** Sandbox: the player's own goals and difficulty (id is 'sandbox', no deadline, no stars). */
+  custom?: { goals: import('./data/missions').Goal[]; difficulty: SandboxDifficulty } | null;
 }
+
+export type SandboxDifficulty = 'easy' | 'normal' | 'hard';
 
 export interface GameState {
   version: number;

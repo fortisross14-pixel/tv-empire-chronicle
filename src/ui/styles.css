@@ -540,15 +540,15 @@ select.input option { background: var(--surface); }
 .menu-head .tv { font-size: 56px; }
 .menu-head h1 { font-size: 36px; font-weight: 900; line-height: 1; }
 .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.slot { position: relative; display: grid; gap: 4px; justify-items: start; text-align: left; padding: 14px; border-radius: 18px; background: var(--tile); color: inherit; min-height: 128px; align-content: start; min-width: 0; }
-@media (max-width: 560px) { .slot { padding: 10px; } .slot-title { font-size: 14px; } .slot .small { font-size: 11px; } }
-.slot.empty { justify-items: center; align-content: center; text-align: center; border: 2px dashed var(--line, rgba(255,255,255,.18)); background: transparent; }
-.slot.empty:hover, .slot.empty:focus-visible { border-color: var(--focus); }
+.save-slot { position: relative; display: grid; gap: 4px; justify-items: start; text-align: left; padding: 14px; border-radius: 18px; background: var(--tile); color: inherit; min-height: 128px; align-content: start; min-width: 0; }
+@media (max-width: 560px) { .save-slot { padding: 10px; } .slot-title { font-size: 14px; } .save-slot .small { font-size: 11px; } }
+.save-slot.empty { justify-items: center; align-content: center; text-align: center; border: 2px dashed var(--line, rgba(255,255,255,.18)); background: transparent; }
+.save-slot.empty:hover, .save-slot.empty:focus-visible { border-color: var(--focus); }
 .slot-n { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
 .slot-plus { font-size: 30px; line-height: 1; }
 .slot-icon { font-size: 28px; }
 .slot-title { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.slot .row { margin-top: 6px; }
+.save-slot .row { margin-top: 6px; }
 .menu-picking { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; padding: 10px 16px; border-radius: 999px; background: var(--focus); color: var(--bg); font-weight: 800; box-shadow: 0 10px 30px rgba(0,0,0,.4); z-index: 20; white-space: nowrap; }
 .menu-picking .btn { color: var(--bg); border-color: var(--bg); }
 .m-group { display: grid; gap: 10px; padding: 14px; border-radius: 20px; background: var(--surface); }
@@ -577,3 +577,11 @@ select.input option { background: var(--surface); }
 .goal { display: flex; justify-content: space-between; gap: 8px; }
 .goal.met { color: var(--text-3); }
 .goal.met span:first-child { text-decoration: line-through; text-decoration-color: rgba(255,255,255,.3); }
+
+.sb-goal { gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--tile); }
+.sb-goal input { width: 18px; height: 18px; accent-color: var(--focus); }
+
+.save-slot .row { flex-wrap: nowrap; gap: 6px; width: 100%; }
+.save-slot .row .btn.primary { flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px; }
+.save-slot .row .btn.ghost { flex: none; padding: 6px 10px; }
+.save-slot:hover, .save-slot:focus-within { box-shadow: 0 0 0 3px var(--focus); }
