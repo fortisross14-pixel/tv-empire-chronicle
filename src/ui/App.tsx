@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   CITY, GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, clearSave, createShow,
   dateLabel, dismissFinished, dismissReveal, loadGame, newGame, openPack, saveGame, scheduleShow, useBusinessCard,
-  rightsById, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, projectPeople, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
+  rightsById, setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, projectPeople, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
   reachOf, type GameState, type ShowPlan,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
@@ -14,6 +14,7 @@ import { CeremonyModal } from './components/CeremonyModal';
 import { TargetPicker } from './components/TargetPicker';
 import { Sheet } from './components/Sheet';
 import { ShowSheet } from './components/ShowSheet';
+import { PosterEditor } from './posters/PosterEditor';
 import { ConfirmProvider, useConfirm } from './components/Confirm';
 import { WeekScreen, type Todo } from './screens/WeekScreen';
 import { ScheduleScreen } from './screens/ScheduleScreen';
@@ -65,6 +66,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   const [showResults, setShowResults] = useState(false);
   const [usingCard, setUsingCard] = useState<string | null>(null);
   const [openShow, setOpenShow] = useState<string | null>(null);
+  const [posterFor, setPosterFor] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
 
@@ -313,12 +315,20 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
           onSchedule={() => { setOpenShow(null); setTab('schedule'); }}
           onRenew={(id) => { setOpenShow(null); setWizard({ renew: id }); }}
           onSpinoff={(id) => { setOpenShow(null); setWizard({ spinoff: id }); }}
+          onEditPoster={(id) => setPosterFor(id)}
           onCancel={(id) => {
             const show = state.shows.find((s) => s.id === id);
             void ask({ title: `Cancel "${show?.name}"?`, text: 'The show is gone for good. Its sponsor deal ends too.', confirm: 'Cancel show', danger: true })
               .then((ok) => { if (ok && run((s) => cancelShow(s, id), 'Show cancelled.')) setOpenShow(null); });
           }} />
       )}
+      {posterFor && (() => {
+        const show = state.shows.find((s) => s.id === posterFor);
+        return show ? (
+          <PosterEditor subject={show} initial={show.poster} onClose={() => setPosterFor(null)}
+            onSave={(spec) => { if (run((s) => setPoster(s, show.id, spec), spec ? 'Poster saved.' : 'Back to the automatic poster.')) setPosterFor(null); }} />
+        ) : null;
+      })()}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );

@@ -1,9 +1,11 @@
 import { Fragment } from 'react';
 import {
   AFFILIATE_MAX, CHAMPION_WEEKS, DAYPART_LABEL, TIERS, affiliateCost, dateLabel, formatById, grade, isSweeps, licenseGaps,
-  nextLicense, overall, periodOf, topicById, reachOf, slotLabel, slotsOf, upcomingMarkers, type GameState, type Show, type SlotId,
+  nextLicense, overall, periodOf, reachOf, slotLabel, slotsOf, upcomingMarkers, type GameState, type Show, type SlotId,
 } from '../../engine';
 import { CastTile, Poster, artStyle, projectPoster, showPoster } from '../components/Poster';
+import { PosterArt } from '../posters/PosterArt';
+import { autoPoster } from '../posters/library';
 import { cx, money, pct, signedMoney, viewers } from '../util';
 
 const PERIOD_EMOJI = { winter: '❄️', spring: '🌷', summer: '☀️', fall: '🍂', holidays: '🎄' } as const;
@@ -45,7 +47,7 @@ export function WeekScreen({
     <>
       {feat ? (
         <section className="billboard" style={artStyle(feat.show.formatId)}>
-          <div className="art"><span className="glyph" aria-hidden="true">{topicById(feat.show.topicId)?.icon ?? formatById(feat.show.formatId).icon}</span></div>
+          <div className="art"><PosterArt spec={feat.show.poster ?? autoPoster(feat.show)} title={feat.show.name} hideTitle /></div>
           <div className="shade" />
           <div className="body">
             <span className="kicker">{feat.kicker}</span>

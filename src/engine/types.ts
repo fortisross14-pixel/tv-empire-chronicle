@@ -142,6 +142,25 @@ export interface Show {
   premieredAt: { week: number; year: number } | null;
   /** The last team and settings used, to pre-fill a renewal. */
   lastPlan: LastPlan | null;
+  /** The player's poster design; null uses the automatic poster. */
+  poster: PosterSpec | null;
+}
+
+/** A show poster: stacked art layers plus a title. Ids refer to the poster art library. */
+export interface PosterSpec {
+  sky: string;
+  scene: string | null;
+  /** Up to two front images, left to right. */
+  fronts: string[];
+  effect: string | null;
+  frame: string | null;
+  title: {
+    show: boolean;
+    font: string;
+    color: string;
+    size: 's' | 'm' | 'l';
+    position: 'top' | 'middle' | 'bottom' | 'tilted';
+  };
 }
 
 export interface LastPlan {

@@ -435,6 +435,7 @@ function finishProject(state: GameState, project: Project): Show {
       awards: [],
       premieredAt: null,
       lastPlan: null,
+      poster: null,
     };
     state.shows.push(show);
   }

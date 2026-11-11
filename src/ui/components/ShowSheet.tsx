@@ -5,10 +5,11 @@ import { Sheet } from './Sheet';
 
 /** Detail view for one of your shows, opened from a poster. */
 export function ShowSheet({
-  state, showId, onClose, onSchedule, onRenew, onSpinoff, onCancel,
+  state, showId, onClose, onSchedule, onRenew, onSpinoff, onCancel, onEditPoster,
 }: {
   state: GameState; showId: string; onClose: () => void;
   onSchedule: () => void; onRenew: (id: string) => void; onSpinoff: (id: string) => void; onCancel: (id: string) => void;
+  onEditPoster: (id: string) => void;
 }) {
   const show = state.shows.find((s) => s.id === showId);
   if (!show) return null;
@@ -22,6 +23,7 @@ export function ShowSheet({
         <ShowCard show={show} state={state} />
         <div className="row wrap">
           <button className="btn primary" onClick={onSchedule}>{slot ? 'Change slot' : 'Schedule it'}</button>
+          <button className="btn ghost" onClick={() => onEditPoster(show.id)}>🎨 Edit poster</button>
           {show.episodesLeft <= 0 && !renewing && <button className="btn good" onClick={() => onRenew(show.id)}>New season</button>}
           {canSpinOff(show) && <button className="btn ghost" onClick={() => onSpinoff(show.id)}>✨ Spin-off</button>}
           <button className="btn danger" onClick={() => onCancel(show.id)}>Cancel show</button>

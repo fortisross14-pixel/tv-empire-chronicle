@@ -23,6 +23,8 @@ const MIGRATIONS: Record<number, (s: RawSave) => RawSave> = {
     const rightsMarket = m ? { ...m, closesAt: year * 52 + m.closesWeek } : null;
     return { ...s, shows, rightsMarket, version: 10 };
   },
+  // 10 → 11: shows can have a custom poster.
+  10: (s) => ({ ...s, shows: (s.shows as Record<string, unknown>[]).map((sh) => ({ poster: null, ...sh })), version: 11 }),
 };
 
 export interface LoadResult {

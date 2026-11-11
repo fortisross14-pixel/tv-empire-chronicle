@@ -459,3 +459,57 @@ select.input option { background: var(--surface); }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   .flip { transition: none; }
 }
+
+/* ---------- Poster art (layers) ----------
+   Every layer fills the 3:2 box. Sizes use container units so a poster looks the
+   same as a small tile, a billboard or the editor preview. */
+.pa { position: absolute; inset: 0; overflow: hidden; container-type: size; }
+.pa-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.pa-front { position: absolute; inset: 0; }
+.pa-front.left { transform: translateX(-22%) scale(0.92); }
+.pa-front.right { transform: translateX(22%) scale(0.92); }
+.pa-scene-stand { position: absolute; right: 5%; bottom: 4%; font-size: 46cqh; line-height: 1; opacity: 0.5; }
+.pa-front-stand { position: absolute; left: 50%; bottom: 5%; transform: translateX(-50%); font-size: 52cqh; line-height: 1; filter: drop-shadow(0 1cqh 1.5cqh rgba(0, 0, 0, 0.45)); }
+.pa-fx-stand { position: absolute; inset: 0; padding: 6%; display: flex; flex-wrap: wrap; justify-content: space-around; align-content: space-between; font-size: 13cqh; letter-spacing: 0.6em; opacity: 0.85; pointer-events: none; }
+.pa-frame-stand { position: absolute; inset: 0; border: 3cqh solid #f4ead2; pointer-events: none; }
+.pa-frame-stand.frame-gold { border: 4cqh double #e8b74a; }
+.pa-frame-stand.frame-tvguide { border-width: 14cqh 2.5cqh 2.5cqh; border-color: #e23b3b #f4ead2 #f4ead2; }
+.pa-frame-stand.frame-filmstrip { border: 0; border-top: 7cqh dashed #111; border-bottom: 7cqh dashed #111; }
+.pa-frame-stand.frame-tvset { border: 7cqh solid #7a4a25; border-right-width: 16cqh; border-radius: 6cqh; }
+.pa-frame-stand.frame-polaroid { border: 4cqh solid #fff; border-bottom-width: 14cqh; }
+.pa-frame-stand.frame-neon { border: 1.5cqh solid #ff5cd6; box-shadow: inset 0 0 4cqh #5ce1ff, 0 0 4cqh #ff5cd6; }
+.pa-frame-stand.frame-marquee { border: 4cqh dotted #ffd23f; }
+.pa-frame-stand.frame-comic { border: 3cqh solid #111; }
+.pa-frame-stand.frame-curtains { border: 0; box-shadow: inset 18cqh 0 0 #b3182c, inset -18cqh 0 0 #b3182c; }
+.pa-frame-stand.frame-chrome { border: 4cqh solid #c9d1d9; box-shadow: inset 0 0 0 1cqh #7d8794; }
+.pa-frame-stand.frame-stamp { border: 4cqh dotted #f4ead2; }
+.pa-frame-stand.frame-wood { border: 5cqh solid #8b5a2b; }
+.pa-title {
+  position: absolute; left: 6%; right: 6%; text-align: center; line-height: 1.02; overflow-wrap: anywhere;
+  text-shadow: 0 0 0.6cqh #000, 0.5cqh 0.6cqh 0 rgba(0, 0, 0, 0.55);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.pa-title.size-s { font-size: 11cqh; }
+.pa-title.size-m { font-size: 15cqh; }
+.pa-title.size-l { font-size: 20cqh; }
+.pa-title.pos-top { top: 7%; }
+.pa-title.pos-middle { top: 50%; transform: translateY(-50%); }
+.pa-title.pos-bottom { bottom: 7%; }
+.pa-title.pos-tilted { top: 34%; transform: rotate(-8deg); }
+
+.poster .art .pa { border-radius: 0; }
+.billboard .art .pa { position: absolute; inset: 0; }
+
+/* ---------- Poster editor ---------- */
+.pe-preview { position: relative; width: 100%; max-width: 520px; margin: 0 auto; aspect-ratio: 3 / 2; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+.pe-tabs { overflow-x: auto; }
+.pe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+.pe-opt { position: relative; aspect-ratio: 3 / 2; border-radius: 10px; overflow: hidden; background: var(--tile); transition: box-shadow 0.12s, transform 0.12s; }
+.pe-opt:hover, .pe-opt:focus-visible { transform: scale(1.03); outline: none; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5); }
+.pe-opt.on { box-shadow: 0 0 0 3px var(--focus); }
+.pe-none { display: grid; place-items: center; font-size: 12px; font-weight: 800; color: var(--text-3); }
+.pe-fonts { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 6px; }
+.pe-font { background: var(--tile); border-radius: 12px; padding: 10px 8px; font-size: 18px; line-height: 1.1; }
+.pe-font.on { box-shadow: 0 0 0 3px var(--focus); }
+.pe-swatch { width: 38px; height: 38px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.3); }
+.pe-swatch.on { box-shadow: 0 0 0 3px var(--focus); }

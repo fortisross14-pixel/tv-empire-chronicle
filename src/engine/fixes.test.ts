@@ -122,3 +122,25 @@ test('local sports keep a local audience after moving up', () => {
   // 420K households at most, far below the state's 2.4M.
   expect(game.viewers).toBeLessThan(420 * 0.4);
 });
+
+test('a show can save a custom poster and go back to automatic', async () => {
+  const { setPoster } = await import('./game');
+  let s = withShow(10);
+  const spec = { sky: 'sky-night', scene: 'bg-castle', fronts: ['front-knight', 'front-dragon'], effect: 'fx-sparks', frame: 'frame-gold',
+    title: { show: true, font: 'abril', color: '#ffd23f', size: 'l' as const, position: 'tilted' as const } };
+  s = setPoster(s, s.shows[0].id, spec);
+  expect(s.shows[0].poster).toEqual(spec);
+  expect(() => setPoster(s, s.shows[0].id, { ...spec, fronts: ['a', 'b', 'c'] })).toThrow();
+  s = setPoster(s, s.shows[0].id, null);
+  expect(s.shows[0].poster).toBeNull();
+});
+
+test('a version 10 save gets empty posters', () => {
+  const s = withShow(11) as unknown as Record<string, unknown> & { version: number; shows: Record<string, unknown>[] };
+  const old = structuredClone(s);
+  old.version = 10;
+  old.shows.forEach((sh) => delete sh.poster);
+  const up = migrate(old)!;
+  expect(up.version).toBe(SAVE_VERSION);
+  expect(up.shows[0].poster).toBeNull();
+});

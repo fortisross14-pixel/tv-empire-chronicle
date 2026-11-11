@@ -1,7 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react';
 import {
-  formatById, grade, overall, topicById, type GameState, type Person, type Project, type Show,
+  formatById, grade, overall, type GameState, type Person, type PosterSpec, type Project, type Show,
 } from '../../engine';
+import { PosterArt } from '../posters/PosterArt';
+import { autoPoster } from '../posters/library';
 import { cx, initials } from '../util';
 
 /** Placeholder key-art colours per format, until the poster editor's art library lands. */
@@ -26,6 +28,7 @@ export const artStyle = (formatId: string): CSSProperties => {
 };
 
 export interface PosterProps {
+  spec: PosterSpec;
   formatId: string;
   topicId?: string | null;
   title: string;
@@ -41,16 +44,15 @@ export interface PosterProps {
   onClick?: () => void;
 }
 
-/** A show as a streaming poster. The art is a placeholder until the poster editor ships. */
+/** A show as a streaming poster tile: layered poster art on top, details below. */
 export function Poster({
-  formatId, topicId, title, sub, badge, badgeTone, gradeLabel, topGrade, progress, wide, fill, classic, onClick,
+  spec, formatId, title, sub, badge, badgeTone, gradeLabel, topGrade, progress, wide, fill, classic, onClick,
 }: PosterProps) {
-  const glyph = topicId ? topicById(topicId)?.icon : formatById(formatId)?.icon;
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag className={cx('poster', wide && 'wide', fill && 'fill', classic && 'classic')} style={artStyle(formatId)} onClick={onClick}
       aria-label={onClick ? `Open ${title}` : undefined}>
-      <div className="art"><span className="glyph" aria-hidden="true">{glyph}</span></div>
+      <div className="art"><PosterArt spec={spec} title={title} /></div>
       {badge && <span className={cx('badge', badgeTone ?? undefined)}>{badge}</span>}
       {gradeLabel && <span className={cx('pgrade', topGrade && 'top')}>{gradeLabel}</span>}
       <div className="info">
@@ -79,6 +81,7 @@ export function showPoster(show: Show, state: GameState): PosterProps {
   else if (!scheduled) status = 'not scheduled';
   else status = format.episodes > 1 ? `${show.episodesTotal - show.episodesLeft}/${show.episodesTotal} eps` : 'on air';
   return {
+    spec: show.poster ?? autoPoster(show),
     formatId: show.formatId, topicId: show.topicId, title: show.name, sub: `${format.name} · ${status}`,
     badge, badgeTone, gradeLabel: g, topGrade: g === 'S' || g === 'A', classic: show.classic,
     progress: format.episodes > 1 ? (show.episodesTotal - show.episodesLeft) / show.episodesTotal : null,
@@ -95,6 +98,7 @@ export function projectPoster(p: Project): PosterProps {
   const doneWeeks = order.slice(0, idx).reduce((s, st) => s + p.durations[st], 0) + (p.durations[p.stage] - p.weeksLeft);
   const left = total - doneWeeks;
   return {
+    spec: autoPoster({ id: p.showId ?? p.id, name: p.name, formatId: p.formatId, topicId: p.topicId, topic2Id: p.topic2Id }),
     formatId: p.formatId, topicId: p.topicId, title: p.name + (p.season > 1 ? ` · S${p.season}` : ''),
     sub: `${formatById(p.formatId).name}${p.script ? ` · script ${'★'.repeat(p.script.stars)}` : ''}${p.waitingOn ? ` · waiting for ${p.waitingOn}` : ''}`,
     badge: `${STAGE_SHORT[p.stage]} · ${left} wk${left !== 1 ? 's' : ''}`, progress: doneWeeks / total, wide: true,

@@ -1,4 +1,4 @@
-import type { GameState, Pack, PackKind, SlotId } from './types';
+import type { GameState, Pack, PackKind, PosterSpec, SlotId } from './types';
 import { CITY } from './data/names';
 import { addHouseCards } from './people';
 import { applyPack, makePack, PRICES } from './packs';
@@ -12,7 +12,7 @@ import { AFFILIATE_MAX, affiliateCost, emptySchedule, reachOf, slotsOf, tierSlot
 import { addNews, round1 } from './news';
 import { simulateWeek, CHAMPION_WEEKS, LOAN } from './sim';
 
-export const SAVE_VERSION = 10;
+export const SAVE_VERSION = 11;
 
 /** What it takes to become a State network. */
 export const STATE_LICENSE = { reputation: 35, cash: 250, fee: 200 };
@@ -189,6 +189,15 @@ export const bidOnRights = (state: GameState, lotId: string, amount: number | nu
 
 export const assignSportsTeam = (state: GameState, rightsId: string, crewId: string, talentId: string) =>
   produce(state, (s) => assignTeam(s, rightsId, crewId, talentId));
+
+/** Save a poster design for a show (null goes back to the automatic poster). */
+export const setPoster = (state: GameState, showId: string, poster: PosterSpec | null) =>
+  produce(state, (s) => {
+    const show = s.shows.find((x) => x.id === showId);
+    if (!show) throw new GameError('Show not found.');
+    if (poster && (poster.fronts.length > 2 || typeof poster.sky !== 'string')) throw new GameError('A poster has one sky and up to two front images.');
+    show.poster = poster ? structuredClone(poster) : null;
+  });
 
 export const dismissMilestone = (state: GameState) => produce(state, (s) => void (s.milestone = null), { duringEvent: true });
 
