@@ -16,5 +16,23 @@
   "frame-stamp",
   "frame-starburst",
   "frame-chrome"
+ ],
+ "backgrounds": [
+  "bg-castle",
+  "bg-beach",
+  "bg-city-night",
+  "bg-city-day",
+  "bg-kitchen",
+  "bg-studio",
+  "bg-newsroom",
+  "bg-gameshow",
+  "bg-stadium",
+  "bg-dojo",
+  "bg-hospital",
+  "bg-precinct",
+  "bg-school",
+  "bg-office",
+  "bg-livingroom",
+  "bg-suburb"
  ]
 }

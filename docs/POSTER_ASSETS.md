@@ -2,12 +2,12 @@
 
 Show posters are **96 × 64 px landscape tiles (3:2)**, built from stacked layers:
 
-1. Background colour or sky — generated in code
-2. Background scene — art
-3. Front image(s) — art, transparent
-4. Effects — art, transparent
-5. Frame — art, transparent centre
-6. Title text — code (fonts, position, rotation, colour, size)
+1. Background — **either** a full scene (art, it has its own sky) **or** a colour,
+   gradient or sky drawn in code
+2. Front image(s) — art, transparent
+3. Effects — art, transparent
+4. Frame — art, transparent centre
+5. Title text — code (fonts, position, rotation, colour, size)
 
 Every art layer is a full 96 × 64 tile, so layers stack without lining anything up.
 
@@ -22,7 +22,7 @@ Every art layer is a full 96 × 64 tile, so layers stack without lining anything
 ## In the game
 
 - Every show gets an **automatic poster** picked from its format and topics (same show,
-  same poster). Shows → 🎨 Edit poster opens the editor: Sky, Scene, Cast (up to 2),
+  same poster). Shows → 🎨 Edit poster opens the editor: Background (scene or colour), Cast (up to 2),
   Effect, Frame and Title (10 fonts, 6 colours, 3 sizes, top / middle / bottom / tilted),
   plus 🎲 Shuffle and "Use automatic".
 - Until a tile exists in `public/posters/`, the editor shows a stand-in (emoji or CSS).

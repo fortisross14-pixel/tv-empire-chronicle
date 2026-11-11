@@ -45,7 +45,9 @@ def main() -> int:
         os.makedirs(group_dir, exist_ok=True)
         for i, (asset_id, _desc) in enumerate(sheet['items']):
             c, r = i % cols, i // cols
-            box = (round(c * cw), round(r * ch), round((c + 1) * cw), round((r + 1) * ch))
+            # "inset" trims lines ChatGPT sometimes draws between cells.
+            pad = sheet.get('inset', 0)
+            box = (round(c * cw) + pad, round(r * ch) + pad, round((c + 1) * cw) - pad, round((r + 1) * ch) - pad)
             tile = img.crop(box).resize(out_size, Image.LANCZOS)
             if not sheet['transparent']:
                 bg = Image.new('RGBA', out_size, (0, 0, 0, 255))

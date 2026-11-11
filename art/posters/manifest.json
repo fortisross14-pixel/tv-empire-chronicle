@@ -23,7 +23,7 @@
       ]
     },
     {
-      "file": "sheet-2-backgrounds.png", "group": "backgrounds", "transparent": false,
+      "file": "sheet-2-backgrounds.png", "group": "backgrounds", "transparent": false, "inset": 5,
       "items": [
         ["bg-castle", "medieval castle on a hill"],
         ["bg-beach", "tropical beach with palm trees"],
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "file": "sheet-3-backgrounds.png", "group": "backgrounds", "transparent": false,
+      "file": "sheet-3-backgrounds.png", "group": "backgrounds", "transparent": false, "inset": 5,
       "items": [
         ["bg-island", "jungle island with a waterfall"],
         ["bg-desert", "desert canyon at sunset"],

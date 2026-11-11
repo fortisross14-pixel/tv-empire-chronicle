@@ -5,9 +5,9 @@ import { PosterArt } from './PosterArt';
 import { EFFECTS, FONTS, FRAMES, FRONTS, SCENES, SKIES, TITLE_COLORS, autoPoster, shufflePoster } from './library';
 import { cx } from '../util';
 
-type Tab = 'sky' | 'scene' | 'cast' | 'effect' | 'frame' | 'title';
+type Tab = 'background' | 'cast' | 'effect' | 'frame' | 'title';
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'sky', label: 'Sky' }, { id: 'scene', label: 'Scene' }, { id: 'cast', label: 'Cast' },
+  { id: 'background', label: 'Background' }, { id: 'cast', label: 'Cast' },
   { id: 'effect', label: 'Effect' }, { id: 'frame', label: 'Frame' }, { id: 'title', label: 'Title' },
 ];
 
@@ -17,7 +17,7 @@ export function PosterEditor({
   subject, initial, onSave, onClose,
 }: { subject: Subject; initial: PosterSpec | null; onSave: (spec: PosterSpec | null) => void; onClose: () => void }) {
   const [spec, setSpec] = useState<PosterSpec>(() => structuredClone(initial ?? autoPoster(subject)));
-  const [tab, setTab] = useState<Tab>('sky');
+  const [tab, setTab] = useState<Tab>('background');
   const set = (patch: Partial<PosterSpec>) => setSpec({ ...spec, ...patch });
   const setTitle = (patch: Partial<PosterSpec['title']>) => setSpec({ ...spec, title: { ...spec.title, ...patch } });
 
@@ -46,24 +46,26 @@ export function PosterEditor({
       <div className="stack">
         <div className="pe-preview"><PosterArt spec={spec} title={subject.name} /></div>
         <div className="row wrap small">
-          <span className="muted">Art layers: sky, scene, up to 2 cast images, effect, frame, title.</span>
+          <span className="muted">Layers: background (scene or colour), up to 2 cast images, effect, frame, title.</span>
           <button className="btn small ghost" onClick={() => { setSpec(autoPoster(subject)); onSave(null); }}>Use automatic</button>
         </div>
         <div className="segmented pe-tabs">
           {TABS.map((t) => <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>)}
         </div>
 
-        {tab === 'sky' && (
-          <div className="pe-grid">
-            {SKIES.map((s) => <Option key={s.id} label={s.label} on={spec.sky === s.id} onPick={() => set({ sky: s.id })}
-              preview={{ ...spec, sky: s.id, scene: null, fronts: [], effect: null, frame: null }} />)}
-          </div>
-        )}
-        {tab === 'scene' && (
-          <div className="pe-grid">
-            <button className={cx('pe-opt pe-none', !spec.scene && 'on')} onClick={() => set({ scene: null })}>No scene</button>
-            {sortByFit(SCENES).map((a) => <Option key={a.id} label={a.label} on={spec.scene === a.id} onPick={() => set({ scene: a.id })}
-              preview={{ ...spec, scene: a.id, fronts: [], effect: null }} />)}
+        {tab === 'background' && (
+          <div className="stack">
+            <p className="small muted">A background is either a full scene or a colour, gradient or sky.</p>
+            <h3 style={{ fontSize: 15 }}>Scenes</h3>
+            <div className="pe-grid">
+              {sortByFit(SCENES).map((a) => <Option key={a.id} label={a.label} on={spec.scene === a.id} onPick={() => set({ scene: a.id })}
+                preview={{ ...spec, scene: a.id, fronts: [], effect: null }} />)}
+            </div>
+            <h3 style={{ fontSize: 15 }}>Colours &amp; skies</h3>
+            <div className="pe-grid">
+              {SKIES.map((sk) => <Option key={sk.id} label={sk.label} on={!spec.scene && spec.sky === sk.id} onPick={() => set({ sky: sk.id, scene: null })}
+                preview={{ ...spec, sky: sk.id, scene: null, fronts: [], effect: null, frame: null }} />)}
+            </div>
           </div>
         )}
         {tab === 'cast' && (
