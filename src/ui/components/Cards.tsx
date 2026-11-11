@@ -236,13 +236,13 @@ export function ProjectCard({ project, state, onCancel }: { project: Project; st
           const progress = done ? 100 : active ? ((total - project.weeksLeft) / total) * 100 : 0;
           return (
             <div key={st} className={cx('stage', done && 'done', active && 'active')}>
-              <span>{done ? '✓ ' : ''}{STAGE_LABEL[st]}</span>
+              <span className="stage-name">{done ? '✓ ' : ''}{st === 'post' ? 'Post' : STAGE_LABEL[st]}</span>
               <span className="bar"><i style={{ width: `${Math.max(progress, active ? 8 : 0)}%` }} /></span>
             </div>
           );
         })}
       </div>
-      <div className="spread">
+      <div className="row wrap project-foot">
         <div className="team">{team.map((p) => <Avatar key={p.id} person={p} showLevel={false} />)}</div>
         {project.script && <ScriptStars n={project.script.stars} />}
         {project.hype > 0 && <span className="chip warn">🔥 {project.hype}</span>}

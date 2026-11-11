@@ -19,7 +19,7 @@ export function ShopScreen({
   const [tab, setTab] = useState<'packs' | 'rights'>(state.rightsMarket ? 'rights' : 'packs');
   return (
     <>
-      <div className="section-title"><h2>Market</h2><span className="sub">Cash {money(state.cash)}</span></div>
+      <div className="section-title"><h2>Market</h2><span className="sub">{state.rightsMarket ? "Rights Market open" : "Packs and rights"}</span></div>
       <div className="segmented">
         <button className={tab === 'packs' ? 'on' : ''} onClick={() => setTab('packs')}>Card packs</button>
         <button className={tab === 'rights' ? 'on' : ''} onClick={() => setTab('rights')}>Rights {state.rightsMarket ? '· OPEN' : ''}</button>

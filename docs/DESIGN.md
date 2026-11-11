@@ -476,6 +476,9 @@ Next (planned):
     (docs/audits/2026-11-11-missions-playtest.md), Sandbox difficulty (Relaxed, Normal,
     Tough) and optional goals with no deadline.
 
+14. **Best practices** ✅ — playtest tool, invariant and save tests, error boundary.
+15. **Visual and navigation polish** ✅ — see docs/audits/2026-11-11-polish.md.
+
 The last three waves are always:
 
 8. **Game dev best practices** — code quality, tests, architecture.

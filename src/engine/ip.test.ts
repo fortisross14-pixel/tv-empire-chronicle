@@ -147,3 +147,14 @@ test('version 11 saves upgrade: IP fields added, film lots dropped from an open 
   expect(up.rivalIps).toEqual([]);
   expect(up.rightsMarket!.lots.map((l) => l.defId)).toEqual(['pelicans']);
 });
+
+test('a State station that owns movies still finds its sports slots (Guide crash)', async () => {
+  const { sportsRightsForSlot } = await import('./rights');
+  const { slotsOf } = await import('./schedule');
+  const { newMissionGame } = await import('./game');
+  const s = newMissionGame(1, 'X', 's1-bleeding-money');
+  s.cash = 500; s.shopUnlocked = true;
+  const t = buyPack(s, 'movies');
+  for (const slot of slotsOf(t)) expect(() => sportsRightsForSlot(t, slot)).not.toThrow();
+  expect(slotsOf(t).some((slot) => sportsRightsForSlot(t, slot)?.defId === 'state-college')).toBe(true);
+});

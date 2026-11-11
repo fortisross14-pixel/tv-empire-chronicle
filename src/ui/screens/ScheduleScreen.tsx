@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   DAYPARTS, DAYPART_ICON, DAYPART_LABEL, DAY_BLOCKS, DAY_BLOCK_LABEL, FILLER_NAME, fitStars, formatById, grade, slotLabel,
-  rightsById, inSeason, TIERS, tierSlot, type GameState, type OwnedRights, type Show, type SlotId,
+  rightsById, inSeason, TIERS, sportsRightsForSlot, slotsOf, type GameState, type OwnedRights, type Show, type SlotId,
 } from '../../engine';
 import { PersonCard, ShowCard, Stars } from '../components/Cards';
 import { RightsCard, seasonLabel } from '../components/RightsCard';
@@ -22,8 +22,10 @@ export function ScheduleScreen({
   const [teamFor, setTeamFor] = useState<OwnedRights | null>(null);
   const [view, setView] = useState<'ours' | 'rivals'>('ours');
   const showIn = (slot: SlotId) => state.shows.find((s) => s.id === state.schedule[slot]);
+  const sports = state.rights.filter((r) => rightsById(r.defId).kind === 'sports');
+  const movies = state.rights.filter((r) => rightsById(r.defId).kind === 'film');
   const filmIn = (slot: SlotId) => state.rights.find((r) => r.id === state.schedule[slot]);
-  const sportsFor = (slot: SlotId) => state.rights.find((r) => tierSlot(rightsById(r.defId).slot!, state.tier) === slot);
+  const sportsFor = (slot: SlotId) => sportsRightsForSlot(state, slot);
   const tier = TIERS[state.tier];
 
   return (
@@ -81,30 +83,6 @@ export function ScheduleScreen({
         </p>
       </section>
 
-      {state.rights.length > 0 && (
-        <section>
-          <div className="section-title"><h2>Your rights</h2><span className="sub">{state.rights.length}</span></div>
-          <div className="grid-wide">
-            {state.rights.map((r) => {
-              const def = rightsById(r.defId);
-              const crew = state.people.find((p) => p.id === r.crewId);
-              const talent = state.people.find((p) => p.id === r.talentId);
-              return (
-                <RightsCard key={r.id} defId={r.defId} owned={r} state={state}>
-                  {def.kind === 'sports' && (
-                    <div className="spread small">
-                      <span>🎥 {crew?.name ?? '—'} · 🎙️ {talent?.name ?? '—'}</span>
-                      <button className="btn ghost small" onClick={() => setTeamFor(r)}>Change team</button>
-                    </div>
-                  )}
-                  {def.kind === 'film' && !Object.values(state.schedule).includes(r.id) && <p className="tiny muted">Tap a slot to schedule it.</p>}
-                </RightsCard>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
       <section>
         <div className="section-title"><h2>Your shows</h2><span className="sub">{state.shows.length}</span></div>
         {state.shows.length === 0
@@ -115,6 +93,49 @@ export function ScheduleScreen({
             </div>
           )}
       </section>
+
+      {sports.length > 0 && (
+        <section>
+          <div className="section-title"><h2>Sports rights</h2><span className="sub">{sports.length}</span></div>
+          <div className="grid-wide">
+            {sports.map((r) => {
+              const crew = state.people.find((p) => p.id === r.crewId);
+              const talent = state.people.find((p) => p.id === r.talentId);
+              return (
+                <RightsCard key={r.id} defId={r.defId} owned={r} state={state}>
+                  <div className="spread small">
+                    <span>🎥 {crew?.name ?? '—'} · 🎙️ {talent?.name ?? '—'}</span>
+                    <button className="btn ghost small" onClick={() => setTeamFor(r)}>Change team</button>
+                  </div>
+                </RightsCard>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {movies.length > 0 && (
+        <section>
+          <div className="section-title"><h2>Movies</h2><span className="sub">{movies.length} · tap a slot to air one</span></div>
+          <div className="movie-list">
+            {movies.map((r) => {
+              const def = rightsById(r.defId);
+              const slot = slotsOf(state).find((x) => state.schedule[x] === r.id);
+              return (
+                <div key={r.id} className="movie-row">
+                  <span className="movie-icon">{def.icon}</span>
+                  <div className="movie-info">
+                    <b>{def.name}</b>
+                    <span className="tiny muted">{def.isNew ? 'New release · ' : ''}{r.airingsLeft} airing{r.airingsLeft !== 1 && 's'} left</span>
+                  </div>
+                  <span className={cx('grade', gradeClass(grade(def.quality)))}>{grade(def.quality)}</span>
+                  {slot ? <span className="chip good">{slotLabel(slot)}</span> : <span className="chip">Not on air</span>}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       </>}
       {picking && (
@@ -136,7 +157,7 @@ function SlotPicker({
   const where = (id: string) => Object.entries(state.schedule).find(([, sid]) => sid === id)?.[0] as SlotId | undefined;
   const shows = [...state.shows].sort((a, b) => fitStars(b.formatId, block, part) - fitStars(a.formatId, block, part) || b.quality - a.quality);
   const films = state.rights.filter((x) => rightsById(x.defId).kind === 'film');
-  const sport = state.rights.find((x) => tierSlot(rightsById(x.defId).slot!, state.tier) === slot);
+  const sport = sportsRightsForSlot(state, slot);
   const note = (id: string) => {
     const other = where(id);
     if (other === slot) return '· already here';
@@ -165,7 +186,7 @@ function SlotPicker({
             </div>
           </div>
         ))}
-        {films.length > 0 && <h3 style={{ fontSize: 15 }}>Licensed films</h3>}
+        {films.length > 0 && <h3 style={{ fontSize: 15 }}>Movies</h3>}
         {films.map((f) => (
           <button key={f.id} style={{ textAlign: 'left' }} onClick={() => onPick(f.id)}>
             <RightsCard defId={f.defId} owned={f} state={state}>

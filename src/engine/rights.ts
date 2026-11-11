@@ -199,6 +199,14 @@ export function assignTeam(s: GameState, rightsId: string, crewId: string, talen
   r.talentId = talentId;
 }
 
+/** Our sports rights that play in this slot (in season or not). Movies have no slot. */
+export function sportsRightsForSlot(s: GameState, slot: string): OwnedRights | undefined {
+  return s.rights.find((r) => {
+    const def = rightsById(r.defId);
+    return def.kind === 'sports' && !!def.slot && tierSlot(def.slot, s.tier) === slot;
+  });
+}
+
 /** Our sports rights with a game in this slot this week. */
 export function sportsInSlot(s: GameState, slot: string): OwnedRights | null {
   return s.rights.find((r) => {

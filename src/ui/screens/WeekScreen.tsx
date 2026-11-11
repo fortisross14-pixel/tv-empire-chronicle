@@ -1,8 +1,8 @@
 import { MissionCard } from '../components/MissionCard';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import {
   AFFILIATE_MAX, CHAMPION_WEEKS, DAYPART_LABEL, TIERS, affiliateCost, dateLabel, formatById, grade, isSweeps, licenseGaps,
-  nextLicense, overall, periodOf, reachOf, slotLabel, slotsOf, upcomingMarkers, type GameState, type Show, type SlotId,
+  nextLicense, overall, rightsById, periodOf, reachOf, slotLabel, slotsOf, upcomingMarkers, type GameState, type Show, type SlotId,
 } from '../../engine';
 import { CastTile, Poster, artStyle, projectPoster, showPoster } from '../components/Poster';
 import { PosterArt } from '../posters/PosterArt';
@@ -27,11 +27,12 @@ function featured(state: GameState): Featured {
 }
 
 export function WeekScreen({
-  state, todos, onMenu, onExpand, onAffiliate, onOpenShow, onNewShow, onAir, goTab,
+  state, todos, onMenu, onExpand, onAffiliate, onOpenShow, onNewShow, goTab,
 }: {
   state: GameState; todos: Todo[]; onMenu: () => void; onExpand: () => void; onAffiliate: () => void;
-  onOpenShow: (id: string) => void; onNewShow: () => void; onAir: () => void; goTab: (tab: 'schedule' | 'studio' | 'cards' | 'shop') => void;
+  onOpenShow: (id: string) => void; onNewShow: () => void; goTab: (tab: 'schedule' | 'studio' | 'cards' | 'shop') => void;
 }) {
+  const [allNews, setAllNews] = useState(false);
   const lic = nextLicense(state);
   const avg = (xs: number[]) => (xs.length ? xs.slice(-CHAMPION_WEEKS).reduce((a, b) => a + b, 0) / Math.min(CHAMPION_WEEKS, xs.length) : 0);
   const SLOTS = slotsOf(state);
@@ -49,7 +50,7 @@ export function WeekScreen({
       <MissionCard state={state} />
       {feat ? (
         <section className="billboard" style={artStyle(feat.show.formatId)}>
-          <div className="art"><PosterArt spec={feat.show.poster ?? autoPoster(feat.show)} title={feat.show.name} hideTitle /></div>
+          <div className="art"><PosterArt spec={{ ...(feat.show.poster ?? autoPoster(feat.show)), frame: null }} title={feat.show.name} hideTitle /></div>
           <div className="shade" />
           <div className="body">
             <span className="kicker">{feat.kicker}</span>
@@ -61,8 +62,10 @@ export function WeekScreen({
             <div className="acts">
               {feat.action === 'schedule'
                 ? <button className="btn primary" onClick={() => goTab('schedule')}>Schedule it</button>
-                : <button className="btn primary" onClick={onAir}>▶ Air week</button>}
-              <button className="btn ghost" onClick={() => onOpenShow(feat.show.id)}>Details</button>
+                : <button className="btn primary" onClick={() => onOpenShow(feat.show.id)}>Details</button>}
+              {feat.action === 'schedule'
+                ? <button className="btn ghost" onClick={() => onOpenShow(feat.show.id)}>Details</button>
+                : <button className="btn ghost" onClick={() => goTab('schedule')}>Guide</button>}
             </div>
           </div>
         </section>
@@ -76,7 +79,7 @@ export function WeekScreen({
             <div className="meta">{state.projects.length ? 'Air weeks to move it through script, production and post.' : 'Pick a format and topic, choose the team, split the focus points.'}</div>
             <div className="acts">
               {state.projects.length
-                ? <button className="btn primary" onClick={onAir}>▶ Air week</button>
+                ? <button className="btn primary" onClick={() => goTab('studio')}>See the studio</button>
                 : <button className="btn primary" onClick={onNewShow} disabled={state.formats.length === 0}>+ New show</button>}
             </div>
           </div>
@@ -110,34 +113,6 @@ export function WeekScreen({
           <div className="rail">{state.projects.map((p) => <Poster key={p.id} {...projectPoster(p)} onClick={() => goTab('studio')} />)}</div>
         </section>
       )}
-
-      <section>
-        <div className="section-title"><h2>Your cast &amp; crew</h2><span className="sub">{state.people.length} people</span></div>
-        <div className="rail">{cast.map((p) => <CastTile key={p.id} person={p} onClick={() => goTab('cards')} />)}</div>
-      </section>
-
-      <section>
-        <div className="section-title"><h2>Tonight's guide</h2><span className="sub">{state.rivals[0] ? `You vs ${state.rivals[0].short}` : ''}</span></div>
-        <button className="guide" style={{ width: '100%', textAlign: 'left' }} onClick={() => goTab('schedule')}>
-          <div className="gr gh"><div>Slot</div><div>{state.stationName}</div><div>{state.rivals[0]?.short}</div></div>
-          {guideSlots.map((slot) => {
-            const id = state.schedule[slot];
-            const show = state.shows.find((s) => s.id === id);
-            const film = state.rights.find((r) => r.id === id);
-            const r = state.rivals[0]?.schedule[slot];
-            return (
-              <div key={slot} className="gr">
-                <div className="t">{DAYPART_LABEL[slot.split('-')[1] as keyof typeof DAYPART_LABEL]}</div>
-                <div className={cx('mine', !show && !film && 'filler')}>
-                  {show ? <><b>{show.name}</b><span>{formatById(show.formatId).name} · {grade(show.quality)}</span></>
-                    : film ? <b>Licensed film</b> : <span>Infomercials</span>}
-                </div>
-                <div className="them">{r ? <><b>{r.name}</b><span>{formatById(r.formatId).name}</span></> : '—'}</div>
-              </div>
-            );
-          })}
-        </button>
-      </section>
 
       {last && (
         <section className="panel stack-sm">
@@ -231,6 +206,34 @@ export function WeekScreen({
         </section>
       )}
 
+      <section>
+        <div className="section-title"><h2>Your cast &amp; crew</h2><span className="sub">{state.people.length} people</span></div>
+        <div className="rail">{cast.map((p) => <CastTile key={p.id} person={p} onClick={() => goTab('cards')} />)}</div>
+      </section>
+
+      <section>
+        <div className="section-title"><h2>Tonight's guide</h2><span className="sub">{state.rivals[0] ? `You vs ${state.rivals[0].short}` : ''}</span></div>
+        <button className="guide" style={{ width: '100%', textAlign: 'left' }} onClick={() => goTab('schedule')}>
+          <div className="gr gh"><div>Slot</div><div>{state.stationName}</div><div>{state.rivals[0]?.short}</div></div>
+          {guideSlots.map((slot) => {
+            const id = state.schedule[slot];
+            const show = state.shows.find((s) => s.id === id);
+            const film = state.rights.find((r) => r.id === id);
+            const r = state.rivals[0]?.schedule[slot];
+            return (
+              <div key={slot} className="gr">
+                <div className="t">{DAYPART_LABEL[slot.split('-')[1] as keyof typeof DAYPART_LABEL]}</div>
+                <div className={cx('mine', !show && !film && 'filler')}>
+                  {show ? <><b>{show.name}</b><span>{formatById(show.formatId).name} · {grade(show.quality)}</span></>
+                    : film ? <><b>{rightsById(film.defId).icon} {rightsById(film.defId).name}</b><span>Movie · {grade(rightsById(film.defId).quality)}</span></> : <span>Infomercials</span>}
+                </div>
+                <div className="them">{r ? <><b>{r.name}</b><span>{formatById(r.formatId).name}</span></> : '—'}</div>
+              </div>
+            );
+          })}
+        </button>
+      </section>
+
       <section className="panel">
         <div className="section-title"><h2>🏆 Trophy cabinet</h2><span className="sub">{state.trophies.length}</span></div>
         {state.trophies.length === 0
@@ -243,10 +246,13 @@ export function WeekScreen({
       <section className="panel">
         <div className="section-title"><h2>📰 The Chronicle</h2></div>
         <div className="news">
-          {state.news.slice(0, 10).map((n) => (
+          {state.news.slice(0, allNews ? 30 : 5).map((n) => (
             <div key={n.id} className={`news-item ${n.tone}`}><i /><div>{n.text}<div className="when">{dateLabel(n.week, n.year)}</div></div></div>
           ))}
         </div>
+        {state.news.length > 5 && (
+          <button className="btn ghost small" style={{ marginTop: 10 }} onClick={() => setAllNews(!allNews)}>{allNews ? 'Show less' : 'Show all news'}</button>
+        )}
       </section>
 
       <div style={{ textAlign: 'center' }}>

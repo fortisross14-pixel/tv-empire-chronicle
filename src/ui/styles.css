@@ -278,7 +278,10 @@ button.card:hover:not(:disabled), button.card:focus-visible { box-shadow: inset 
 
 /* Project card */
 .project { padding: 14px; display: grid; gap: 10px; }
-.stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.stage-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-foot { gap: 8px; }
+.project-foot .btn, .project-foot .chip.warn:last-child { margin-left: auto; }
 .stage { display: grid; gap: 4px; font-size: 11px; font-weight: 700; color: var(--text-3); }
 .stage .bar { height: 8px; }
 .stage.done { color: var(--good); }
@@ -590,3 +593,11 @@ select.input option { background: var(--surface); }
 .save-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .todo:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Guide: compact movie list */
+.movie-list { display: grid; gap: 8px; }
+.movie-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--tile); }
+.movie-icon { font-size: 26px; flex: none; }
+.movie-info { display: grid; flex: 1; min-width: 0; }
+.movie-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.movie-row .grade { min-width: 32px; height: 32px; font-size: 15px; }

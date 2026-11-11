@@ -175,7 +175,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
                 .then((ok) => { if (ok) run(state.tier === 'local' ? expandToState : expandToNational); });
             }}
             onAffiliate={() => run(signAffiliate, 'Affiliate signed! 📡')}
-            onOpenShow={setOpenShow} onNewShow={() => setWizard({})} onAir={air} goTab={setTab} />
+            onOpenShow={setOpenShow} onNewShow={() => setWizard({})} goTab={setTab} />
         )}
         {tab === 'schedule' && (
           <ScheduleScreen state={state}

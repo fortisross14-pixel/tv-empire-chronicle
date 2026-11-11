@@ -121,6 +121,15 @@ function schedule(s: GameState, preferMovies: boolean): GameState {
 const wants = (goals: Goal[], kind: Goal['kind']) => goals.some((g) => g.kind === kind);
 
 function play(missionId: string, seed: number): { status: string; stars: number; weeks: number; why: string; cash: number } {
+  const { s, start } = playMission(missionId, seed);
+  const def = missionById(missionId);
+  const run = s.mission!;
+  const missing = def.goals.map((g, i) => (run.met[i] ? null : g.kind)).filter(Boolean).join('+');
+  return { status: s.gameOver ? 'bankrupt' : run.status, stars: run.stars, weeks: s.year * 52 + s.week - start, why: missing, cash: Math.round(s.cash) };
+}
+
+/** Play a mission with the bot (optionally only for a few weeks) and return the final state. */
+export function playMission(missionId: string, seed: number, maxWeeks = Infinity): { s: GameState; start: number } {
   const def = missionById(missionId);
   const goals = [...def.goals, def.bonus];
   let s = newMissionGame(seed, 'Bot', missionId);
@@ -130,7 +139,7 @@ function play(missionId: string, seed: number): { status: string; stars: number;
   const wantSports = wants(goals, 'sportsGames') || sportsIds.length > 0;
   const wantIp = wants(goals, 'ownIp') || wants(goals, 'ips');
   const wantTier = goals.find((g) => g.kind === 'tier');
-  for (let w = 0; w < def.weeks + 2 && s.mission!.status === 'playing' && !s.gameOver; w++) {
+  for (let w = 0; w < Math.min(maxWeeks, def.weeks + 2) && s.mission!.status === 'playing' && !s.gameOver; w++) {
     while (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
     while (s.unopened.length) { s = openPack(s, s.unopened[0].id); s = dismissReveal(s); }
     if (s.reveal) s = dismissReveal(s);
@@ -215,9 +224,7 @@ function play(missionId: string, seed: number): { status: string; stars: number;
     }
   }
   if (s.mission!.status === 'won') s = ackMission(s);
-  const run = s.mission!;
-  const missing = def.goals.map((g, i) => (run.met[i] ? null : g.kind)).filter(Boolean).join('+');
-  return { status: s.gameOver ? 'bankrupt' : run.status, stars: run.stars, weeks: s.year * 52 + s.week - start, why: missing, cash: Math.round(s.cash) };
+  return { s, start };
 }
 
 const ENV = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
