@@ -179,6 +179,12 @@ export function ShowCard({
           <span className={cx('grade', gradeClass(g))} title={`Quality ${show.quality}`}>{g}</span>
         </div>
         {show.classic && <span className="chip classic-chip">🏆 Show for the Ages</span>}
+        {show.reviews && (
+          <div className="row small">
+            <span className="mini-score aud" title="Audience score">{show.reviews.audience}</span><span className="muted">Audience</span>
+            <span className="mini-score crit" title="Critics score">{show.reviews.critics}</span><span className="muted">Critics</span>
+          </div>
+        )}
         {!compact && <Pillars scores={show.scores} />}
         {!compact && <div className="row small"><span className="muted">Script</span><ScriptStars n={show.scriptStars} />{show.teamBonus > 0 && <span className="chip info">Dream team +{show.teamBonus}</span>}</div>}
         <div className="novelty">
@@ -191,6 +197,9 @@ export function ShowCard({
           {show.episodesTotal > 1 && <span className="chip">{show.episodesLeft}/{show.episodesTotal} eps</span>}
           {show.bestViewers > 0 && <span className="chip">Best {Math.round(show.bestViewers)}K</span>}
           {inProduction && <span className="chip info">New season in production</span>}
+          {show.hype > 0 && <span className="chip warn">🔥 Hype {show.hype}</span>}
+          {state.sponsorDeals.some((d) => d.showId === show.id) && <span className="chip good">💰 Sponsored</span>}
+          {show.awards.length > 0 && <span className="chip classic-chip" title={show.awards.join('\n')}>🏆 ×{show.awards.length}</span>}
         </div>
         {actions}
       </div>
@@ -236,6 +245,7 @@ export function ProjectCard({ project, state, onCancel }: { project: Project; st
       <div className="spread">
         <div className="team">{team.map((p) => <Avatar key={p.id} person={p} showLevel={false} />)}</div>
         {project.script && <ScriptStars n={project.script.stars} />}
+        {project.hype > 0 && <span className="chip warn">🔥 {project.hype}</span>}
         {project.waitingOn
           ? <span className="chip warn">Waiting for {project.waitingOn}</span>
           : onCancel && <button className="btn danger small" onClick={onCancel}>Scrap</button>}

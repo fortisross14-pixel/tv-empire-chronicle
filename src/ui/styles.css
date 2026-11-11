@@ -156,6 +156,15 @@ button.card:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(
 .card.house { border-style: dashed; background: #fbf9f5; }
 .card.house .rarity-tag { color: var(--ink-3); }
 .card.show.classic { border: 3px solid var(--legend); background: linear-gradient(160deg, #fff6dc, #fff 45%); }
+.review-box { display: grid; gap: 6px; margin: 4px 0; }
+.review { display: grid; grid-template-columns: 38px 1fr; gap: 8px; align-items: center; font-size: 12px; }
+.review .score, .mini-score { display: grid; place-items: center; border-radius: 10px; color: #fff; font-family: var(--display); font-weight: 700; }
+.review .score { width: 38px; height: 38px; font-size: 17px; }
+.mini-score { width: 28px; height: 22px; font-size: 12px; border-radius: 7px; }
+.aud { background: #e0753a; }
+.crit { background: #5a4fcf; }
+.trophies { display: flex; flex-wrap: wrap; gap: 8px; }
+.trophy { background: var(--paper); border-radius: 12px; padding: 8px 10px; font-size: 12px; }
 .classic-chip { background: linear-gradient(90deg, #f2a900, #ff8a3c); color: #fff; justify-self: start; }
 .ages-banner { text-align: center; padding: 14px; border-radius: 14px; color: #fff; background: linear-gradient(135deg, #f2a900, #ff5a3c); font-family: var(--display); font-weight: 700; font-size: 20px; animation: pop 0.6s 1.8s both; }
 

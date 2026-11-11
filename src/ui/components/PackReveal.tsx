@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { FORMAT_REFUND, formatById, topicById, type Pack, type PackCard } from '../../engine';
 import { FormatCard, PersonCard, TopicCard } from './Cards';
+import { NetworkCardView } from './NetworkCard';
 import { Sheet } from './Sheet';
 import { cx } from '../util';
 
-const PACK_TITLE = { starter: 'Free program pack', 'starter-people': 'Free people pack', program: 'Program pack', people: 'People pack' };
+const PACK_TITLE = { starter: 'Free program pack', 'starter-people': 'Free people pack', program: 'Program pack', people: 'People pack', network: 'Network pack' };
 
 function Face({ card }: { card: PackCard }) {
   if (card.type === 'format') return <FormatCard format={formatById(card.id)} />;
   if (card.type === 'topic') return <TopicCard topic={topicById(card.id)} />;
+  if (card.type === 'network') return <NetworkCardView defId={card.card.defId} />;
   return <PersonCard person={card.person} />;
 }
 
 function dupText(card: PackCard) {
   if (card.type === 'format') return `Duplicate · +$${FORMAT_REFUND}K`;
   if (card.type === 'topic') return 'Duplicate → 🌀 Twist token';
+  if (card.type === 'network') return 'Already installed · +$8K';
   return '';
 }
 
@@ -42,7 +45,7 @@ export function PackReveal({ pack, onDone }: { pack: Pack; onDone: () => void })
               <div><div className="logo">📺</div>Tap to reveal</div>
             </div>
             <div className="face back">
-              {card.type !== 'person' && !card.duplicate && <span className="new-note">NEW</span>}
+              {card.type !== 'person' && card.type !== 'network' && !card.duplicate && <span className="new-note">NEW</span>}
               {card.type !== 'person' && card.duplicate && <span className="dup-note">{dupText(card)}</span>}
               <Face card={card} />
             </div>

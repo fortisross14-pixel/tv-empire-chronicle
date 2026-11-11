@@ -68,6 +68,9 @@ export function upcomingMarkers(week: number, count = 3): CalendarMarker[] {
     { week: 36, label: 'Fall premieres' },
     { week: 44, label: 'Nov sweeps' },
     { week: 49, label: 'Holidays' },
+    { week: 12, label: '🏆 Indie Awards' },
+    { week: 25, label: '🏆 State Awards' },
+    { week: 38, label: '🏆 Glimmys' },
   ];
   const out: CalendarMarker[] = [];
   for (let i = 1; i <= 52 && out.length < count; i++) {

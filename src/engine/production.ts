@@ -6,8 +6,10 @@ import { FIT_MULT, topicById } from './data/topics';
 import { CITY, TITLE_TEMPLATES } from './data/names';
 import { clamp, pick, randInt } from './rng';
 import { grantXp, newId, RARITY_POINTS } from './people';
+import { withFacilities } from './network';
 
-export class GameError extends Error {}
+import { GameError } from './errors';
+export { GameError };
 
 /** Most points one area can take on a basic (local) production. */
 export const MAX_POINTS_PER_AREA = 5;
@@ -170,7 +172,9 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
   const time = plan.scriptTime ?? 'standard';
   const cost = productionCost(format, crew, renewal);
   const durations = stageDurations(format, writer, crew, renewal, time);
-  const breakdown = computeScores(plan.formatId, plan.topicId, writer, crew, talent, plan.points, undefined, time);
+  const eff = withFacilities(state, writer, crew, talent);
+  const breakdown = computeScores(plan.formatId, plan.topicId, eff.writer, eff.crew, eff.talent, plan.points, undefined, time);
+  breakdown.teamBonus = teamBonus([writer, crew, talent]);
   return { format, topic, writer, crew, talent, cost, durations, breakdown, renewal };
 }
 
@@ -197,6 +201,8 @@ export function startProject(state: GameState, plan: ShowPlan): void {
     points: { ...plan.points },
     cost,
     twist: !!plan.twist,
+    hype: 0,
+    scriptBonus: 0,
     scriptTime: plan.scriptTime ?? 'standard',
     script: null,
     waitingOn: null,
@@ -231,8 +237,10 @@ export function advanceProjects(state: GameState): { finished: Show[]; scripts: 
     if (project.weeksLeft > 0) continue;
     if (project.stage === 'script') {
       // The script is done: skill, writing time and a bit of luck.
-      const writer = findPerson(state, project.writerId, 'writer');
-      const score = clamp(Math.round(scriptBase(project.formatId, project.topicId, writer, project.scriptTime) + randInt(state, -8, 8)), 1, 100);
+      const t = project;
+      const eff = withFacilities(state, findPerson(state, t.writerId, 'writer'), findPerson(state, t.crewId, 'crew'), findPerson(state, t.talentId, 'talent'));
+      const base = scriptBase(t.formatId, t.topicId, eff.writer, t.scriptTime) + t.scriptBonus;
+      const score = clamp(Math.round(base + randInt(state, -8, 8)), 1, 100);
       project.script = { score, stars: scriptStars(score) };
       scripts.push(project);
     }
@@ -253,7 +261,8 @@ function finishProject(state: GameState, project: Project): Show {
   const crew = findPerson(state, project.crewId, 'crew');
   const talent = findPerson(state, project.talentId, 'talent');
   const format = formatById(project.formatId);
-  const result = computeScores(project.formatId, project.topicId, writer, crew, talent, project.points, project.script?.score, project.scriptTime);
+  const eff = withFacilities(state, writer, crew, talent);
+  const result = computeScores(project.formatId, project.topicId, eff.writer, eff.crew, eff.talent, project.points, project.script?.score, project.scriptTime);
   // A little production luck.
   const quality = clamp(result.quality + randInt(state, -3, 3), 1, 99);
   [writer, crew, talent].forEach((p) => grantXp(state, p));
@@ -286,6 +295,10 @@ function finishProject(state: GameState, project: Project): Show {
       premiered: false,
       history: [],
       bestViewers: 0,
+      hype: 0,
+      reviews: null,
+      awards: [],
+      premieredAt: null,
     };
     state.shows.push(show);
   }
@@ -301,6 +314,9 @@ function finishProject(state: GameState, project: Project): Show {
     episodesTotal: format.episodes,
     episodesLeft: format.episodes,
     premiered: false,
+    hype: Math.min(100, show.hype + project.hype),
+    reviews: null,
+    premieredAt: null,
   });
   state.newlyFinished.push(show.id);
   return show;

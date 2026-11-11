@@ -3,8 +3,10 @@ import { pick, shuffle, weighted } from './rng';
 import { FORMATS, STARTER_FORMATS } from './data/formats';
 import { topicsForFormat } from './data/topics';
 import { newId, rollPeoplePack } from './people';
+import { FACILITY_REFUND, rollNetworkCards } from './network';
+import { networkById } from './data/network';
 
-export const PRICES = { program: 40, people: 25, business: 8 } as const;
+export const PRICES = { program: 40, people: 25, network: 30, business: 8 } as const;
 /** Cash back for a duplicate format card. */
 export const FORMAT_REFUND = 10;
 
@@ -27,10 +29,10 @@ function programCards(state: GameState, starter: boolean): PackCard[] {
 }
 
 export function makePack(state: GameState, kind: PackKind): Pack {
-  const cards: PackCard[] =
-    kind === 'people' || kind === 'starter-people'
-      ? rollPeoplePack(state).map((person) => ({ type: 'person' as const, person }))
-      : programCards(state, kind === 'starter');
+  let cards: PackCard[];
+  if (kind === 'people' || kind === 'starter-people') cards = rollPeoplePack(state).map((person) => ({ type: 'person' as const, person }));
+  else if (kind === 'network') cards = rollNetworkCards(state).map((card) => ({ type: 'network' as const, card, duplicate: false }));
+  else cards = programCards(state, kind === 'starter');
   return { id: newId(state, 'pk'), kind, cards };
 }
 
@@ -48,6 +50,17 @@ export function applyPack(state: GameState, pack: Pack): Pack {
       if (duplicate) state.twists[card.id] = (state.twists[card.id] ?? 0) + 1;
       else state.topics.push(card.id);
       return { ...card, duplicate };
+    }
+    if (card.type === 'network') {
+      const def = networkById(card.card.defId);
+      if (def.kind === 'facility') {
+        const duplicate = state.facilities.includes(def.id);
+        if (duplicate) state.cash += FACILITY_REFUND;
+        else state.facilities.push(def.id);
+        return { ...card, duplicate };
+      }
+      state.networkCards.push(card.card);
+      return card;
     }
     state.people.push(card.person);
     return card;

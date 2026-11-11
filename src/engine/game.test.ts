@@ -1,4 +1,7 @@
-import { airWeek, buyPack, createShow, newGame, openPack, scheduleShow } from './game';
+import { airWeek, answerEvent, buyPack, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
+import { startEvent } from './events';
+import { holdCeremony } from './awards';
+import { makeReviews } from './reviews';
 import { FORMATS } from './data/formats';
 import { topicsForFormat } from './data/topics';
 import { CLASSIC_QUALITY, computeScores, previewPlan, scriptStars, teamBonus, type ShowPlan } from './production';
@@ -99,6 +102,7 @@ test('balance: a simple strategy survives the first year', () => {
       const slots: SlotId[] = ['weekday-prime', 'weekday-evening', 'weekday-morning', 'weekend-prime', 'weekend-evening', 'weekend-morning'];
       slots.forEach((slot, i) => { s = scheduleShow(s, slot, fresh[i]?.id ?? null); });
       if (s.shopUnlocked && s.cash > 90) s = buyPack(s, s.people.length < 6 ? 'people' : 'program');
+      if (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
       s = airWeek(s);
       s.reveal = null;
     }
@@ -155,4 +159,95 @@ test('legend team can make a Show for the Ages', () => {
   for (let i = 0; i < 12 && s.shows.length === 0; i++) s = airWeek(s);
   expect(s.shows[0].quality).toBeGreaterThanOrEqual(CLASSIC_QUALITY);
   expect(s.shows[0].classic).toBe(true);
+});
+
+function readyShow(seed: number) {
+  let s = newGame(seed, 'X');
+  s = openPack(s, s.unopened[0].id);
+  s = createShow(s, firstPlan(s));
+  for (let i = 0; i < 12 && s.shows.length === 0; i++) {
+    if (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
+    s = airWeek(s);
+  }
+  s.pendingEvent = null;
+  return s;
+}
+
+test('premiere gives audience and critic reviews; hype boosts the premiere', () => {
+  const base = readyShow(21);
+  const plain = airWeek(scheduleShow(base, 'weekday-evening', base.shows[0].id));
+  expect(plain.shows[0].reviews).not.toBeNull();
+  expect(plain.lastResult!.slots.find((r) => r.showId)!.reviews).toBeDefined();
+  const hyped = structuredClone(base);
+  hyped.networkCards.push({ id: 'promo1', defId: 'viral-teaser' });
+  const promoted = airWeek(scheduleShow(usePromo(hyped, 'promo1', hyped.shows[0].id), 'weekday-evening', hyped.shows[0].id));
+  const v = (x: typeof plain) => x.lastResult!.slots.find((r) => r.showId)!.viewers;
+  expect(v(promoted)).toBeGreaterThan(v(plain));
+});
+
+test('critics weigh craft more than the audience does', () => {
+  const s = readyShow(4);
+  const show = { ...s.shows[0], scores: { script: 50, technical: 95, art: 95, screen: 30 }, focusMatch: 1, novelty: 50 };
+  const r = makeReviews(structuredClone(s), show);
+  expect(r.critics).toBeGreaterThan(r.audience);
+});
+
+test('every event can be answered', () => {
+  for (const id of ['raise', 'interview', 'breakdown', 'viral', 'sponsor-offer', 'poach', 'writers-block', 'copycat']) {
+    let s = readyShow(31);
+    s = airWeek(scheduleShow(s, 'weekday-prime', s.shows[0].id));
+    s.pendingEvent = null;
+    s.cash = 500;
+    s.shows[0].history.push({ ...s.shows[0].history[0], share: 0.3 });
+    s.people.push({ ...s.people[2], id: 'star', house: false, rarity: 'rare', uses: 3, skills: { hosting: 60, acting: 30, charisma: 50, fame: 30 } } as never);
+    s.projects.push({ ...structuredClone(s.projects[0] ?? { ...firstPlanProject(s) }), id: 'pj', stage: 'script', weeksLeft: 2 });
+    for (const choice of [0, 1]) {
+      const t = structuredClone(s);
+      if (!startEvent(t, id)) throw new Error(`event ${id} could not start`);
+      const n = Math.min(choice, t.pendingEvent!.choices.length - 1);
+      const after = answerEvent(t, n);
+      expect(after.pendingEvent).toBeNull();
+    }
+  }
+});
+
+function firstPlanProject(s: ReturnType<typeof newGame>) {
+  const p = firstPlan(s);
+  return {
+    id: 'x', name: 'P', formatId: p.formatId, topicId: p.topicId, showId: null, season: 1, stage: 'script' as const, weeksLeft: 2,
+    durations: { script: 2, production: 2, post: 1 }, writerId: p.writerId, crewId: p.crewId, talentId: p.talentId, points: p.points,
+    cost: 10, twist: false, scriptTime: 'standard' as const, script: null, hype: 0, scriptBonus: 0, waitingOn: null,
+  };
+}
+
+test('a strong show can win at the Indie Awards', () => {
+  let s = readyShow(8);
+  s = airWeek(scheduleShow(s, 'weekday-prime', s.shows[0].id));
+  const show = s.shows[0];
+  show.quality = 95;
+  show.scores = { script: 95, technical: 95, art: 95, screen: 95 };
+  show.reviews = { ...show.reviews!, audience: 95, critics: 95 };
+  const before = s.unopened.length;
+  const c = holdCeremony(s, 'indie')!;
+  expect(c.categories.some((x) => x.weWon)).toBe(true);
+  expect(s.unopened.length).toBe(before + 1);
+  expect(show.awards.length).toBeGreaterThan(0);
+});
+
+test('release a pack card, but not house staff', () => {
+  let s = newGame(3, 'X');
+  s = openPack(s, s.unopened[1].id);
+  const packCard = s.people.find((p) => !p.house)!;
+  s = releasePerson(s, packCard.id);
+  expect(s.people.some((p) => p.id === packCard.id)).toBe(false);
+  expect(() => releasePerson(s, s.people[0].id)).toThrow();
+});
+
+test('network pack: facilities go to the studio, others to the hand', () => {
+  let s = readyShow(13);
+  s = airWeek(scheduleShow(s, 'weekday-prime', s.shows[0].id));
+  s.pendingEvent = null;
+  s.cash = 1000;
+  for (let i = 0; i < 10; i++) { s = buyPack(s, 'network'); s.reveal = null; }
+  expect(s.networkCards.length + s.facilities.length).toBeGreaterThan(0);
 });

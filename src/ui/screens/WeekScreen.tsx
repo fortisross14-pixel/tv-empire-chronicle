@@ -74,6 +74,9 @@ export function WeekScreen({
             <div className="delta muted">Viewing ×{period.viewing.toFixed(2)}</div>
           </div>
         </div>
+        {state.modifiers.map((m) => (
+          <p key={m.label} className="small neg" style={{ marginTop: 8 }}>⚠️ {m.label}: viewers ×{m.mult} for {m.weeksLeft} more week{m.weeksLeft > 1 ? 's' : ''}.</p>
+        ))}
         {state.loan && (
           <p className="small neg" style={{ marginTop: 8 }}>Bank loan: {money(state.loan.balance)} left, {money(state.loan.payment)}/week. There is no second loan.</p>
         )}
@@ -93,6 +96,15 @@ export function WeekScreen({
           </div>
         </section>
       )}
+
+      <section className="panel">
+        <div className="section-title"><h2>🏆 Trophy cabinet</h2><span className="sub">{state.trophies.length}</span></div>
+        {state.trophies.length === 0
+          ? <p className="small muted">Indie Awards in March, State Awards in June, Glimmys in September. Shows that premiered in the past year compete — critics count most.</p>
+          : <div className="trophies">{state.trophies.map((t, i) => (
+            <div key={i} className="trophy"><b>{t.level === 'glimmy' ? '🏆' : t.level === 'state' ? '🏅' : '🎗️'} {t.title}</b><div className="muted">{t.showName} · Y{t.year}</div></div>
+          ))}</div>}
+      </section>
 
       <section className="panel">
         <div className="section-title"><h2>🎯 Goal: State network</h2></div>

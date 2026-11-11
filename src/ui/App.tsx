@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import {
   CITY, GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, clearSave, createShow,
   dateLabel, dismissFinished, dismissReveal, loadGame, newGame, openPack, saveGame, scheduleShow, useBusinessCard,
+  answerEvent, dismissCeremony, releasePerson, usePromo, useSponsor, networkById,
   type GameState, type ShowPlan,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
 import { PackReveal } from './components/PackReveal';
 import { WeekResults } from './components/WeekResults';
 import { FinishedReveal } from './components/FinishedReveal';
+import { EventModal } from './components/EventModal';
+import { CeremonyModal } from './components/CeremonyModal';
+import { TargetPicker } from './components/TargetPicker';
 import { WeekScreen, type Todo } from './screens/WeekScreen';
 import { ScheduleScreen } from './screens/ScheduleScreen';
 import { StudioScreen } from './screens/StudioScreen';
@@ -54,6 +58,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   const [tab, setTab] = useState<Tab>('week');
   const [wizard, setWizard] = useState<{ renew?: string } | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [usingCard, setUsingCard] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
 
@@ -80,6 +85,7 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   };
 
   const air = () => {
+    if (state.pendingEvent) return say('Answer the event first.');
     if (run(airWeek)) setShowResults(true);
   };
 
@@ -105,11 +111,12 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
   // To-do list on the Week tab.
   const todos: Todo[] = [];
   for (const pack of state.unopened) {
-    const people = pack.kind === 'starter-people';
+    const people = pack.kind === 'starter-people' || pack.kind === 'people';
+    const label = { starter: 'program', 'starter-people': 'people', program: 'program', people: 'people', network: 'network' }[pack.kind];
     todos.push({
-      emoji: people ? '👥' : '🎁',
-      title: people ? 'Open your free people pack' : 'Open your free program pack',
-      detail: people ? 'Meet 3 new people to join your house staff.' : 'See which format and topics you start with.',
+      emoji: people ? '👥' : pack.kind === 'network' ? '📡' : '🎁',
+      title: `Open your free ${label} pack`,
+      detail: people ? 'Meet 3 new people to join your house staff.' : pack.kind === 'network' ? 'Promos, sponsors or studio upgrades.' : 'See which format and topics you start with.',
       onClick: () => run((s) => openPack(s, pack.id)),
     });
   }
@@ -122,6 +129,10 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
       detail: 'Pick a format and topic, build the team, split the focus points.',
       onClick: () => { setTab('studio'); setWizard({}); },
     });
+  }
+  const promoTargets = state.projects.length + state.shows.filter((x) => !x.premiered).length;
+  if (promoTargets > 0 && state.networkCards.some((c) => networkById(c.defId).kind === 'promo')) {
+    todos.push({ emoji: '📣', title: 'Build hype before the premiere', detail: 'You have promo cards. Use them in Cards → Network.', onClick: () => setTab('cards') });
   }
   const scheduled = new Set(Object.values(state.schedule));
   for (const show of state.shows) {
@@ -164,7 +175,12 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
           <StudioScreen state={state} onNewShow={() => setWizard({})}
             onCancelProject={(id) => run((s) => cancelProject(s, id))} />
         )}
-        {tab === 'cards' && <CardsScreen state={state} onUseBusinessCard={(id) => run((s) => useBusinessCard(s, id), 'Contract renewed!')} />}
+        {tab === 'cards' && (
+          <CardsScreen state={state}
+            onUseBusinessCard={(id) => run((s) => useBusinessCard(s, id), 'Contract renewed!')}
+            onRelease={(id) => run((s) => releasePerson(s, id))}
+            onUseNetworkCard={(id) => setUsingCard(id)} />
+        )}
         {tab === 'shop' && (
           <ShopScreen state={state}
             onBuyPack={(kind) => run((s) => buyPack(s, kind))}
@@ -196,7 +212,22 @@ function Game({ state, setState }: { state: GameState; setState: (s: GameState |
       {!state.reveal && showResults && state.lastResult && (
         <WeekResults result={state.lastResult} state={state} onClose={() => setShowResults(false)} />
       )}
-      {!state.reveal && !showResults && finishedShows.length > 0 && (
+      {!state.reveal && !showResults && state.ceremony && (
+        <CeremonyModal ceremony={state.ceremony} onClose={() => run(dismissCeremony)} />
+      )}
+      {!state.reveal && !showResults && !state.ceremony && state.pendingEvent && (
+        <EventModal event={state.pendingEvent} onChoose={(i) => run((s) => answerEvent(s, i))} />
+      )}
+      {usingCard && (
+        <TargetPicker state={state} cardId={usingCard} onClose={() => setUsingCard(null)}
+          onPick={(target) => {
+            const card = state.networkCards.find((c) => c.id === usingCard);
+            const kind = card && networkById(card.defId).kind;
+            const ok = run((s) => (kind === 'promo' ? usePromo(s, usingCard, target) : useSponsor(s, usingCard, target)), kind === 'promo' ? 'Hype is building! 🔥' : 'Sponsor signed! 💰');
+            if (ok) setUsingCard(null);
+          }} />
+      )}
+      {!state.reveal && !showResults && !state.ceremony && !state.pendingEvent && finishedShows.length > 0 && (
         <FinishedReveal shows={finishedShows} state={state} onClose={() => { run(dismissFinished); setTab('schedule'); }} />
       )}
       {toast && <div className="toast" role="status">{toast}</div>}

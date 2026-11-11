@@ -74,6 +74,10 @@ export interface Project {
   scriptTime: ScriptTime;
   /** Set when the script stage finishes. */
   script: { score: number; stars: number } | null;
+  /** Hype from promo cards used before the show is finished. */
+  hype: number;
+  /** Extra script points (e.g. a script doctor from an event). */
+  scriptBonus: number;
   /** Week the project was waiting on someone busy (for UI). */
   waitingOn: string | null;
 }
@@ -113,6 +117,81 @@ export interface Show {
   premiered: boolean;
   history: AiringRecord[];
   bestViewers: number;
+  /** Buzz from marketing. Boosts the premiere, then fades. */
+  hype: number;
+  /** Reviews of the current season, set on its premiere. */
+  reviews: Reviews | null;
+  /** Award wins, e.g. "Indie Awards Y1 · Best Writing". */
+  awards: string[];
+  /** Week + year of the current season's premiere, for award eligibility. */
+  premieredAt: { week: number; year: number } | null;
+}
+
+export interface Reviews {
+  /** 0–100, from viewers: script, screen power, freshness. */
+  audience: number;
+  /** 0–100, from critics: everything, craft-heavy. */
+  critics: number;
+  audienceQuote: string;
+  criticQuote: string;
+  outlet: string;
+}
+
+// ---------- Network cards ----------
+
+export type NetworkKind = 'promo' | 'facility' | 'sponsor';
+
+export interface NetworkCard {
+  id: string;
+  defId: string;
+}
+
+export interface SponsorDeal {
+  id: string;
+  defId: string;
+  showId: string;
+  perWeek: number;
+  weeksLeft: number;
+  minShare: number;
+}
+
+// ---------- Events ----------
+
+export interface PendingEvent {
+  id: string;
+  defId: string;
+  title: string;
+  text: string;
+  choices: { label: string; detail: string }[];
+  /** Ids the event is about (person, show, project). */
+  targetId: string | null;
+  amount: number;
+}
+
+export interface Modifier {
+  kind: 'viewers';
+  mult: number;
+  weeksLeft: number;
+  label: string;
+}
+
+// ---------- Awards ----------
+
+export type AwardLevel = 'indie' | 'state' | 'glimmy';
+
+export interface AwardCategoryResult {
+  category: string;
+  nominees: { name: string; station: string; score: number; ours: boolean }[];
+  winner: string;
+  weWon: boolean;
+}
+
+export interface Ceremony {
+  level: AwardLevel;
+  title: string;
+  year: number;
+  categories: AwardCategoryResult[];
+  prize: string | null;
 }
 
 export interface RivalShow {
@@ -135,6 +214,9 @@ export interface Rival {
 }
 
 export interface SlotResult {
+  /** Set on a premiere: the reviews it got. */
+  reviews?: Reviews;
+  sponsorPay?: number;
   slot: SlotId;
   showId: string | null;
   showName: string;
@@ -153,18 +235,20 @@ export interface WeekResult {
   year: number;
   slots: SlotResult[];
   revenue: number;
+  sponsors: number;
   overhead: number;
   loanPayment: number;
   net: number;
   reputationDelta: number;
 }
 
-export type PackKind = 'program' | 'people' | 'starter' | 'starter-people';
+export type PackKind = 'program' | 'people' | 'network' | 'starter' | 'starter-people';
 
 export type PackCard =
   | { type: 'format'; id: string; duplicate: boolean }
   | { type: 'topic'; id: string; duplicate: boolean }
-  | { type: 'person'; person: Person };
+  | { type: 'person'; person: Person }
+  | { type: 'network'; card: NetworkCard; duplicate: boolean };
 
 export interface Pack {
   id: string;
@@ -216,6 +300,16 @@ export interface GameState {
   knownFormats: string[];
   sweeps: { shareSum: number; samples: number };
   shopUnlocked: boolean;
+  networkCards: NetworkCard[];
+  facilities: string[];
+  sponsorDeals: SponsorDeal[];
+  pendingEvent: PendingEvent | null;
+  modifiers: Modifier[];
+  /** Ceremony to show on screen, then cleared. */
+  ceremony: Ceremony | null;
+  trophies: { title: string; showName: string; year: number; level: AwardLevel }[];
+  /** Weeks since the last event, to keep them rare. */
+  eventCooldown: number;
   /** Shows that finished production this week, for the reveal screen. */
   newlyFinished: string[];
   gameOver: string | null;

@@ -25,7 +25,14 @@ export function WeekResults({ result, state, onClose }: { result: WeekResult; st
               <span className="us" style={{ width: `${r.share * 100}%` }} />
               <span className="them" style={{ width: `${r.rivalShare * 100}%` }} />
             </div>
+            {r.reviews && (
+              <div className="review-box" style={{ gridColumn: '1 / -1' }}>
+                <div className="review"><span className="score aud">{r.reviews.audience}</span><span><b>Audience</b><br />{r.reviews.audienceQuote}</span></div>
+                <div className="review"><span className="score crit">{r.reviews.critics}</span><span><b>Critics</b><br />{r.reviews.criticQuote} <i className="muted">— {r.reviews.outlet}</i></span></div>
+              </div>
+            )}
             <div className="row tiny muted" style={{ gridColumn: '1 / -1' }}>
+              {r.sponsorPay ? <span className="chip good">Sponsor +{money(r.sponsorPay)}</span> : null}
               <span>You {pct(r.share)}</span>
               <span>· {rival?.short} {pct(r.rivalShare)} <i>“{r.rivalName}”</i></span>
               {r.won && <span className="win" style={{ marginLeft: 'auto' }}>WIN</span>}
@@ -36,7 +43,7 @@ export function WeekResults({ result, state, onClose }: { result: WeekResult; st
           <div className="muted small">Week result</div>
           <div className={`value ${result.net >= 0 ? 'pos' : 'neg'}`}>{signedMoney(result.net)}</div>
           <div className="small muted">
-            Ads {money(result.revenue)} · Running costs −{money(result.overhead)}
+            Ads {money(result.revenue)}{result.sponsors > 0 && ` · Sponsors ${money(result.sponsors)}`} · Running costs −{money(result.overhead)}
             {result.loanPayment > 0 && ` · Loan −${money(result.loanPayment)}`}
           </div>
           <div className="small" style={{ marginTop: 6 }}>

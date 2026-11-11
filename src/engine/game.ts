@@ -1,4 +1,4 @@
-import type { GameState, NewsItem, Pack, PackKind, Show, SlotId, SlotResult, WeekResult } from './types';
+import type { AwardLevel, GameState, NewsItem, Pack, PackKind, Show, SlotId, SlotResult, WeekResult } from './types';
 import { clamp } from './rng';
 import { dateLabel, isFallPremiere, isSweeps, periodOf } from './calendar';
 import { formatById } from './data/formats';
@@ -8,11 +8,16 @@ import { applyPack, makePack, PRICES } from './packs';
 import { advanceProjects, GameError, startProject, type ShowPlan } from './production';
 import { advanceRivals, makeRivals } from './rivals';
 import { appeal } from './appeal';
+import { applyPromo, applySponsor, HYPE_POWER } from './network';
+import { makeReviews, wordOfMouth } from './reviews';
+import { maybeStartEvent, resolvePendingEvent } from './events';
+import { AWARD_LEVELS, AWARD_WEEKS, holdCeremony } from './awards';
+import { networkById } from './data/network';
 import {
   AIRINGS, CPM, DAYPARTS, DAY_BLOCKS, FILLER_APPEAL, FILLER_NAME, HUT, MARKET_HOUSEHOLDS, OTHER_APPEAL, OVERHEAD, SLOTS,
 } from './schedule';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 export const START_CASH = 120;
 export const LOAN = { amount: 100, total: 125, payment: 2.5 };
 
@@ -46,6 +51,14 @@ export function newGame(seed: number, stationName: string): GameState {
     knownFormats: [],
     sweeps: { shareSum: 0, samples: 0 },
     shopUnlocked: false,
+    networkCards: [],
+    facilities: [],
+    sponsorDeals: [],
+    pendingEvent: null,
+    modifiers: [],
+    ceremony: null,
+    trophies: [],
+    eventCooldown: 4,
     newlyFinished: [],
     gameOver: null,
     nextId: 0,
@@ -82,7 +95,7 @@ export const openPack = (state: GameState, packId: string) =>
 
 export const dismissReveal = (state: GameState) => produce(state, (s) => void (s.reveal = null));
 
-export const buyPack = (state: GameState, kind: Extract<PackKind, 'program' | 'people'>) =>
+export const buyPack = (state: GameState, kind: Extract<PackKind, 'program' | 'people' | 'network'>) =>
   produce(state, (s) => {
     if (!s.shopUnlocked) throw new GameError('The shop opens after your first show airs.');
     const price = PRICES[kind];
@@ -134,6 +147,7 @@ export const scheduleShow = (state: GameState, slot: SlotId, showId: string | nu
 
 export const cancelShow = (state: GameState, showId: string) =>
   produce(state, (s) => {
+    s.sponsorDeals = s.sponsorDeals.filter((d) => d.showId !== showId);
     const show = s.shows.find((x) => x.id === showId);
     if (!show) throw new GameError('Show not found.');
     if (s.projects.some((p) => p.showId === showId)) throw new GameError('A new season is in production.');
@@ -143,6 +157,28 @@ export const cancelShow = (state: GameState, showId: string) =>
   });
 
 export const dismissFinished = (state: GameState) => produce(state, (s) => void (s.newlyFinished = []));
+
+export const usePromo = (state: GameState, cardId: string, targetId: string) =>
+  produce(state, (s) => addNews(s, applyPromo(s, cardId, targetId), 'good'));
+
+export const useSponsor = (state: GameState, cardId: string, showId: string) =>
+  produce(state, (s) => addNews(s, applySponsor(s, cardId, showId), 'good'));
+
+export const answerEvent = (state: GameState, choice: number) =>
+  produce(state, (s) => addNews(s, resolvePendingEvent(s, choice), 'neutral'));
+
+export const dismissCeremony = (state: GameState) => produce(state, (s) => void (s.ceremony = null));
+
+/** Let a person go for good. House staff can't be released. */
+export const releasePerson = (state: GameState, personId: string) =>
+  produce(state, (s) => {
+    const p = s.people.find((x) => x.id === personId);
+    if (!p) throw new GameError('Person not found.');
+    if (p.house) throw new GameError('House staff stay with the station.');
+    if (s.projects.some((pr) => [pr.writerId, pr.crewId, pr.talentId].includes(p.id))) throw new GameError(`${p.name} is working on a show.`);
+    s.people = s.people.filter((x) => x.id !== personId);
+    addNews(s, `${p.name} leaves ${s.stationName}. Thanks for everything!`, 'neutral');
+  });
 
 // ---------- Airing ----------
 
@@ -163,8 +199,11 @@ function saturation(state: GameState, show: Show): number {
 
 export const airWeek = (state: GameState) =>
   produce(state, (s) => {
+    if (s.pendingEvent) throw new GameError('Answer the event first.');
     s.newlyFinished = [];
+    s.ceremony = null;
     const period = periodOf(s.week);
+    const viewerMod = s.modifiers.reduce((m, x) => m * x.mult, 1);
     const fall = isFallPremiere(s.week);
     const slots: SlotResult[] = [];
     const aired = new Set<string>();
@@ -184,6 +223,8 @@ export const airWeek = (state: GameState) =>
           if (rerun) ours *= 0.55;
           if (show.classic) ours *= 1.1;
           if (premiere) ours *= fall ? 1.3 : 1.15;
+          ours *= 1 + (show.hype / 100) * HYPE_POWER;
+          ours *= wordOfMouth(show.reviews);
           ours *= 1 + clamp((prevShare - 0.15) * 0.8, -0.06, 0.12);
         }
         const rivalShows = s.rivals.map((r) => r.schedule[slot]);
@@ -193,7 +234,7 @@ export const airWeek = (state: GameState) =>
         const share = ours / total;
         const rivalShare = rivalAppeals[0] / total;
         const watching = MARKET_HOUSEHOLDS * HUT[block][part] * period.viewing;
-        const viewers = round1(watching * share);
+        const viewers = round1(watching * share * viewerMod);
         const revenue = round1((viewers * AIRINGS[block] * CPM[part] * period.adPrice * s.rateCard) / 1000);
         const won = !!show && share > rivalShare;
         slots.push({
@@ -221,8 +262,14 @@ export const airWeek = (state: GameState) =>
         show.bestViewers = Math.max(show.bestViewers, res.viewers);
         if (res.premiere) {
           show.premiered = true;
-          addNews(s, `"${show.name}"${show.season > 1 ? ` season ${show.season}` : ''} premieres to ${Math.round(res.viewers)}K viewers.`, 'good');
+          show.premieredAt = { week: s.week, year: s.year };
+          show.reviews = makeReviews(s, show);
+          res.reviews = show.reviews;
+          reputationDelta += (show.reviews.critics - 50) / 8;
+          addNews(s, `"${show.name}"${show.season > 1 ? ` season ${show.season}` : ''} premieres to ${Math.round(res.viewers)}K viewers. Critics ${show.reviews.critics}, audience ${show.reviews.audience}.`, 'good');
         }
+        // Hype fades after each airing.
+        show.hype = Math.round(show.hype * 0.6);
         if (!rerun) {
           show.episodesLeft -= 1;
           if (show.episodesLeft === 0) {
@@ -254,6 +301,21 @@ export const airWeek = (state: GameState) =>
       }
     }
 
+    // Sponsors pay while their show holds its share.
+    let sponsors = 0;
+    for (const deal of s.sponsorDeals) {
+      const res = slots.find((r) => r.showId === deal.showId);
+      if (res && res.share >= deal.minShare) {
+        res.sponsorPay = deal.perWeek;
+        sponsors += deal.perWeek;
+      }
+      deal.weeksLeft -= 1;
+      if (deal.weeksLeft <= 0) addNews(s, `The ${networkById(deal.defId).name} sponsor deal has ended.`, 'neutral');
+    }
+    s.sponsorDeals = s.sponsorDeals.filter((d) => d.weeksLeft > 0);
+    sponsors = round1(sponsors);
+    s.modifiers = s.modifiers.map((m) => ({ ...m, weeksLeft: m.weeksLeft - 1 })).filter((m) => m.weeksLeft > 0);
+
     const revenue = round1(slots.reduce((sum, r) => sum + r.revenue, 0));
     let loanPayment = 0;
     if (s.loan) {
@@ -264,7 +326,7 @@ export const airWeek = (state: GameState) =>
         addNews(s, 'The bank loan is paid off.', 'good');
       }
     }
-    const net = round1(revenue - OVERHEAD - loanPayment);
+    const net = round1(revenue + sponsors - OVERHEAD - loanPayment);
     s.cash = round1(s.cash + net);
     // Reputation fades unless you keep earning it.
     reputationDelta -= s.reputation * 0.02;
@@ -274,7 +336,7 @@ export const airWeek = (state: GameState) =>
     if (wins > 0 && rival) addNews(s, `${s.stationName} beats ${rival.short} in ${wins} of ${slots.length} slots this week.`, 'good');
 
     s.lastResult = {
-      week: s.week, year: s.year, slots, revenue, overhead: OVERHEAD, loanPayment, net, reputationDelta: round1(reputationDelta),
+      week: s.week, year: s.year, slots, revenue, sponsors, overhead: OVERHEAD, loanPayment, net, reputationDelta: round1(reputationDelta),
     } satisfies WeekResult;
 
     // Studio work happens during the week too.
@@ -286,6 +348,23 @@ export const airWeek = (state: GameState) =>
       if (show.classic) addNews(s, `🏆 Critics rave: "${show.name}" is a Show for the Ages! Quality ${show.quality}.`, 'good');
       else addNews(s, `"${show.name}"${show.season > 1 ? ` season ${show.season}` : ''} is ready to air. Quality ${show.quality}.`, 'good');
     }
+
+    // Award season.
+    for (const level of Object.keys(AWARD_WEEKS) as AwardLevel[]) {
+      if (AWARD_WEEKS[level] !== s.week) continue;
+      const ceremony = holdCeremony(s, level);
+      if (ceremony) {
+        s.ceremony = ceremony;
+        const wins = ceremony.categories.filter((c) => c.weWon).length;
+        addNews(s, wins
+          ? `🏆 ${s.stationName} wins ${wins} award${wins > 1 ? 's' : ''} at the ${ceremony.title}!`
+          : `${ceremony.title}: no wins for ${s.stationName} this year.`, wins ? 'good' : 'neutral');
+      } else {
+        addNews(s, `The ${AWARD_LEVELS[level].title} were held. You had no show that premiered this year.`, 'neutral');
+      }
+    }
+
+    maybeStartEvent(s);
 
     // Next week.
     s.week += 1;

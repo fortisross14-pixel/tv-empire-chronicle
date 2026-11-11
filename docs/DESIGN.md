@@ -75,7 +75,9 @@ Permanent, collectible, never expire. Two types that combine:
 - The **Album** view shows every card, owned or still a silhouette — a collection goal.
 
 ### 3.3 Network cards
-Consumables and permanent studio items (these replace research):
+Bought as a **Network pack** ($30K, 2 cards). Consumables and permanent studio
+items (these replace research). Hype from promos boosts appeal (100 hype =
++60%) and fades by 40% after every airing.
 
 - **Business Card** — renew a person (+5 uses).
 - **Promo cards** — Social Media Blitz, Radio Spot, Billboard, Newspaper Ad,
@@ -158,6 +160,14 @@ Each format weighs them differently (e.g. News: Technical/Screen Power heavy;
 Series: Script/Art heavy; Contest: Screen Power/Technical). Quality is the
 weighted sum.
 
+## 4b. Reviews
+
+Every premiere (first episode of a season) gets two scores, 0–100, with quotes:
+- **Audience** — mostly script and screen power, plus freshness. Drives
+  word of mouth: 80 → +10% appeal for the rest of the season, 30 → −10%.
+- **Critics** — everything, craft-heavy: script, technical, art, focus match.
+  Moves reputation on the premiere and decides awards.
+
 ## 5. Show life cycle
 
 - **Novelty** starts at 100 and drops each week on air. It drops faster with
@@ -200,6 +210,22 @@ The game starts in **July, Year 1**, so you have one summer to prepare for fall.
 
 Plus: sports seasons, election falls (Political News boost), the yearly
 **"Glimmy Awards"** in September, and a parody "Olympics" every 4 years.
+
+## 7b. Events and awards
+
+**Events:** at most one at a time, about a 30% chance a week, then a 3-week
+cooldown. Each is a small choice: a star wants a raise, a Gazette interview,
+transmitter trouble, a viral clip, a sponsor offer, a rival poaching someone,
+writer's block, a rival copying your show.
+
+**Awards:** three levels each year. Shows whose season premiered in the past
+52 weeks compete; critics count most.
+
+| Ceremony | Week | Who you face | Categories open to a local station | Win prize |
+|---|---|---|---|---|
+| Indie TV Awards | 12 (Mar) | small stations | Best Indie Show, Writing, Craft, On-Screen, Audience Award | People pack, +4 rep |
+| State TV Awards | 25 (Jun) | state networks | Best Show, Writing, Performance | Program pack, $10K, +7 rep |
+| The Glimmy Awards | 38 (Sep) | national | Best Indie Production only | Network pack, $25K, +15 rep |
 
 ## 8. Economy
 
@@ -265,9 +291,10 @@ Unlocks:
 2. **Cards, deeper** ✅ (started) — permanent house cards, script stars with
    writing time and luck, dream-team rarity bonus, Shows for the Ages.
    Next: network packs, facility cards, more people variety.
-3. **Show life, deeper** — hype, better rival AI reactions, show history charts.
-4. **Calendar & marketing** — sweeps and ad pricing, premiere season, promo
-   cards, hype, events, sponsors.
+3. **Reviews, marketing, events, awards** ✅ — audience + critic reviews,
+   network packs (promos/hype, sponsors, studio upgrades), 8 events,
+   Indie/State/Glimmy awards with trophy cabinet, release a card.
+4. **Calendar depth** — sports seasons, election years, holiday specials.
 5. **Rights** — Rights Market, film packages, local sports on the calendar.
 6. **State tier** — license, more slots, second rival, new formats.
 7. **National + payoff** — national tier, Glimmy Awards, franchises.
