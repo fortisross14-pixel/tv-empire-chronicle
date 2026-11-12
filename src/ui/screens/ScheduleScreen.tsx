@@ -21,6 +21,7 @@ export function ScheduleScreen({
   const [picking, setPicking] = useState<SlotId | null>(null);
   const [teamFor, setTeamFor] = useState<OwnedRights | null>(null);
   const [view, setView] = useState<'ours' | 'rivals'>('ours');
+  const active = state.shows.filter((x) => !x.archived);
   const showIn = (slot: SlotId) => state.shows.find((s) => s.id === state.schedule[slot]);
   const sports = state.rights.filter((r) => rightsById(r.defId).kind === 'sports');
   const movies = state.rights.filter((r) => rightsById(r.defId).kind === 'film');
@@ -84,12 +85,12 @@ export function ScheduleScreen({
       </section>
 
       <section>
-        <div className="section-title"><h2>Your shows</h2><span className="sub">{state.shows.length}</span></div>
-        {state.shows.length === 0
+        <div className="section-title"><h2>Your shows</h2><span className="sub">{active.length} · past shows in the Studio</span></div>
+        {active.length === 0
           ? <div className="empty"><div className="big">🎬</div>Finished shows appear here. Start one in the Studio.</div>
           : (
             <div className="poster-grid">
-              {state.shows.map((show) => <Poster key={show.id} {...showPoster(show, state)} onClick={() => onOpenShow(show.id)} />)}
+              {active.map((show) => <Poster key={show.id} {...showPoster(show, state)} onClick={() => onOpenShow(show.id)} />)}
             </div>
           )}
       </section>
@@ -155,7 +156,7 @@ function SlotPicker({
 }: { state: GameState; slot: SlotId; onPick: (id: string | null) => void; onClose: () => void }) {
   const [block, part] = slot.split('-') as [typeof DAY_BLOCKS[number], typeof DAYPARTS[number]];
   const where = (id: string) => Object.entries(state.schedule).find(([, sid]) => sid === id)?.[0] as SlotId | undefined;
-  const shows = [...state.shows].sort((a, b) => fitStars(b.formatId, block, part) - fitStars(a.formatId, block, part) || b.quality - a.quality);
+  const shows = state.shows.filter((x) => !x.archived).sort((a, b) => fitStars(b.formatId, block, part) - fitStars(a.formatId, block, part) || b.quality - a.quality);
   const films = state.rights.filter((x) => rightsById(x.defId).kind === 'film');
   const sport = sportsRightsForSlot(state, slot);
   const note = (id: string) => {

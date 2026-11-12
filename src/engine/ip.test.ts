@@ -158,3 +158,31 @@ test('a State station that owns movies still finds its sports slots (Guide crash
   for (const slot of slotsOf(t)) expect(() => sportsRightsForSlot(t, slot)).not.toThrow();
   expect(slotsOf(t).some((slot) => sportsRightsForSlot(t, slot)?.defId === 'state-college')).toBe(true);
 });
+
+test('program packs rarely repeat a format you own', () => {
+  let s = started(21);
+  s.shopUnlocked = true;
+  s.cash = 10_000;
+  const first = s.formats[0];
+  let repeats = 0;
+  for (let i = 0; i < 20; i++) {
+    const t = buyPack({ ...structuredClone(s), rng: s.rng + i * 7919 }, 'program');
+    if (t.reveal!.cards.some((c) => c.type === 'format' && c.id === first)) repeats++;
+  }
+  expect(repeats).toBeLessThanOrEqual(3);
+});
+
+test('archived shows leave the schedule, stay in the library and can come back', async () => {
+  const { archiveShow } = await import('./game');
+  let s = started(22);
+  s = finish(createShow(s, plan(s)));
+  const id = s.shows[0].id;
+  s = scheduleShow(s, 'weekday-prime', id);
+  s = archiveShow(s, id);
+  expect(s.shows[0].archived).toBe(true);
+  expect(Object.values(s.schedule)).not.toContain(id);
+  expect(() => scheduleShow(s, 'weekday-prime', id)).toThrow(/archive/);
+  s = archiveShow(s, id, false);
+  expect(s.shows[0].archived).toBe(false);
+  expect(scheduleShow(s, 'weekday-prime', id).schedule['weekday-prime']).toBe(id);
+});

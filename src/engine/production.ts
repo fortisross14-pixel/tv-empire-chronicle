@@ -315,6 +315,7 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
     if (!show) throw new GameError('Show not found.');
     if (show.formatId !== plan.formatId || show.topicId !== plan.topicId) throw new GameError('A new season keeps the show\'s format and topic.');
     if (show.episodesLeft > 0) throw new GameError('Finish the current season first.');
+    if (show.archived) throw new GameError('Restore the show from the archive first.');
     if (state.projects.some((p) => p.showId === show.id)) throw new GameError('A new season is already in production.');
   }
   if (plan.twist && !renewal) throw new GameError('Twists are for new seasons of a show.');

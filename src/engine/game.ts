@@ -179,6 +179,7 @@ export const scheduleShow = (state: GameState, slot: SlotId, showId: string | nu
     const film = showId ? s.rights.find((r) => r.id === showId) : null;
     if (film && rightsById(film.defId).kind !== 'film') throw new GameError('Sports air automatically in their own slot.');
     if (showId && !film && !s.shows.some((x) => x.id === showId)) throw new GameError('Show not found.');
+    if (showId && s.shows.find((x) => x.id === showId)?.archived) throw new GameError('Restore the show from the archive first.');
     for (const other of slotsOf(s)) if (showId && s.schedule[other] === showId) s.schedule[other] = null;
     s.schedule[slot] = showId;
   });
@@ -192,6 +193,22 @@ export const cancelShow = (state: GameState, showId: string) =>
     s.shows = s.shows.filter((x) => x.id !== showId);
     for (const slot of slotsOf(s)) if (s.schedule[slot] === showId) s.schedule[slot] = null;
     addNews(s, `${s.stationName} cancels "${show.name}".`, 'neutral');
+  });
+
+/** Archive a show (off the air, kept in the library) or bring it back. */
+export const archiveShow = (state: GameState, showId: string, archived = true) =>
+  produce(state, (s) => {
+    const show = s.shows.find((x) => x.id === showId);
+    if (!show) throw new GameError('Show not found.');
+    if (archived && s.projects.some((p) => p.showId === showId)) throw new GameError('A new season is in production.');
+    show.archived = archived;
+    if (archived) {
+      s.sponsorDeals = s.sponsorDeals.filter((d) => d.showId !== showId);
+      for (const slot of slotsOf(s)) if (s.schedule[slot] === showId) s.schedule[slot] = null;
+      addNews(s, `"${show.name}" goes into the archive.`, 'neutral');
+    } else {
+      addNews(s, `"${show.name}" is back from the archive.`, 'neutral');
+    }
   });
 
 export const dismissFinished = (state: GameState) => produce(state, (s) => void (s.newlyFinished = []), { duringEvent: true });

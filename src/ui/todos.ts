@@ -53,7 +53,7 @@ export function buildTodos(
       todos.push({ id: `film-${r.id}`, emoji: def.icon, title: `Schedule ${def.name}`, detail: `${r.airingsLeft} airings left before the license runs out.`, onClick: () => act.goTab('schedule') });
     }
   }
-  for (const show of state.shows) {
+  for (const show of state.shows.filter((x) => !x.archived)) {
     if (show.episodesLeft > 0 && !scheduled.has(show.id)) {
       todos.push({ id: `schedule-${show.id}`, emoji: '📺', title: `Schedule "${show.name}"`, detail: 'It is ready to air. Pick a time slot.', onClick: () => act.goTab('schedule') });
     }

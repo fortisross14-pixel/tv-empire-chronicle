@@ -361,7 +361,7 @@ button.card:hover:not(:disabled), button.card:focus-visible { box-shadow: inset 
 .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(8, 2, 20, 0.7); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.15s; }
 @media (min-width: 700px) { .overlay { align-items: center; padding: 24px; } }
 .sheet {
-  background: var(--bg); width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto;
+  background: var(--bg); width: 100%; max-width: 640px; max-height: 92vh; max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   border-radius: 24px 24px 0 0; padding: 18px 16px calc(20px + env(safe-area-inset-bottom));
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
   animation: rise 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
@@ -698,7 +698,7 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
   .tab { grid-auto-flow: column; gap: 6px; align-items: center; font-size: 12px; padding: 6px; }
   .tab .tab-icon { font-size: 16px; }
   .air-fab { bottom: calc(var(--tabbar) + 12px); padding-top: 10px; padding-bottom: 10px; }
-  .sheet { max-height: 94vh; }
+  .sheet { max-height: 94vh; max-height: 94dvh; }
   .billboard { min-height: 180px; }
   .menu-head .tv { display: none; }
 }
@@ -755,7 +755,7 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
   .grid-cards { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
   .poster-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
   .sheet.wide { max-width: 980px; }
-  .sheet { max-height: 92vh; }
+  .sheet { max-height: 92vh; max-height: 92dvh; }
 }
 @media (min-width: 900px) and (orientation: landscape) and (min-width: 1240px) {
   .air-fab { right: calc((100% - var(--rail) - 1180px) / 2 + 16px); }
@@ -779,3 +779,28 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
   display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap; max-width: calc(100vw - 24px);
   padding: 6px 6px 6px 14px; border-radius: 999px; background: var(--tile-2); box-shadow: 0 12px 30px rgba(0, 0, 0, .45); font-weight: 800; font-size: 13px;
   animation: rise .35s both; }
+
+/* ================= Studio: show library, project details, trophies ================= */
+.project-open { display: block; width: 100%; text-align: left; color: inherit; border-radius: 18px; }
+.project-open:focus-visible { box-shadow: 0 0 0 3px var(--focus); }
+.project-details .pd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.project-details .spread { padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.pd-bar { display: grid; grid-template-columns: 90px 1fr 22px; align-items: center; gap: 8px; padding: 2px 0; }
+.pd-bar i { display: block; height: 6px; border-radius: 3px; background: var(--focus); }
+.library { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); }
+.show-row { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 16px; background: var(--tile); color: inherit; text-align: left; width: 100%; }
+.show-row.archived { opacity: .7; }
+.show-row.onair { box-shadow: inset 3px 0 0 var(--good); }
+.sr-icon { font-size: 26px; flex: none; }
+.sr-main { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.sr-title { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.sr-title b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.sr-stats { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; color: var(--text-2); }
+.show-row .grade { flex: none; }
+.trophies { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.trophy { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 14px; background: var(--tile); }
+.t-icon { font-size: 26px; }
+
+/* Buttons never widen the page: long labels wrap. */
+.btn { max-width: 100%; white-space: normal; text-align: center; overflow-wrap: anywhere; }
+.req { overflow-wrap: anywhere; }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  GameError, airWeek, buyBusinessCard, buyPack, cancelProject, cancelShow, createShow, ackMission, newMissionGame, recordMission,
+  GameError, airWeek, buyBusinessCard, buyPack, cancelProject, archiveShow, createShow, ackMission, newMissionGame, recordMission,
   dateLabel, dismissFinished, dismissReveal, openPack, saveGame, scheduleShow, useBusinessCard,
   setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
   reachOf, SANDBOX_GOALS, type GameState, type Goal, type ShowPlan,
@@ -185,7 +185,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
             onAssignTeam={(rid, c, t) => run((s) => assignSportsTeam(s, rid, c, t), 'Broadcast team set.')} />
         )}
         {tab === 'studio' && (
-          <StudioScreen state={state} onNewShow={() => setWizard({})}
+          <StudioScreen state={state} onNewShow={() => setWizard({})} onOpenShow={setOpenShow}
             onCancelProject={(id) => run((s) => cancelProject(s, id), 'Production scrapped.')} />
         )}
         {tab === 'cards' && (
@@ -302,9 +302,10 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
           onEditPoster={(id) => setPosterFor(id)}
           onCancel={(id) => {
             const show = state.shows.find((s) => s.id === id);
-            void ask({ title: `Cancel "${show?.name}"?`, text: 'The show is gone for good. Its sponsor deal ends too.', confirm: 'Cancel show', danger: true })
-              .then((ok) => { if (ok && run((s) => cancelShow(s, id), 'Show cancelled.')) setOpenShow(null); });
-          }} />
+            void ask({ title: `Archive "${show?.name}"?`, text: 'It comes off the air (its sponsor deal ends) and stays in your show library in the Studio. You can restore it any time.', confirm: 'Archive' })
+              .then((ok) => { if (ok && run((s) => archiveShow(s, id), 'Show archived.')) setOpenShow(null); });
+          }}
+          onRestore={(id) => run((s) => archiveShow(s, id, false), 'Back on the guide: pick a slot.')} />
       )}
       {posterFor && (() => {
         const show = state.shows.find((s) => s.id === posterFor);

@@ -28,6 +28,8 @@ function movieCards(state: GameState): PackCard[] {
 }
 /** Cash back for a duplicate format card. */
 export const FORMAT_REFUND = 10;
+/** How likely an owned format is to show up again in a program pack (vs a new one). */
+export const OWNED_FORMAT_WEIGHT = 0.15;
 
 /** Cheaper formats show up more often. */
 const FORMAT_WEIGHTS: Record<string, number> = {
@@ -35,12 +37,17 @@ const FORMAT_WEIGHTS: Record<string, number> = {
 };
 
 function programCards(state: GameState, starter: boolean): PackCard[] {
+  // A little kindness: formats you already own are far less likely (a repeat pack early on
+  // can sink a small station), and new topics come before ones you have.
   const formatId = starter
     ? pick(state, STARTER_FORMATS)
-    : weighted(state, Object.fromEntries(FORMATS.filter((f) => !f.tier || state.tier !== 'local').map((f) => [f.id, FORMAT_WEIGHTS[f.id] ?? 8])));
+    : weighted(state, Object.fromEntries(FORMATS.filter((f) => !f.tier || state.tier !== 'local')
+      .map((f) => [f.id, (FORMAT_WEIGHTS[f.id] ?? 8) * (state.formats.includes(f.id) ? OWNED_FORMAT_WEIGHT : 1)])));
   let topics = topicsForFormat(formatId);
   if (starter) topics = topics.filter((t) => t.fits[formatId] >= 2);
-  const chosen = shuffle(state, topics).slice(0, 2);
+  const fresh = shuffle(state, topics.filter((t) => !state.topics.includes(t.id)));
+  const owned = shuffle(state, topics.filter((t) => state.topics.includes(t.id)));
+  const chosen = [...fresh, ...owned].slice(0, 2);
   return [
     { type: 'format', id: formatId, duplicate: false },
     ...chosen.map((t) => ({ type: 'topic' as const, id: t.id, duplicate: false })),

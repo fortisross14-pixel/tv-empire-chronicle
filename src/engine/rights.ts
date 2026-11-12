@@ -1,7 +1,7 @@
 import type { GameState, OwnedRights, RightsLot } from './types';
 import { clamp, pick, randInt, shuffle } from './rng';
 import {
-  MARKET_OPEN_WEEKS, MARKET_WEEKS, RIGHTS, SPORTS_AT_MARKET, TIER_RANK, inSeason, rightsById, weeksToSeasonEnd, weeksToSeasonStart,
+  MARKET_OPEN_WEEKS, MARKET_WEEKS, RIGHTS, TIER_RANK, inSeason, rightsById, weeksToSeasonEnd, weeksToSeasonStart,
   type RightsDef,
 } from './data/rights';
 import { GameError } from './errors';
@@ -39,20 +39,13 @@ export function maybeOpenMarket(s: GameState): string | null {
   const lots: RightsLot[] = [];
   const rank = TIER_RANK[s.tier];
   const allowed = (d: RightsDef) => TIER_RANK[d.tier] <= rank;
-  for (const id of SPORTS_AT_MARKET[s.week] ?? []) {
-    const sport = rightsById(id);
-    if (allowed(sport) && !owned(s, sport.id)) lots.push(makeLot(s, sport, false));
-  }
+  // Sports: every competition your tier can enter is on sale at every market (Local sees
+  // local leagues; State adds college sports; National sees everything).
+  for (const sport of RIGHTS.filter((d) => d.kind === 'sports' && allowed(d) && !owned(s, d.id))) lots.push(makeLot(s, sport, false));
   // IP licenses: books, games, toys, chefs… The biggest of your tier first.
   const ips = shuffle(s, IPS.filter((d) => TIER_RANK[d.tier] <= rank && !owned(s, d.id)))
     .sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier]).slice(0, IP_LOTS[s.tier]);
   ips.forEach((d) => lots.push(makeLot(s, d, false, true)));
-  // One big lot you can see but not bid on yet.
-  const bigger = [
-    ...RIGHTS.filter((d) => d.kind === 'sports' && TIER_RANK[d.tier] > rank).map((d) => ({ d, ip: false })),
-    ...IPS.filter((d) => TIER_RANK[d.tier] > rank).map((d) => ({ d, ip: true })),
-  ];
-  if (bigger.length) { const b = pick(s, bigger); lots.push(makeLot(s, b.d, true, b.ip)); }
   s.rightsMarket = { closesWeek: ((s.week + MARKET_OPEN_WEEKS - 1) % 52) + 1, closesAt: absWeek(s) + MARKET_OPEN_WEEKS, lots };
   return `The Rights Market is open for ${MARKET_OPEN_WEEKS} weeks: ${lots.filter((l) => !l.locked).map((l) => lotInfo(l).name).join(', ')}.`;
 }

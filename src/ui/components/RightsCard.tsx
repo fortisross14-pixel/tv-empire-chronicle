@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  MONTHS, TIER_LABEL, absWeek, inSeason, monthOf, rightsById, slotLabel, sportsQuality, grade,
+  MONTHS, TIER_LABEL, absWeek, inSeason, monthOf, rightsById, slotLabel, sportsQuality, grade, weeksToSeasonStart,
   type GameState, type OwnedRights,
 } from '../../engine';
 import { cx, gradeClass } from '../util';
@@ -33,6 +33,9 @@ export function RightsCard({
           {def.kind === 'film' && <span className="chip">{owned ? `${weeksLeft} weeks left` : `${def.weeks}-week license`}</span>}
           {def.kind === 'sports' && <span className="chip">{seasonLabel(def.season!)}</span>}
           {def.kind === 'sports' && <span className="chip">{slotLabel(def.slot!)}</span>}
+          {def.kind === 'sports' && !owned && <span className={cx('chip', inSeason(def, state.week) ? 'good' : weeksToSeasonStart(def, state.week) > 16 && 'warn')}>
+            {inSeason(def, state.week) ? 'Season under way: games start now' : `Season starts in ${weeksToSeasonStart(def, state.week)} weeks`}
+          </span>}
           {def.kind === 'sports' && owned && <span className={cx('chip', inSeason(def, state.week) && 'good')}>{inSeason(def, state.week) ? `In season · ${owned.games} games` : 'Off season'}</span>}
           {owned && def.kind === 'film' && Object.values(state.schedule).includes(owned.id) && <span className="chip good">On air</span>}
         </div>

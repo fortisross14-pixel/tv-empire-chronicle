@@ -5,7 +5,8 @@ import { money, pct, signedMoney, viewers } from '../util';
 
 export function WeekResults({ result, state, onClose }: { result: WeekResult; state: GameState; onClose: () => void }) {
   const ordered = [...result.slots].sort((a, b) => Number(!!b.showId) - Number(!!a.showId));
-  const delay = (i: number) => ({ animationDelay: `${i * 0.18}s` });
+  // A quick ripple; long lists must not keep rows invisible for seconds.
+  const delay = (i: number) => ({ animationDelay: `${Math.min(i, 8) * 0.06}s` });
   return (
     <Sheet title="Ratings are in! 📊" onClose={onClose} footer={<button className="btn primary" onClick={onClose}>Continue</button>}>
       <div className="stack">

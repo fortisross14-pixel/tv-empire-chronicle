@@ -88,13 +88,13 @@ export const MISSIONS: MissionDef[] = [
     goals: [{ kind: 'movies', n: 4 }], bonus: { kind: 'avgShare', min: 0.18 }, setup: { cash: 150, shopUnlocked: true } }),
   m({ id: 'b4-in-the-black', group: 'beginner', icon: '💵', title: 'In the Black', weeks: 26,
     brief: 'End a calendar month with more money coming in than going out.',
-    goals: [{ kind: 'positiveMonths', n: 1 }], bonus: { kind: 'avgShare', min: 0.15 }, setup: {} }),
+    goals: [{ kind: 'positiveMonths', n: 1 }], bonus: { kind: 'avgShare', min: 0.17 }, setup: {} }),
   m({ id: 'b5-no-filler', group: 'beginner', icon: '📅', title: 'No Filler', weeks: 30,
     brief: 'Fill all six slots with your own shows or movies for 4 weeks in a row.',
     goals: [{ kind: 'fullSchedule', weeks: 4 }], bonus: { kind: 'avgShare', min: 0.23 }, setup: { cash: 160, shopUnlocked: true } }),
-  m({ id: 'b6-back-for-more', group: 'beginner', icon: '🔁', title: 'Back for More', weeks: 44,
+  m({ id: 'b6-back-for-more', group: 'beginner', icon: '🔁', title: 'Back for More', weeks: 48,
     brief: 'Viewers want more. Make season 2 of a show and put it on air.',
-    goals: [{ kind: 'season', n: 2 }], bonus: { kind: 'ownIp', rating: 1 }, setup: {} }),
+    goals: [{ kind: 'season', n: 2 }], bonus: { kind: 'avgShare', min: 0.17 }, setup: {} }),
 
   // ---------- Campaign: Local ----------
   m({ id: 'l1-zero-to-hero', group: 'local', icon: '🦸', title: 'Zero to Hero', weeks: 60,

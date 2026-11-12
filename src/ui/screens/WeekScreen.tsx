@@ -1,13 +1,13 @@
 import { MissionCard } from '../components/MissionCard';
 import { Fragment, useState } from 'react';
 import {
-  AFFILIATE_MAX, CHAMPION_WEEKS, DAYPART_LABEL, TIERS, affiliateCost, dateLabel, formatById, grade, isSweeps, licenseGaps,
-  nextLicense, overall, rightsById, primeShares, periodOf, reachOf, slotLabel, slotsOf, upcomingMarkers, type GameState, type Show, type SlotId,
+  AFFILIATE_MAX, CHAMPION_WEEKS, TIERS, affiliateCost, dateLabel, formatById, grade, isSweeps, licenseGaps,
+  nextLicense, primeShares, periodOf, reachOf, slotLabel, slotsOf, upcomingMarkers, type GameState, type Show,
 } from '../../engine';
-import { CastTile, Poster, artStyle, projectPoster, showPoster } from '../components/Poster';
+import { Poster, artStyle, projectPoster, showPoster } from '../components/Poster';
 import { PosterArt } from '../posters/PosterArt';
 import { autoPoster } from '../posters/library';
-import { cx, money, pct, signedMoney, viewers } from '../util';
+import { money, pct, signedMoney, viewers } from '../util';
 
 const PERIOD_EMOJI = { winter: '❄️', spring: '🌷', summer: '☀️', fall: '🍂', holidays: '🎄' } as const;
 
@@ -18,7 +18,7 @@ type Featured = { show: Show; kicker: string; action: 'schedule' | 'air' } | nul
 /** The show the billboard features: something new to schedule, else the biggest show on air. */
 function featured(state: GameState): Featured {
   const scheduled = new Set(Object.values(state.schedule));
-  const fresh = state.shows.filter((s) => s.episodesLeft > 0 && !scheduled.has(s.id)).sort((a, b) => b.quality - a.quality)[0];
+  const fresh = state.shows.filter((s) => s.episodesLeft > 0 && !s.archived && !scheduled.has(s.id)).sort((a, b) => b.quality - a.quality)[0];
   if (fresh) return { show: fresh, kicker: fresh.season > 1 ? `NEW SEASON READY` : 'READY TO AIR', action: 'schedule' };
   const onAir = state.shows.filter((s) => scheduled.has(s.id))
     .sort((a, b) => (b.history[b.history.length - 1]?.viewers ?? 0) - (a.history[a.history.length - 1]?.viewers ?? 0))[0];
@@ -38,10 +38,7 @@ export function WeekScreen({
   const period = periodOf(state.week);
   const last = state.lastResult;
   const feat = featured(state);
-  const shows = [...state.shows].sort((a, b) => Number(Object.values(state.schedule).includes(b.id)) - Number(Object.values(state.schedule).includes(a.id)) || b.quality - a.quality);
-  const cast = [...state.people].sort((a, b) => Number(!!a.house) - Number(!!b.house) || overall(b) - overall(a));
-  const firstBlock = TIERS[state.tier].blocks[0];
-  const guideSlots = TIERS[state.tier].dayparts.filter((p) => p !== 'morning' || state.tier === 'local').slice(-3).map((p) => `${firstBlock}-${p}` as SlotId);
+  const shows = state.shows.filter((x) => !x.archived).sort((a, b) => Number(Object.values(state.schedule).includes(b.id)) - Number(Object.values(state.schedule).includes(a.id)) || b.quality - a.quality);
   const topShowResult = last?.slots.filter((r) => r.showId).sort((a, b) => b.viewers - a.viewers)[0];
 
   return (
@@ -206,58 +203,24 @@ export function WeekScreen({
           <div className="section-title" style={{ marginTop: 8 }}><h3>📡 Affiliates</h3><span className="sub">Reach {Math.round(reachOf(state) * 100)}%</span></div>
           <div className="affiliates">{Array.from({ length: AFFILIATE_MAX }, (_, i) => <i key={i} className={i < state.affiliates ? 'on' : ''} />)}</div>
           {state.affiliates < AFFILIATE_MAX && (
-            <button className="btn ghost" disabled={state.cash < affiliateCost(state.affiliates)} onClick={onAffiliate}>
-              Sign an affiliate · ${affiliateCost(state.affiliates)}K (+5% reach and running costs)
-            </button>
+            <>
+              <button className="btn ghost" disabled={state.cash < affiliateCost(state.affiliates)} onClick={onAffiliate}>
+                Sign an affiliate · ${affiliateCost(state.affiliates)}K
+              </button>
+              <p className="tiny muted">Each affiliate adds 5% reach, and 5% to running costs.</p>
+            </>
           )}
         </section>
       )}
 
-      <section>
-        <div className="section-title"><h2>Your cast &amp; crew</h2><span className="sub">{state.people.length} people</span></div>
-        <div className="rail">{cast.map((p) => <CastTile key={p.id} person={p} onClick={() => goTab('cards')} />)}</div>
-      </section>
-
-      <section>
-        <div className="section-title"><h2>Tonight's guide</h2><span className="sub">{state.rivals[0] ? `You vs ${state.rivals[0].short}` : ''}</span></div>
-        <button className="guide" style={{ width: '100%', textAlign: 'left' }} onClick={() => goTab('schedule')}>
-          <div className="gr gh"><div>Slot</div><div>{state.stationName}</div><div>{state.rivals[0]?.short}</div></div>
-          {guideSlots.map((slot) => {
-            const id = state.schedule[slot];
-            const show = state.shows.find((s) => s.id === id);
-            const film = state.rights.find((r) => r.id === id);
-            const r = state.rivals[0]?.schedule[slot];
-            return (
-              <div key={slot} className="gr">
-                <div className="t">{DAYPART_LABEL[slot.split('-')[1] as keyof typeof DAYPART_LABEL]}</div>
-                <div className={cx('mine', !show && !film && 'filler')}>
-                  {show ? <><b>{show.name}</b><span>{formatById(show.formatId).name} · {grade(show.quality)}</span></>
-                    : film ? <><b>{rightsById(film.defId).icon} {rightsById(film.defId).name}</b><span>Movie · {grade(rightsById(film.defId).quality)}</span></> : <span>Infomercials</span>}
-                </div>
-                <div className="them">{r ? <><b>{r.name}</b><span>{formatById(r.formatId).name}</span></> : '—'}</div>
-              </div>
-            );
-          })}
-        </button>
-      </section>
-
-      <section className="panel">
-        <div className="section-title"><h2>🏆 Trophy cabinet</h2><span className="sub">{state.trophies.length}</span></div>
-        {state.trophies.length === 0
-          ? <p className="small muted">Indie Awards in March, State Awards in June, Glimmys in September. Shows that premiered in the past year compete, and critics count most.</p>
-          : <div className="trophies">{state.trophies.map((t, i) => (
-            <div key={i} className="trophy"><b>{t.level === 'glimmy' ? '🏆' : t.level === 'state' ? '🏅' : '🎗️'} {t.title}</b><div className="muted">{t.showName} · Y{t.year}</div></div>
-          ))}</div>}
-      </section>
-
       <section className="panel">
         <div className="section-title"><h2>📰 The Chronicle</h2></div>
         <div className="news">
-          {state.news.slice(0, allNews ? 30 : 5).map((n) => (
+          {state.news.slice(0, allNews ? 30 : 3).map((n) => (
             <div key={n.id} className={`news-item ${n.tone}`}><i /><div>{n.text}<div className="when">{dateLabel(n.week, n.year)}</div></div></div>
           ))}
         </div>
-        {state.news.length > 5 && (
+        {state.news.length > 3 && (
           <button className="btn ghost small" style={{ marginTop: 10 }} onClick={() => setAllNews(!allNews)}>{allNews ? 'Show less' : 'Show all news'}</button>
         )}
       </section>

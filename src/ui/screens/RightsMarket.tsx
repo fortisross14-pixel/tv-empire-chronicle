@@ -36,7 +36,7 @@ export function RightsMarket({ state, onBid }: { state: GameState; onBid: (lotId
       <div className="panel locked-panel">
         <div className="big">📜</div>
         <h2>Rights Market</h2>
-        <p className="muted">Opens in {next.d} week{next.d !== 1 && 's'} ({MONTHS[monthOf(next.w)]}). Three times a year: sports rights and IP licenses (books, games, toys, chefs…). Movies are in the card packs.</p>
+        <p className="muted">Opens in {next.d} week{next.d !== 1 && 's'} ({MONTHS[monthOf(next.w)]}). Three times a year: every sports right your network can enter (whenever its season starts) and IP licenses (books, games, toys, chefs…). Movies are in the card packs.</p>
       </div>
     );
   }

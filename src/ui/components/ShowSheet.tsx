@@ -5,10 +5,10 @@ import { Sheet } from './Sheet';
 
 /** Detail view for one of your shows, opened from a poster. */
 export function ShowSheet({
-  state, showId, onClose, onSchedule, onRenew, onSpinoff, onCancel, onEditPoster,
+  state, showId, onClose, onSchedule, onRenew, onSpinoff, onCancel, onRestore, onEditPoster,
 }: {
   state: GameState; showId: string; onClose: () => void;
-  onSchedule: () => void; onRenew: (id: string) => void; onSpinoff: (id: string) => void; onCancel: (id: string) => void;
+  onSchedule: () => void; onRenew: (id: string) => void; onSpinoff: (id: string) => void; onCancel: (id: string) => void; onRestore: (id: string) => void;
   onEditPoster: (id: string) => void;
 }) {
   const show = state.shows.find((s) => s.id === showId);
@@ -31,13 +31,21 @@ export function ShowSheet({
           );
         })()}
         <ShowCard show={show} state={state} />
-        <div className="row wrap">
-          <button className="btn primary" onClick={onSchedule}>{slot ? 'Change slot' : 'Schedule it'}</button>
-          <button className="btn ghost" onClick={() => onEditPoster(show.id)}>🎨 Edit poster</button>
-          {show.episodesLeft <= 0 && !renewing && <button className="btn good" onClick={() => onRenew(show.id)}>New season</button>}
-          {canSpinOff(show) && <button className="btn ghost" onClick={() => onSpinoff(show.id)}>✨ {show.ipId ? 'Spin-off / adaptation' : 'Spin-off'}</button>}
-          <button className="btn danger" onClick={() => onCancel(show.id)}>Cancel show</button>
-        </div>
+        {show.archived ? (
+          <div className="row wrap">
+            <span className="chip">🗄️ In the archive</span>
+            <button className="btn primary" onClick={() => onRestore(show.id)}>Restore to the guide</button>
+            {canSpinOff(show) && <button className="btn ghost" onClick={() => onSpinoff(show.id)}>✨ {show.ipId ? 'Spin-off / adaptation' : 'Spin-off'}</button>}
+          </div>
+        ) : (
+          <div className="row wrap">
+            <button className="btn primary" onClick={onSchedule}>{slot ? 'Change slot' : 'Schedule it'}</button>
+            <button className="btn ghost" onClick={() => onEditPoster(show.id)}>🎨 Edit poster</button>
+            {show.episodesLeft <= 0 && !renewing && <button className="btn good" onClick={() => onRenew(show.id)}>New season</button>}
+            {canSpinOff(show) && <button className="btn ghost" onClick={() => onSpinoff(show.id)}>✨ {show.ipId ? 'Spin-off / adaptation' : 'Spin-off'}</button>}
+            <button className="btn ghost" onClick={() => onCancel(show.id)}>🗄️ Archive</button>
+          </div>
+        )}
       </div>
     </Sheet>
   );

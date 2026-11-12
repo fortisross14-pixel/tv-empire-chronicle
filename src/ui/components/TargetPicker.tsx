@@ -12,9 +12,9 @@ export function TargetPicker({ state, cardId, onPick, onClose }: {
   const targets = def.kind === 'promo'
     ? [
       ...state.projects.map((p) => ({ id: p.id, name: p.name, note: `In production · hype ${p.hype}` })),
-      ...state.shows.filter((s) => !s.premiered).map((s) => ({ id: s.id, name: s.name, note: `Before premiere · hype ${s.hype}` })),
+      ...state.shows.filter((s) => !s.premiered && !s.archived).map((s) => ({ id: s.id, name: s.name, note: `Before premiere · hype ${s.hype}` })),
     ]
-    : state.shows.filter((s) => !state.sponsorDeals.some((d) => d.showId === s.id))
+    : state.shows.filter((s) => !s.archived && !state.sponsorDeals.some((d) => d.showId === s.id))
       .map((s) => {
         const last = s.history[s.history.length - 1]?.share;
         const need = def.sponsor?.minShare ?? 0;

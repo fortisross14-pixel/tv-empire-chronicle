@@ -148,6 +148,8 @@ export interface Show {
   poster: PosterSpec | null;
   /** The IP it is based on, or its own IP once it has a hit season. */
   ipId: string | null;
+  /** Archived: off the air for good (kept in the show library; can be restored). */
+  archived?: boolean;
 }
 
 /** An IP we can make shows from: a licensed one, or one of our own hit shows. */

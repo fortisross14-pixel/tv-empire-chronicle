@@ -7,6 +7,7 @@ import { topicsForFormat } from './data/topics';
 import { CLASSIC_QUALITY, computeScores, previewPlan, scriptStars, teamBonus, type ShowPlan } from './production';
 import type { GameState, SlotId } from './types';
 import { rightsById } from './data/rights';
+import { maybeOpenMarket } from './rights';
 import { TIERS, affiliateCost } from './schedule';
 
 const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
@@ -263,14 +264,19 @@ describe('rights', () => {
     return s;
   };
 
-  test('market opens in week 30 with football, films and a locked big lot', () => {
+  test('every market sells all the sports your tier can enter, and nothing above it', () => {
     let s = newGame(5, 'X');
     s = advanceTo(s, 30);
     expect(s.rightsMarket).not.toBeNull();
-    const lots = s.rightsMarket!.lots;
-    expect(lots.some((l) => l.defId === 'friday-football')).toBe(true);
-    expect(lots.some((l) => l.locked)).toBe(true);
-    expect(() => bidOnRights(s, lots.find((l) => l.locked)!.id, 100)).toThrow();
+    const sports = s.rightsMarket!.lots.filter((l) => !l.ip).map((l) => l.defId).sort();
+    expect(sports).toEqual(['friday-football', 'ice-hawks', 'pelicans']);
+    expect(s.rightsMarket!.lots.some((l) => l.locked)).toBe(false);
+    // State networks also see college football.
+    const t = newGame(6, 'X');
+    t.tier = 'state'; t.week = 10;
+    maybeOpenMarket(t);
+    expect(t.rightsMarket!.lots.map((l) => l.defId)).toContain('state-college');
+    expect(t.rightsMarket!.lots.map((l) => l.defId)).not.toContain('gridiron');
   });
 
   test('winning football: games take over weekday prime in season and pay well', () => {
