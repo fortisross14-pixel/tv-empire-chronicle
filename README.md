@@ -7,6 +7,12 @@ to State to National.
 
 Play it: https://fortisross14-pixel.github.io/tv-empire-chronicle/
 
+**Install it (PWA):** on iPhone/iPad, Safari → Share → *Add to Home Screen*; on Android,
+Chrome → menu → *Install app*; on a laptop, the install icon in the address bar. Installed,
+it opens full screen, works offline (the whole game and its art are cached) and shows a
+"New version ready" banner when an update is published. Phones play in portrait, tablets
+in landscape.
+
 The full design is in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## How to play
@@ -51,6 +57,9 @@ weeks. Narrow it with `MISSIONS=l,n1 SEEDS=1,2 npm run playtest`. The last repor
     state stays valid every week; `playtest/` holds the mission bot
 - `src/ui/` — React screens and components. `todos.ts` builds the Home to-do list;
   `posters/` is the poster editor and renderer.
+- `public/logo.svg` — the logo; `node scripts/make_icons.cjs` renders the app icons from it.
+- `scripts/sw-template.js` — the service worker; the build (`vite.config.ts`) fills in the
+  list of every file and a version, and writes `dist/sw.js`.
 - `art/posters/` + `scripts/slice_posters.py` — poster sprite sheets cut into
   `public/posters/` (see `docs/POSTER_ASSETS.md`).
 

@@ -1,3 +1,5 @@
+import { LogoMark } from './Logo';
+
 /**
  * Phones play upright, tablets sideways. A browser tab can't lock rotation, so when the
  * device is held the wrong way this screen asks to turn it (CSS decides when it shows).
@@ -7,6 +9,7 @@ export function RotateGate() {
   return (
     <div className="rotate-gate" role="alert" aria-live="polite">
       <div className="rotate-card">
+        <div className="rotate-logo"><LogoMark size={64} /></div>
         <div className="rotate-icon" aria-hidden="true">📱</div>
         <h2 className="rotate-phone">Turn your phone upright</h2>
         <h2 className="rotate-tablet">Turn your tablet sideways</h2>

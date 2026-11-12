@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+        <linearGradient id="lg-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffd23f" />
+          <stop offset="1" stop-color="#f59e0b" />
+        </linearGradient>
+        <linearGradient id="lg-screen" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#5b3a9e" />
+          <stop offset="1" stop-color="#24124a" />
+        </linearGradient>
+        <linearGradient id="lg-crown" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ff7ad9" />
+          <stop offset="1" stop-color="#ff4d6d" />
+        </linearGradient>
+      </defs>
+      
+      <path d="M206 168 L160 92 M306 168 L352 92" stroke="#ffd23f" stroke-width="16" stroke-linecap="round" />
+      <circle cx="160" cy="88" r="14" fill="#5ce1ff" />
+      <circle cx="352" cy="88" r="14" fill="#5ce1ff" />
+      
+      <path d="M176 176 L196 112 L232 148 L256 98 L280 148 L316 112 L336 176 Z" fill="url(#lg-crown)" stroke="#1c0f33" stroke-width="10" stroke-linejoin="round" />
+      
+      <rect x="64" y="164" width="384" height="270" rx="56" fill="url(#lg-body)" stroke="#1c0f33" stroke-width="12" />
+      
+      <rect x="100" y="198" width="250" height="200" rx="38" fill="url(#lg-screen)" stroke="#1c0f33" stroke-width="10" />
+      <path d="M128 222 Q176 206 226 214" stroke="rgba(255,255,255,0.35)" stroke-width="12" stroke-linecap="round" fill="none" />
+      
+      <path d="M198 252 L198 344 L278 298 Z" fill="#ffffff" stroke="#1c0f33" stroke-width="8" stroke-linejoin="round" />
+      
+      <circle cx="398" cy="244" r="22" fill="#1c0f33" />
+      <circle cx="398" cy="244" r="9" fill="#5ce1ff" />
+      <circle cx="398" cy="306" r="22" fill="#1c0f33" />
+      <circle cx="398" cy="306" r="9" fill="#ff4d6d" />
+      <rect x="380" y="346" width="36" height="12" rx="6" fill="#1c0f33" />
+      <rect x="380" y="368" width="36" height="12" rx="6" fill="#1c0f33" />
+      
+      <path d="M136 434 L120 462 M376 434 L392 462" stroke="#f59e0b" stroke-width="16" stroke-linecap="round" />
+    </svg>

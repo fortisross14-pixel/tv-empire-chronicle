@@ -5,6 +5,7 @@ import {
   type GameState, type LoadResult, type MissionDef, type MissionGroup, type Profile, type SandboxDifficulty,
 } from '../../engine';
 import { Sheet } from '../components/Sheet';
+import { Logo } from '../components/Logo';
 import { useConfirm } from '../components/Confirm';
 import { cx } from '../util';
 
@@ -36,8 +37,7 @@ export function MenuScreen({ onPlay }: { onPlay: (slot: number, state: GameState
       {view === 'home' && (
         <>
           <header className="menu-head">
-            <div className="tv">📺</div>
-            <h1>TV Empire Chronicle</h1>
+            <Logo />
             <p className="muted">Run a TV station in {CITY}. Collect cards, make shows, win the ratings, grow into a national network.</p>
           </header>
           <nav className="menu-options" aria-label="Main menu">
