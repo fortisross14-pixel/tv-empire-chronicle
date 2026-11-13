@@ -35,11 +35,14 @@ export function LotHome({
 
   const startPlacing = (kind: BuildingKind) => {
     setMenu(false);
-    // Start in the first free spot so the ghost is green right away when possible.
+    // Start in the free spot nearest the middle of the lot, so the ghost is green and in view.
+    const cx = state.lot.w / 2 - 1, cy = state.lot.h / 2 - 1;
+    let best: { x: number; y: number; d: number } | null = null;
     for (let y = 0; y < state.lot.h; y++) for (let x = 0; x < state.lot.w; x++) {
-      if (!placementProblem(state.lot, { kind, x, y, rot: 0 })) { setPlacing({ kind, x, y, rot: 0, moving: null }); return; }
+      const d = Math.hypot(x - cx, y - cy);
+      if ((!best || d < best.d) && !placementProblem(state.lot, { kind, x, y, rot: 0 })) best = { x, y, d };
     }
-    setPlacing({ kind, x: 0, y: 0, rot: 0, moving: null });
+    setPlacing({ kind, x: best?.x ?? 0, y: best?.y ?? 0, rot: 0, moving: null });
   };
   const confirmPlace = () => {
     if (!placing || problem) return;

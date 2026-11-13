@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Building, BuildingKind } from '../../engine';
 import { buildingDef, footprint } from '../../engine';
+import { BULB_OFF, BULB_ON, M, WIN_OFF, WIN_ON, buildingMesh, carMesh, forgetShared, gateMesh, isShared, lampMesh, reelMesh, walkerMesh } from './lotModels';
 
 /** What the scene draws: the lot, its buildings, productions in flight, a placement ghost. */
 export interface LotModel {
@@ -16,167 +17,62 @@ export interface LotModel {
   selectedId: string | null;
 }
 
-const REDUCED = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-
 export interface LotLabel { id: string; x: number; y: number; visible: boolean }
 
-const PALETTE = { grass: 0x2f6b4f, grassDark: 0x285c44, border: 0x1c0f33, path: 0x8a7da8, roof: 0x34205a, glass: 0x1c0f33, white: 0xffffff };
-const mat = (color: number | string, opts: Partial<THREE.MeshLambertMaterialParameters> = {}) => new THREE.MeshLambertMaterial({ color, flatShading: true, ...opts });
+const REDUCED = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const CAM_OFFSET = new THREE.Vector3(14, 16, 14);
+const BORDER = 0.5; // grass around the buildable tiles
+const FRONT = 2; // pavement and road in front of the lot
+const easeOutBack = (t: number) => { const c = 1.70158; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
-/** One low-poly building, built from simple shapes. Height grows with its level. */
-function buildingMesh(b: Pick<Building, 'kind' | 'level'>, stationName: string): THREE.Group {
-  const def = buildingDef(b.kind);
-  const g = new THREE.Group();
-  const [w, d] = def.size;
-  const body = (color: string | number, x: number, y: number, z: number, sx: number, sy: number, sz: number) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat(color));
-    m.position.set(x, y + sy / 2, z);
-    m.castShadow = true; m.receiveShadow = true;
-    g.add(m);
-    return m;
-  };
-  const lv = b.level ?? 1;
-  switch (b.kind) {
-    case 'writers': {
-      const floorH = 0.55;
-      for (let i = 0; i < lv; i++) {
-        body(def.color, 0, 0.05 + i * floorH, 0, w * 0.8, floorH - 0.04, d * 0.8);
-        for (let k = -1; k <= 1; k++) body(PALETTE.glass, k * 0.45, 0.22 + i * floorH, d * 0.4 + 0.01, 0.26, 0.2, 0.04);
-      }
-      body(PALETTE.roof, 0, 0.05 + lv * floorH, 0, w * 0.86, 0.08, d * 0.86);
-      // a big pencil on the roof
-      const pencil = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.7, 6), mat('#ffd23f'));
-      pencil.rotation.z = Math.PI / 2.6; pencil.position.set(0.1, 0.4 + lv * floorH, 0);
-      g.add(pencil);
-      break;
-    }
-    case 'stage': {
-      const len = w * 0.86;
-      const wallH = 0.3 + (lv - 1) * 0.22;
-      body(def.color, 0, 0.05, 0, len, wallH, d * 0.84);
-      // A barrel roof: a cylinder lying along the hall, its lower half hidden in the walls.
-      const roof = new THREE.Mesh(new THREE.CylinderGeometry(d * 0.42, d * 0.42, len, 12), mat('#f5b82e'));
-      roof.rotation.z = Math.PI / 2;
-      roof.position.set(0, 0.05 + wallH, 0);
-      roof.castShadow = true;
-      g.add(roof);
-      body(PALETTE.border, len / 2 - 0.02, 0.05, 0, 0.06, Math.min(0.45, wallH + 0.1), d * 0.45); // big door
-      for (let i = 0; i < lv; i++) body('#ff4d6d', -len / 2 + 0.25 + i * 0.3, 0.12, -d * 0.43, 0.16, 0.16, 0.03); // a star per level
-      break;
-    }
-    case 'post': {
-      const floorH = 0.5;
-      for (let i = 0; i < lv; i++) {
-        body(def.color, 0, 0.05 + i * floorH, 0, w * 0.78, floorH - 0.04, d * 0.78);
-        body(PALETTE.glass, 0, 0.2 + i * floorH, d * 0.39 + 0.01, w * 0.6, 0.16, 0.04);
-      }
-      const dish = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2.4), mat('#e8e8f0', { side: THREE.DoubleSide }));
-      dish.rotation.x = -Math.PI / 1.5; dish.position.set(-0.25, 0.25 + lv * floorH, 0);
-      g.add(dish);
-      body('#ffd23f', 0.35, 0.05 + lv * floorH, 0.2, 0.05, 0.5, 0.05);
-      break;
-    }
-    case 'tower': {
-      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.28, 2.4, 4, 4, true), mat(def.color, { wireframe: false }));
-      mast.position.y = 1.2; mast.castShadow = true;
-      g.add(mast);
-      for (let i = 1; i <= 4; i++) {
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.28 - i * 0.05, 0.02, 4, 8), mat('#ffffff'));
-        ring.rotation.x = Math.PI / 2; ring.position.y = i * 0.48;
-        g.add(ring);
-      }
-      const light = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({ color: '#ff4d6d' }));
-      light.position.y = 2.45; light.name = 'beacon';
-      g.add(light);
-      break;
-    }
-    case 'tree': {
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 5), mat('#7a4b2a'));
-      trunk.position.y = 0.15; g.add(trunk);
-      const crown = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.7, 6), mat(def.color));
-      crown.position.y = 0.6; crown.castShadow = true; g.add(crown);
-      break;
-    }
-    case 'fountain': {
-      const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.85, 0.2, 10), mat('#cfc7e8'));
-      basin.position.y = 0.1; g.add(basin);
-      const water = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.05, 10), mat(def.color));
-      water.position.y = 0.2; water.name = 'water'; g.add(water);
-      const spout = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.6, 6), mat('#a6f0ff', { transparent: true, opacity: 0.85 }));
-      spout.position.y = 0.5; g.add(spout);
-      break;
-    }
-    case 'sign': {
-      for (const sx of [-0.7, 0.7]) body(PALETTE.border, sx, 0, 0, 0.06, 0.5, 0.06);
-      const canvas = document.createElement('canvas');
-      canvas.width = 256; canvas.height = 64;
-      const c = canvas.getContext('2d')!;
-      c.fillStyle = '#ffd23f'; c.fillRect(0, 0, 256, 64);
-      c.fillStyle = '#1c0f33'; c.font = 'bold 30px Figtree, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText(stationName.toUpperCase().slice(0, 16), 128, 34);
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const board = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.42, 0.06), [mat('#ffd23f'), mat('#ffd23f'), mat('#ffd23f'), mat('#ffd23f'), new THREE.MeshBasicMaterial({ map: tex }), new THREE.MeshBasicMaterial({ map: tex })]);
-      board.position.y = 0.62; g.add(board);
-      break;
-    }
-  }
-  return g;
-}
-
-/** A little film reel: one production. */
-function reelMesh(color: string): THREE.Group {
-  const g = new THREE.Group();
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.07, 10), mat(color));
-  disc.rotation.x = Math.PI / 2;
-  g.add(disc);
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.09, 6), mat('#ffffff'));
-  hub.rotation.x = Math.PI / 2;
-  g.add(hub);
-  return g;
-}
-
-/** A little person: body and head in their card colour. */
-function walkerMesh(color: string): THREE.Group {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.22, 6), mat(color));
-  body.position.y = 0.11; g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.065, 6, 5), mat('#f3c9a8'));
-  head.position.y = 0.28; g.add(head);
-  return g;
-}
-
+interface Entry { group: THREE.Group; key: string; fx: THREE.Object3D[]; wins: THREE.Mesh[]; anim: { kind: 'pop' | 'bounce'; t: number } | null; level: number }
 interface Reel { mesh: THREE.Group; from: THREE.Vector3; to: THREE.Vector3; t: number; key: string }
-interface Walker { mesh: THREE.Group; target: THREE.Vector3; speed: number }
+interface Walker { mesh: THREE.Group; path: THREE.Vector3[]; speed: number; wait: number; phase: number; legs: THREE.Object3D[] }
+interface Particle { mesh: THREE.Mesh; v: THREE.Vector3; gravity: number; life: number; t: number; grow: number; spin: number; opacity: number }
 
 /**
- * The studio lot in 3D: a fixed isometric camera you pan and zoom, low-poly buildings,
- * production reels that fly between buildings, staff strolling about. Draws only while
- * something moves (and at most ~30 fps), and pauses when the page is hidden.
+ * The studio lot in 3D: a little island seen from a fixed corner, which you pan and zoom.
+ * Low-poly buildings, production reels that fly between them, staff strolling about, cars
+ * on the road. Draws only while something moves, and pauses when the page is hidden.
  */
 export class LotScene {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera: THREE.OrthographicCamera;
+  private sun: THREE.DirectionalLight;
+  /** Where the camera wants to look and how close; the drawn camera eases toward these. */
   private target = new THREE.Vector3();
   private zoom = 1;
+  private camTarget = new THREE.Vector3();
+  private camZoom = 0.82;
+  private minZoom = 0.6;
+  private aspect = 1;
   private ground = new THREE.Group();
+  private gridLines: THREE.Mesh | null = null;
   private buildingsGroup = new THREE.Group();
-  private meshes = new Map<string, { group: THREE.Group; key: string }>();
+  private meshes = new Map<string, Entry>();
   private reels = new Map<string, Reel>();
   private walkers = new Map<string, Walker>();
   private ghost: THREE.Group | null = null;
   private ghostKey = '';
   private selection: THREE.Mesh;
   private model: LotModel | null = null;
+  private busy = new Set<string>();
+  private started = false;
   private raf = 0;
   private last = 0;
+  private hotUntil = 0;
+  private labelKey = '';
   private pointers = new Map<number, { x: number; y: number }>();
   private dragStart: { x: number; y: number; target: THREE.Vector3; moved: boolean } | null = null;
   private pinch: { dist: number; zoom: number } | null = null;
   private waves: { mesh: THREE.Mesh; t: number }[] = [];
-  private puffs: { mesh: THREE.Mesh; t: number }[] = [];
+  private particles: Particle[] = [];
   private nextPuff = 0;
+  private car: { mesh: THREE.Group; wait: number; dir: number } | null = null;
+  private puffGeo = new THREE.IcosahedronGeometry(1, 0);
+  private bitGeo = new THREE.BoxGeometry(1, 1, 0.3);
   private onVisibility = () => { if (document.visibilityState === 'visible') this.kick(); };
 
   constructor(private canvas: HTMLCanvasElement, private handlers: {
@@ -190,15 +86,19 @@ export class LotScene {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
-    this.scene.add(new THREE.HemisphereLight(0xfff4e0, 0x3a2266, 1.6));
-    const sun = new THREE.DirectionalLight(0xfff1d6, 1.6);
-    sun.position.set(-8, 14, 6);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16 });
-    this.scene.add(sun);
+    // A warm afternoon: bright sky, lilac bounce from below, a low sun and a soft cool fill.
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x9a7be0, 1.75));
+    this.sun = new THREE.DirectionalLight(0xffe4b8, 2.1);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.bias = -0.0006;
+    this.sun.shadow.normalBias = 0.03;
+    this.scene.add(this.sun, this.sun.target);
+    const fill = new THREE.DirectionalLight(0xb9d4ff, 0.55);
+    fill.position.set(10, 6, 2);
+    this.scene.add(fill);
     this.scene.add(this.ground, this.buildingsGroup);
-    this.selection = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.58, 24), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }));
+    this.selection = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.7, 4, 1).rotateZ(Math.PI / 4), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false }));
     this.selection.rotation.x = -Math.PI / 2;
     this.selection.visible = false;
     this.scene.add(this.selection);
@@ -219,13 +119,20 @@ export class LotScene {
     this.canvas.removeEventListener('pointerup', this.up);
     this.canvas.removeEventListener('pointercancel', this.up);
     this.canvas.removeEventListener('wheel', this.wheel);
-    this.scene.traverse((o) => {
-      const m = o as THREE.Mesh;
-      m.geometry?.dispose?.();
-      const mats = Array.isArray(m.material) ? m.material : m.material ? [m.material] : [];
-      mats.forEach((x) => { (x as THREE.MeshBasicMaterial).map?.dispose(); x.dispose(); });
-    });
+    this.free(this.scene);
+    forgetShared();
+    this.puffGeo.dispose(); this.bitGeo.dispose();
     this.renderer.dispose();
+  }
+
+  /** Release an object's geometry, and the materials that belong to it alone. */
+  private free(root: THREE.Object3D) {
+    root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (m.geometry && m.geometry !== this.puffGeo && m.geometry !== this.bitGeo) m.geometry.dispose();
+      const mats = Array.isArray(m.material) ? m.material : m.material ? [m.material] : [];
+      for (const x of mats) if (!isShared(x)) { const map = (x as THREE.MeshBasicMaterial).map; if (map && map.image instanceof HTMLCanvasElement && map.image.width !== 64) map.dispose(); x.dispose(); }
+    });
   }
 
   // ---------- coordinates ----------
@@ -241,6 +148,7 @@ export class LotScene {
     const m = this.model!;
     return { x: Math.floor(p.x + m.w / 2), y: Math.floor(p.z + m.h / 2) };
   }
+  private topOf(id: string): number { return (this.meshes.get(id)?.group.userData.top as number | undefined) ?? 1.2; }
 
   resize() {
     const r = this.canvas.getBoundingClientRect();
@@ -248,19 +156,30 @@ export class LotScene {
     const h = Math.max(1, r.height);
     this.renderer.setSize(w, h, false);
     this.aspect = w / h;
+    this.fitZoom();
     this.updateCamera();
-    this.kick();
+    this.kick(400);
   }
-  private aspect = 1;
+
+  private span() { const m = this.model; return m ? Math.max(m.w, m.h) * 0.6 : 8; }
+
+  /** The furthest zoom-out shows the whole island. */
+  private fitZoom() {
+    const m = this.model;
+    if (!m) return;
+    const across = (m.w + m.h + 2 * BORDER + FRONT) / Math.SQRT2;
+    const needW = across / 2 + 0.6;
+    const needH = across * 0.63 / 2 + 2.4;
+    this.minZoom = Math.min(1, this.span() / Math.max(needH, needW / this.aspect));
+    this.zoom = Math.max(this.zoom, this.minZoom);
+  }
 
   private updateCamera() {
-    const m = this.model;
-    const span = m ? Math.max(m.w, m.h) * 0.62 : 8;
-    const half = span / this.zoom;
+    const half = this.span() / this.camZoom;
     const c = this.camera;
     c.left = -half * this.aspect; c.right = half * this.aspect; c.top = half; c.bottom = -half;
-    c.position.copy(this.target).add(new THREE.Vector3(14, 16, 14));
-    c.lookAt(this.target);
+    c.position.copy(this.camTarget).add(CAM_OFFSET);
+    c.lookAt(this.camTarget);
     c.updateProjectionMatrix();
   }
 
@@ -279,7 +198,7 @@ export class LotScene {
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (this.pinch && this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
-      this.setZoom(this.pinch.zoom * (Math.hypot(a.x - b.x, a.y - b.y) / this.pinch.dist));
+      this.setZoom(this.pinch.zoom * (Math.hypot(a.x - b.x, a.y - b.y) / this.pinch.dist), true);
       if (this.dragStart) this.dragStart.moved = true;
       return;
     }
@@ -295,8 +214,9 @@ export class LotScene {
     const fwd = new THREE.Vector3(-1, 0, -1).normalize();
     const next = d.target.clone().addScaledVector(right, -dx * worldPerPx).addScaledVector(fwd, -dy * worldPerPx * 1.4);
     const m = this.model;
-    if (m) { next.x = THREE.MathUtils.clamp(next.x, -m.w / 2, m.w / 2); next.z = THREE.MathUtils.clamp(next.z, -m.h / 2, m.h / 2); }
+    if (m) { next.x = THREE.MathUtils.clamp(next.x, -m.w / 2, m.w / 2); next.z = THREE.MathUtils.clamp(next.z, -m.h / 2, m.h / 2 + FRONT); }
     this.target.copy(next);
+    this.camTarget.copy(next); // a finger drag follows the finger exactly
     this.updateCamera();
     this.kick();
   };
@@ -309,7 +229,11 @@ export class LotScene {
     if (tap) this.pick(e.clientX, e.clientY);
   };
   private wheel = (e: WheelEvent) => { e.preventDefault(); this.setZoom(this.zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12)); };
-  private setZoom(z: number) { this.zoom = THREE.MathUtils.clamp(z, 0.7, 3); this.updateCamera(); this.kick(); }
+  private setZoom(z: number, snap = false) {
+    this.zoom = THREE.MathUtils.clamp(z, this.minZoom, 3);
+    if (snap) { this.camZoom = this.zoom; this.updateCamera(); }
+    this.kick(500);
+  }
   zoomBy(f: number) { this.setZoom(this.zoom * f); }
 
   private pick(cx: number, cy: number) {
@@ -321,6 +245,7 @@ export class LotScene {
     if (!this.model.ghost) {
       const hits = ray.intersectObjects(this.buildingsGroup.children, true);
       for (const h of hits) {
+        if (h.object.name === 'beamCone') continue;
         let o: THREE.Object3D | null = h.object;
         while (o && !o.userData.buildingId) o = o.parent;
         if (o?.userData.buildingId) return this.handlers.onBuilding(o.userData.buildingId);
@@ -336,47 +261,128 @@ export class LotScene {
   // ---------- model ----------
   setModel(m: LotModel) {
     const sizeChanged = !this.model || this.model.w !== m.w || this.model.h !== m.h;
+    const wasSelected = this.model?.selectedId;
     this.model = m;
-    if (sizeChanged) { this.buildGround(); this.updateCamera(); }
+    this.busy = new Set(m.projects.map((p) => p.buildingId).filter((x): x is string => !!x));
+    if (sizeChanged) {
+      this.buildGround();
+      this.fitZoom();
+      if (!this.started) { this.target.set(0, 0, 0.4); this.camTarget.copy(this.target); this.camZoom = this.zoom * 0.82; }
+      this.updateCamera();
+    }
     this.syncBuildings();
     this.syncGhost();
     this.syncReels();
     this.syncWalkers();
+    if (this.gridLines) this.gridLines.visible = !!m.ghost;
     const sel = m.selectedId ? m.buildings.find((b) => b.id === m.selectedId) : undefined;
     this.selection.visible = !!sel;
     if (sel) {
       const f = footprint(sel);
-      this.selection.position.copy(this.centerOf(sel)).setY(0.03);
-      this.selection.scale.setScalar(Math.max(f.w, f.h) * 0.95);
+      this.selection.position.copy(this.centerOf(sel)).setY(0.09);
+      this.selection.userData.size = [f.w * 1.14, f.h * 1.14];
+      const e = this.meshes.get(sel.id);
+      if (e && wasSelected !== sel.id && !e.anim) e.anim = { kind: 'bounce', t: 0 };
     }
-    this.kick();
+    this.started = true;
+    this.kick(700);
   }
 
   private buildGround() {
     const m = this.model!;
+    this.free(this.ground);
     this.ground.clear();
-    const canvas = document.createElement('canvas');
-    const px = 32;
-    canvas.width = m.w * px; canvas.height = m.h * px;
-    const c = canvas.getContext('2d')!;
-    for (let x = 0; x < m.w; x++) for (let y = 0; y < m.h; y++) {
-      c.fillStyle = (x + y) % 2 ? '#2f6b4f' : '#2c6449';
-      c.fillRect(x * px, y * px, px, px);
-    }
-    c.strokeStyle = 'rgba(255,255,255,0.07)';
-    for (let x = 0; x <= m.w; x++) { c.beginPath(); c.moveTo(x * px, 0); c.lineTo(x * px, m.h * px); c.stroke(); }
-    for (let y = 0; y <= m.h; y++) { c.beginPath(); c.moveTo(0, y * px); c.lineTo(m.w * px, y * px); c.stroke(); }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.magFilter = THREE.NearestFilter;
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(m.w, m.h), new THREE.MeshLambertMaterial({ map: tex }));
+    this.car = null;
+    const px = 48;
+    const paint = (lines: boolean) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = m.w * px; canvas.height = m.h * px;
+      const c = canvas.getContext('2d')!;
+      if (!lines) {
+        for (let x = 0; x < m.w; x++) for (let y = 0; y < m.h; y++) {
+          c.fillStyle = (x + y) % 2 ? '#86d672' : '#7ecf6b';
+          c.fillRect(x * px, y * px, px, px);
+          // A few darker tufts so the grass isn't flat.
+          const r = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+          const k = r - Math.floor(r);
+          if (k > 0.86) { // a patch of flowers
+            for (let i = 0; i < 4; i++) {
+              c.fillStyle = ['#ffffff', '#ffd23f', '#ff9ae2', '#ffffff'][i];
+              c.beginPath(); c.arc(x * px + 8 + ((k * 977 * (i + 1)) % 32), y * px + 8 + ((k * 613 * (i + 2)) % 32), 2.6, 0, 7); c.fill();
+            }
+          }
+          if (k < 0.3) { c.fillStyle = 'rgba(40,120,60,0.16)'; c.fillRect(x * px + k * 90, y * px + 8 + k * 60, 5, 9); c.fillRect(x * px + 30 - k * 40, y * px + 30, 5, 8); }
+        }
+      } else {
+        c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 2;
+        for (let x = 0; x <= m.w; x++) { c.beginPath(); c.moveTo(x * px, 0); c.lineTo(x * px, m.h * px); c.stroke(); }
+        for (let y = 0; y <= m.h; y++) { c.beginPath(); c.moveTo(0, y * px); c.lineTo(m.w * px, y * px); c.stroke(); }
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      return tex;
+    };
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(m.w, m.h), new THREE.MeshLambertMaterial({ map: paint(false) }));
     plane.rotation.x = -Math.PI / 2;
     plane.receiveShadow = true;
     this.ground.add(plane);
-    // The lot's raised edge.
-    const edge = new THREE.Mesh(new THREE.BoxGeometry(m.w + 0.6, 0.4, m.h + 0.6), mat(PALETTE.border));
-    edge.position.y = -0.21;
-    this.ground.add(edge);
+    // The tile grid shows only while placing a building.
+    this.gridLines = new THREE.Mesh(new THREE.PlaneGeometry(m.w, m.h), new THREE.MeshBasicMaterial({ map: paint(true), transparent: true, opacity: 0.5, depthWrite: false }));
+    this.gridLines.rotation.x = -Math.PI / 2; this.gridLines.position.y = 0.012; this.gridLines.visible = false;
+    this.ground.add(this.gridLines);
+
+    const box = (color: string, sx: number, sy: number, sz: number, x: number, top: number, z: number, receive = true) => {
+      const o = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), M(color));
+      o.position.set(x, top - sy / 2, z); o.receiveShadow = receive;
+      this.ground.add(o);
+      return o;
+    };
+    const W = m.w + 2 * BORDER, H = m.h + 2 * BORDER;
+    const zFront = m.h / 2 + BORDER; // where the pavement starts
+    box('#6dbd5e', W, 0.12, H, 0, -0.004, 0); // the lawn around the tiles
+    box('#e4dcf2', W, 0.12, 0.55, 0, -0.004, zFront + 0.275); // pavement
+    box('#c9bfe0', W, 0.14, 0.08, 0, 0.01, zFront + 0.55); // kerb
+    box('#5b5482', W, 0.12, FRONT - 0.63, 0, -0.03, zFront + 0.63 + (FRONT - 0.63) / 2); // road
+    const roadZ = zFront + 0.63 + (FRONT - 0.63) / 2;
+    for (let x = -W / 2 + 0.6; x < W / 2 - 0.4; x += 1.3) box('#ffffff', 0.55, 0.02, 0.07, x, -0.025, roadZ, false);
+    // The island itself: soil, then rock, stepping in underneath.
+    const D = H + FRONT, zc = FRONT / 2;
+    box('#b98058', W, 0.55, D, 0, -0.12, zc, false);
+    box('#8c5f4c', W - 0.7, 0.5, D - 0.7, 0, -0.67, zc, false);
+    box('#6a463f', W - 1.9, 0.45, D - 1.9, 0, -1.17, zc, false);
+    // Hedges along the two far edges, with a round bush here and there.
+    const hedge = (sx: number, sz: number, x: number, z: number) => { const o = box('#3f9a55', sx, 0.34, sz, x, 0.33, z); o.castShadow = true; };
+    hedge(W - 0.1, 0.3, 0, -m.h / 2 - 0.27);
+    hedge(0.3, H - 0.1, -m.w / 2 - 0.27, 0);
+    for (let i = 0; i < Math.floor(m.w / 3); i++) {
+      const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.26, 0), M('#4fb36a'));
+      bush.position.set(-m.w / 2 + 1.5 + i * 3, 0.36, -m.h / 2 - 0.27); bush.castShadow = true;
+      this.ground.add(bush);
+    }
+    // The studio gate, lamps on the pavement, and the news van parked by the kerb.
+    const gate = gateMesh();
+    gate.position.set(-m.w / 4, 0, zFront - 0.2);
+    this.ground.add(gate);
+    for (const x of [-m.w / 2 + 0.4, m.w / 4, m.w / 2 - 0.2]) {
+      const lamp = lampMesh();
+      lamp.position.set(x, 0, zFront + 0.4);
+      this.ground.add(lamp);
+    }
+    const van = carMesh(0, true);
+    van.position.set(m.w / 2 - 1.6, -0.03, zFront + 0.92);
+    this.ground.add(van);
+    const car = carMesh(Math.floor(Math.random() * 6));
+    car.position.set(-W / 2 - 1, -0.03, roadZ + 0.33);
+    car.visible = false;
+    this.ground.add(car);
+    this.car = { mesh: car, wait: 2 + Math.random() * 3, dir: 1 };
+    // The sun: its shadow box covers the whole island.
+    const reach = Math.max(m.w, m.h) / 2 + 4;
+    this.sun.position.set(-8, 12, 7);
+    this.sun.target.position.set(0, 0, 0);
+    Object.assign(this.sun.shadow.camera, { left: -reach, right: reach, top: reach, bottom: -reach, near: 1, far: 50 });
+    this.sun.shadow.camera.updateProjectionMatrix();
   }
 
   private syncBuildings() {
@@ -387,34 +393,57 @@ export class LotScene {
       const key = `${b.kind}:${b.level}:${b.x}:${b.y}:${b.rot}:${b.kind === 'sign' ? m.stationName : ''}`;
       const have = this.meshes.get(b.id);
       if (have && have.key === key) continue;
-      if (have) this.buildingsGroup.remove(have.group);
+      if (have) { this.buildingsGroup.remove(have.group); this.free(have.group); }
       const g = buildingMesh(b, m.stationName);
+      const inner = g.rotation.y; // trees turn a little on their own
       g.position.copy(this.centerOf(b));
-      g.rotation.y = -(b.rot % 4) * (Math.PI / 2);
-      g.userData.buildingId = b.id;
-      g.traverse((o) => { o.userData.buildingId = b.id; });
+      g.rotation.y = inner - (b.rot % 4) * (Math.PI / 2);
+      const fx: THREE.Object3D[] = [];
+      const wins: THREE.Mesh[] = [];
+      g.traverse((o) => {
+        o.userData.buildingId = b.id;
+        if (o.userData.fx) fx.push(o);
+        if (o.userData.win) wins.push(o as THREE.Mesh);
+      });
+      g.userData.baseScale = g.scale.x;
       this.buildingsGroup.add(g);
-      // A new building pops up.
-      if (!have) g.scale.setScalar(0.01);
-      this.meshes.set(b.id, { group: g, key });
+      const entry: Entry = { group: g, key, fx, wins, anim: null, level: b.level };
+      // New and moved buildings pop up in a puff of dust; an expanded one bounces under confetti.
+      if (this.started) {
+        const grew = have && b.level > have.level;
+        entry.anim = { kind: grew ? 'bounce' : 'pop', t: 0 };
+        if (!grew) g.scale.setScalar(0.01);
+        const f = footprint(b);
+        if (grew) this.burst(g.position.clone().setY(this.topOf(b.id) + 0.2), 22, ['#ffd23f', '#ff6b81', '#5be3a1', '#7cc4ff', '#ffffff'], { speed: 2.6, up: 3.4, gravity: 7, life: 1.1, size: 0.09, bits: true });
+        else if (buildingDef(b.kind).stage) this.burst(g.position.clone().setY(0.15), 12, ['#f2e6d0', '#ffffff'], { speed: Math.max(f.w, f.h) * 0.9, up: 0.5, gravity: -0.3, life: 0.7, size: 0.16, grow: 1.6 });
+      }
+      this.meshes.set(b.id, entry);
     }
-    for (const [id, v] of this.meshes) if (!seen.has(id)) { this.buildingsGroup.remove(v.group); this.meshes.delete(id); }
+    for (const [id, v] of this.meshes) if (!seen.has(id)) { this.buildingsGroup.remove(v.group); this.free(v.group); this.meshes.delete(id); }
+    // Windows glow in the buildings where a production is under way.
+    for (const [id, e] of this.meshes) {
+      const lit = this.busy.has(id);
+      for (const w of e.wins) w.material = lit ? WIN_ON() : WIN_OFF();
+    }
   }
 
   private syncGhost() {
     const gh = this.model!.ghost;
     const key = gh ? `${gh.kind}:${gh.rot}:${gh.ok}` : '';
     if (key !== this.ghostKey) {
-      if (this.ghost) this.scene.remove(this.ghost);
+      if (this.ghost) { this.scene.remove(this.ghost); this.free(this.ghost); }
       this.ghost = null;
       if (gh) {
         const g = buildingMesh({ kind: gh.kind, level: 1 }, this.model!.stationName);
+        const tint = new THREE.MeshBasicMaterial({ color: gh.ok ? 0x7bed9f : 0xff4d6d, transparent: true, opacity: 0.6 });
         g.traverse((o) => {
           const mm = o as THREE.Mesh;
-          if (mm.material) mm.material = new THREE.MeshBasicMaterial({ color: gh.ok ? 0x7bed9f : 0xff4d6d, transparent: true, opacity: 0.55 });
+          if (o.name === 'beamCone' || (o as THREE.Sprite).isSprite) { o.visible = false; return; }
+          if (mm.material) { if (!isShared(mm.material as THREE.Material)) (mm.material as THREE.Material).dispose(); mm.material = tint; }
+          mm.castShadow = false;
         });
         const f = footprint(gh);
-        const pad = new THREE.Mesh(new THREE.PlaneGeometry(f.w, f.h), new THREE.MeshBasicMaterial({ color: gh.ok ? 0x7bed9f : 0xff4d6d, transparent: true, opacity: 0.35 }));
+        const pad = new THREE.Mesh(new THREE.PlaneGeometry(f.w, f.h), new THREE.MeshBasicMaterial({ color: gh.ok ? 0x7bed9f : 0xff4d6d, transparent: true, opacity: 0.4, depthWrite: false }));
         pad.rotation.x = -Math.PI / 2; pad.position.y = 0.02; pad.name = 'pad';
         g.add(pad);
         this.ghost = g;
@@ -436,9 +465,9 @@ export class LotScene {
     const host = m.buildings.find((b) => b.id === (p.buildingId ?? p.waitingAt));
     if (!host) return new THREE.Vector3(0, 0.6, 0);
     const c = this.centerOf(host);
-    if (p.buildingId) return c.add(new THREE.Vector3((index % 3 - 1) * 0.45, 1.6 + host.level * 0.35, 0));
+    if (p.buildingId) return c.add(new THREE.Vector3((index % 3 - 1) * 0.5, this.topOf(host.id) + 0.4, 0));
     const f = footprint(host);
-    return c.add(new THREE.Vector3(f.w / 2 + 0.3, 0.35, -f.h / 2 + 0.4 + index * 0.45)); // the queue outside
+    return c.add(new THREE.Vector3(f.w / 2 + 0.35, 0.4, -f.h / 2 + 0.4 + index * 0.5)); // the queue outside
   }
 
   private syncReels() {
@@ -452,11 +481,11 @@ export class LotScene {
       const i = perHost.get(hostKey) ?? 0;
       perHost.set(hostKey, i + 1);
       const to = this.reelSpot(p, i);
-      const key = `${p.buildingId}:${p.waitingAt}:${i}`;
+      const key = `${p.buildingId}:${p.waitingAt}:${i}:${to.x.toFixed(1)}:${to.y.toFixed(1)}:${to.z.toFixed(1)}`;
       const have = this.reels.get(p.id);
       if (!have) {
         const mesh = reelMesh(p.color);
-        mesh.scale.setScalar(1.4);
+        mesh.scale.setScalar(this.started ? 0.01 : 1.5);
         mesh.position.copy(to);
         this.scene.add(mesh);
         this.reels.set(p.id, { mesh, from: to.clone(), to, t: 1, key });
@@ -468,114 +497,295 @@ export class LotScene {
     for (const [id, r] of this.reels) {
       if (seen.has(id)) continue;
       if (r.key !== 'done' && tower) {
-        Object.assign(r, { from: r.mesh.position.clone(), to: this.centerOf(tower).add(new THREE.Vector3(0, 2.5, 0)), t: 0, key: 'done' });
+        Object.assign(r, { from: r.mesh.position.clone(), to: this.centerOf(tower).add(new THREE.Vector3(0, this.topOf(tower.id) - 0.1, 0)), t: 0, key: 'done' });
       } else if (r.key !== 'done') {
-        this.scene.remove(r.mesh); this.reels.delete(id);
+        this.scene.remove(r.mesh); this.free(r.mesh); this.reels.delete(id);
       }
     }
   }
 
-  private randomSpot(): THREE.Vector3 {
+  // ---------- strolling staff ----------
+  private blockedTiles(): Set<number> {
     const m = this.model!;
-    return this.tileToWorld(0.5 + Math.random() * (m.w - 1), 0.5 + Math.random() * (m.h - 1));
+    const out = new Set<number>();
+    for (const b of m.buildings) {
+      const f = footprint(b);
+      for (let x = f.x; x < f.x + f.w; x++) for (let y = f.y; y < f.y + f.h; y++) out.add(y * m.w + x);
+    }
+    return out;
+  }
+  private freeSpot(blocked: Set<number>): { x: number; y: number } {
+    const m = this.model!;
+    for (let i = 0; i < 30; i++) {
+      const x = Math.floor(Math.random() * m.w), y = Math.floor(Math.random() * m.h);
+      if (!blocked.has(y * m.w + x)) return { x, y };
+    }
+    return { x: 0, y: m.h - 1 };
+  }
+  /** A walk around the buildings, tile by tile (breadth-first). */
+  private route(from: THREE.Vector3): THREE.Vector3[] {
+    const m = this.model!;
+    const blocked = this.blockedTiles();
+    const goal = this.freeSpot(blocked);
+    const s = this.worldToTile(from);
+    s.x = THREE.MathUtils.clamp(s.x, 0, m.w - 1); s.y = THREE.MathUtils.clamp(s.y, 0, m.h - 1);
+    const start = s.y * m.w + s.x, end = goal.y * m.w + goal.x;
+    const prev = new Map<number, number>([[start, -1]]);
+    const queue = [start];
+    while (queue.length && !prev.has(end)) {
+      const cur = queue.shift()!;
+      const cx = cur % m.w, cy = Math.floor(cur / m.w);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy, n = ny * m.w + nx;
+        if (nx < 0 || ny < 0 || nx >= m.w || ny >= m.h || prev.has(n) || blocked.has(n)) continue;
+        prev.set(n, cur);
+        queue.push(n);
+      }
+    }
+    const jitter = () => 0.3 + Math.random() * 0.4;
+    if (!prev.has(end)) return [this.tileToWorld(goal.x + jitter(), goal.y + jitter())];
+    const path: THREE.Vector3[] = [];
+    for (let n = end; n !== start && n !== -1; n = prev.get(n)!) path.unshift(this.tileToWorld((n % m.w) + jitter(), Math.floor(n / m.w) + jitter()));
+    return path;
   }
 
   private syncWalkers() {
     const m = this.model!;
-    const seen = new Set(m.walkers.slice(0, 10).map((w) => w.id));
-    for (const w of m.walkers.slice(0, 10)) {
-      if (this.walkers.has(w.id)) continue;
-      const mesh = walkerMesh(w.color);
-      mesh.scale.setScalar(1.6);
-      mesh.position.copy(this.randomSpot());
+    const list = m.walkers.slice(0, 10);
+    const seen = new Set(list.map((w) => w.id));
+    list.forEach((w, i) => {
+      if (this.walkers.has(w.id)) return;
+      const mesh = walkerMesh(w.color, i + w.id.length);
+      mesh.scale.setScalar(1.7);
+      const at = this.freeSpot(this.blockedTiles());
+      mesh.position.copy(this.tileToWorld(at.x + 0.5, at.y + 0.5));
       this.scene.add(mesh);
-      this.walkers.set(w.id, { mesh, target: this.randomSpot(), speed: 0.5 + Math.random() * 0.4 });
+      this.walkers.set(w.id, { mesh, path: [], speed: 0.55 + Math.random() * 0.35, wait: Math.random() * 2, phase: Math.random() * 6, legs: [mesh.getObjectByName('legL')!, mesh.getObjectByName('legR')!] });
+    });
+    for (const [id, w] of this.walkers) if (!seen.has(id)) { this.scene.remove(w.mesh); this.free(w.mesh); this.walkers.delete(id); }
+  }
+
+  // ---------- effects ----------
+  /** A burst of little shapes: dust, confetti, smoke, sparkles. */
+  private burst(at: THREE.Vector3, n: number, colors: string[], o: { speed: number; up: number; gravity: number; life: number; size: number; grow?: number; bits?: boolean }) {
+    if (REDUCED()) return;
+    for (let i = 0; i < n && this.particles.length < 90; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const material = new THREE.MeshLambertMaterial({ color: colors[i % colors.length], flatShading: true, transparent: true, opacity: 0.95 });
+      const mesh = new THREE.Mesh(o.bits ? this.bitGeo : this.puffGeo, material);
+      mesh.position.copy(at);
+      mesh.scale.setScalar(o.size * (0.7 + Math.random() * 0.6));
+      mesh.userData.size = mesh.scale.x;
+      this.scene.add(mesh);
+      const sp = o.speed * (0.4 + Math.random() * 0.6);
+      this.particles.push({ mesh, v: new THREE.Vector3(Math.cos(a) * sp, o.up * (0.6 + Math.random() * 0.5), Math.sin(a) * sp), gravity: o.gravity, life: o.life * (0.7 + Math.random() * 0.5), t: 0, grow: o.grow ?? 0, spin: o.bits ? 6 + Math.random() * 8 : 0, opacity: 0.95 });
     }
-    for (const [id, w] of this.walkers) if (!seen.has(id)) { this.scene.remove(w.mesh); this.walkers.delete(id); }
+    this.kick(1500);
+  }
+
+  /** A week went on air: signal rings spread out from the tower. */
+  broadcast() {
+    const tower = this.model?.buildings.find((b) => b.kind === 'tower');
+    if (!tower) return;
+    for (let i = 0; i < 4; i++) {
+      const mesh = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.035, 4, 40), new THREE.MeshBasicMaterial({ color: i % 2 ? '#ffffff' : '#ffd23f', transparent: true, opacity: 0.8, depthWrite: false }));
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.copy(this.centerOf(tower)).add(new THREE.Vector3(0, this.topOf(tower.id) - 0.2, 0));
+      mesh.visible = false;
+      this.scene.add(mesh);
+      this.waves.push({ mesh, t: -i * 0.22 });
+    }
+    const e = this.meshes.get(tower.id);
+    if (e && !e.anim) e.anim = { kind: 'bounce', t: 0 };
+    this.kick(2500);
   }
 
   // ---------- loop ----------
-  /** Wake the loop (it sleeps when nothing moves). */
-  kick() {
+  /** Wake the loop (it sleeps when nothing moves). `hot` keeps it smooth for that many ms. */
+  kick(hot = 0) {
+    if (hot) this.hotUntil = Math.max(this.hotUntil, performance.now() + hot);
     if (!this.raf && document.visibilityState === 'visible') this.raf = requestAnimationFrame(this.frame);
   }
 
   private frame = (now: number) => {
     this.raf = 0;
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible' || !this.model) return;
+    // Smooth while something is happening; ~30 fps is plenty for the idle lot.
+    if (now - this.last < (now < this.hotUntil ? 12 : 30)) { this.raf = requestAnimationFrame(this.frame); return; }
     const dt = Math.min(0.1, (now - (this.last || now)) / 1000);
-    if (now - this.last < 30) { this.raf = requestAnimationFrame(this.frame); return; } // ~30 fps is plenty
     this.last = now;
-    let moving = this.walkers.size > 0; // strolling staff keep the lot alive
-    // New buildings pop up.
-    for (const { group } of this.meshes.values()) {
-      if (group.scale.x < 1) { group.scale.setScalar(Math.min(1, group.scale.x + dt * 3.5)); moving = true; }
+    const calm = REDUCED();
+    let moving = !calm && (this.walkers.size > 0 || !!this.car);
+    let hot = false;
+
+    // The camera eases to where it's asked to look.
+    const dz = this.zoom - this.camZoom;
+    const dp = this.camTarget.distanceTo(this.target);
+    if (Math.abs(dz) > 0.001 || dp > 0.001) {
+      const k = 1 - Math.exp(-dt * 9);
+      this.camZoom += dz * k;
+      this.camTarget.lerp(this.target, k);
+      this.updateCamera();
+      moving = hot = true;
     }
-    // Reels: fly along an arc, then bob and spin.
-    for (const [id, r] of this.reels) {
-      if (r.t < 1) {
-        r.t = Math.min(1, r.t + dt * 0.9);
-        const k = r.t < 0.5 ? 2 * r.t * r.t : 1 - Math.pow(-2 * r.t + 2, 2) / 2;
-        r.mesh.position.lerpVectors(r.from, r.to, k);
-        r.mesh.position.y += Math.sin(Math.PI * r.t) * 1.4;
-        moving = true;
-        if (r.t >= 1 && r.key === 'done') { this.scene.remove(r.mesh); this.reels.delete(id); continue; }
+
+    // Buildings: pop up, bounce, and their moving parts.
+    for (const [id, e] of this.meshes) {
+      const base = (e.group.userData.baseScale as number) ?? 1;
+      if (e.anim) {
+        e.anim.t = Math.min(1, e.anim.t + dt / (e.anim.kind === 'pop' ? 0.45 : 0.55));
+        const t = e.anim.t;
+        if (e.anim.kind === 'pop') e.group.scale.setScalar(base * Math.max(0.01, easeOutBack(t)));
+        else { const k = Math.sin(t * Math.PI * 3) * (1 - t) * 0.16; e.group.scale.set(base * (1 - k * 0.5), base * (1 + k), base * (1 - k * 0.5)); }
+        if (t >= 1) { e.group.scale.setScalar(base); e.anim = null; }
+        moving = hot = true;
       }
-      r.mesh.rotation.y += dt * 1.6;
-      r.mesh.position.y = (r.t < 1 ? r.mesh.position.y : r.to.y + Math.sin(now / 500 + r.to.x) * 0.06);
+      const lit = this.busy.has(id);
+      for (const o of e.fx) {
+        switch (o.userData.fx) {
+          case 'beacon': o.scale.setScalar(1 + 0.25 * Math.sin(now / 320)); break;
+          case 'glow': ((o as THREE.Sprite).material as THREE.SpriteMaterial).opacity = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(now / 320)); break;
+          case 'dish': if (!calm) o.rotation.y += dt * (lit ? 1.4 : 0.25); break;
+          case 'beam': o.visible = true; o.getObjectByName('beamCone')!.visible = lit; o.rotation.set(0.35 * Math.sin(now / 1300 + (o.userData.phase as number)), 0, -0.35 + 0.3 * Math.cos(now / 1700 + (o.userData.phase as number))); break;
+          case 'sway': if (!calm) o.rotation.z = Math.sin(now / 1100 + (o.userData.phase as number)) * 0.045; break;
+          case 'jet': {
+            const p = ((now / 1400 + (o.userData.phase as number)) % 1);
+            const a = o.userData.angle as number;
+            o.position.set(Math.cos(a) * p * 0.6, 0.78 + Math.sin(p * Math.PI) * 0.45 - p * 0.5, Math.sin(a) * p * 0.6);
+            break;
+          }
+          case 'bulb': (o as THREE.Mesh).material = (Math.floor(now / 260) + (o.userData.i as number)) % 3 === 0 ? BULB_ON() : BULB_OFF(); break;
+        }
+      }
+    }
+
+    // Reels: fly along an arc with a trail of sparkles, then bob and spin over the roof.
+    for (const [id, r] of this.reels) {
+      const spin = r.mesh.getObjectByName('spin');
+      if (r.mesh.scale.x < 1.5 && r.key !== 'done') { r.mesh.scale.setScalar(Math.min(1.5, r.mesh.scale.x + dt * 5)); hot = true; }
+      if (r.t < 1) {
+        r.t = Math.min(1, r.t + dt * 0.85);
+        const k = easeInOut(r.t);
+        r.mesh.position.lerpVectors(r.from, r.to, k);
+        r.mesh.position.y += Math.sin(Math.PI * r.t) * 1.6;
+        if (spin) spin.rotation.z -= dt * 9;
+        if (Math.random() < 0.5) this.burst(r.mesh.position, 1, ['#fff3b0', '#ffffff'], { speed: 0.3, up: 0.1, gravity: 0.6, life: 0.5, size: 0.06 });
+        if (r.key === 'done' && r.t > 0.75) r.mesh.scale.setScalar(Math.max(0.01, 1.5 * (1 - (r.t - 0.75) * 4)));
+        hot = true;
+        if (r.t >= 1) {
+          if (r.key === 'done') {
+            this.burst(r.to, 14, ['#ffd23f', '#ffffff', '#ff6b81'], { speed: 1.8, up: 1.6, gravity: 4, life: 0.8, size: 0.08, bits: true });
+            this.scene.remove(r.mesh); this.free(r.mesh); this.reels.delete(id);
+            continue;
+          }
+          const host = this.model.projects.find((p) => p.id === id)?.buildingId;
+          const e = host ? this.meshes.get(host) : undefined;
+          if (e && !e.anim) e.anim = { kind: 'bounce', t: 0 }; // the building takes it in
+        }
+      } else {
+        r.mesh.position.y = r.to.y + Math.sin(now / 520 + r.to.x) * 0.07;
+        if (spin && !calm) spin.rotation.z -= dt * 1.2;
+      }
+      r.mesh.rotation.y = Math.PI / 4;
       moving = true;
     }
-    for (const w of this.walkers.values()) {
-      const d = w.target.clone().sub(w.mesh.position);
+
+    // Staff stroll around the buildings and stop for a moment now and then.
+    if (!calm) for (const w of this.walkers.values()) {
+      if (w.wait > 0) {
+        w.wait -= dt;
+        for (const leg of w.legs) leg.rotation.x *= 0.8;
+        w.mesh.position.y = 0;
+        if (w.wait <= 0) w.path = this.route(w.mesh.position);
+        continue;
+      }
+      const next = w.path[0];
+      if (!next) { w.wait = 0.8 + Math.random() * 2.5; continue; }
+      const d = next.clone().sub(w.mesh.position);
       d.y = 0;
       const dist = d.length();
-      if (dist < 0.1) { w.target = this.randomSpot(); continue; }
+      if (dist < 0.06) { w.path.shift(); continue; }
       w.mesh.position.addScaledVector(d.normalize(), Math.min(dist, w.speed * dt));
-      w.mesh.rotation.y = Math.atan2(d.x, d.z);
-      w.mesh.position.y = Math.abs(Math.sin(now / 120)) * 0.03;
+      const want = Math.atan2(d.x, d.z);
+      let turn = want - w.mesh.rotation.y;
+      turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+      w.mesh.rotation.y += turn * Math.min(1, dt * 10);
+      const step = now / 95 + w.phase;
+      w.legs[0].rotation.x = Math.sin(step) * 0.7;
+      w.legs[1].rotation.x = -Math.sin(step) * 0.7;
+      w.mesh.position.y = Math.abs(Math.sin(step)) * 0.025;
     }
-    // Busy buildings puff a little as people work inside.
-    if (this.puffs.length) moving = true;
-    if (now > this.nextPuff && this.model && !REDUCED()) {
-      this.nextPuff = now + 450;
-      const busy = [...new Set(this.model.projects.map((p) => p.buildingId).filter((x): x is string => !!x))];
-      const id = busy[Math.floor(Math.random() * busy.length)];
-      const b = id ? this.model.buildings.find((x) => x.id === id) : undefined;
-      if (b) {
-        const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), mat('#ffffff', { transparent: true, opacity: 0.8 }));
-        mesh.position.copy(this.centerOf(b)).add(new THREE.Vector3((Math.random() - 0.5) * 0.8, 1 + b.level * 0.3, (Math.random() - 0.5) * 0.8));
-        this.scene.add(mesh);
-        this.puffs.push({ mesh, t: 0 });
+
+    // A car goes by on the road now and then.
+    if (this.car && !calm) {
+      const c = this.car;
+      const edge = this.model.w / 2 + BORDER + 1.2;
+      if (c.wait > 0) {
+        c.wait -= dt;
+        if (c.wait <= 0) {
+          c.dir = Math.random() < 0.5 ? 1 : -1;
+          c.mesh.visible = true;
+          c.mesh.position.x = -edge * c.dir;
+          c.mesh.rotation.y = c.dir === 1 ? 0 : Math.PI;
+        }
+      } else {
+        c.mesh.position.x += c.dir * dt * 2.6;
+        c.mesh.position.y = -0.03 + Math.abs(Math.sin(now / 90)) * 0.008;
+        if (Math.abs(c.mesh.position.x) > edge) { c.mesh.visible = false; c.wait = 4 + Math.random() * 9; }
       }
     }
-    for (const p of [...this.puffs]) {
-      p.t += dt * 0.8;
-      p.mesh.position.y += dt * 0.6;
-      p.mesh.scale.setScalar(1 + p.t * 1.5);
-      (p.mesh.material as THREE.MeshLambertMaterial).opacity = Math.max(0, 0.8 * (1 - p.t));
-      if (p.t >= 1) { this.scene.remove(p.mesh); p.mesh.geometry.dispose(); (p.mesh.material as THREE.Material).dispose(); this.puffs.splice(this.puffs.indexOf(p), 1); }
+
+    // Busy buildings puff a little as people work inside.
+    if (now > this.nextPuff && !calm) {
+      this.nextPuff = now + 520;
+      const ids = [...this.busy];
+      const e = ids.length ? this.meshes.get(ids[Math.floor(Math.random() * ids.length)]) : undefined;
+      if (e) {
+        const src = e.fx.find((o) => o.userData.fx === 'smoke');
+        const at = src ? src.getWorldPosition(new THREE.Vector3()) : e.group.position.clone().setY(this.topOf(ids[0]));
+        this.burst(at, 1, ['#ffffff'], { speed: 0.12, up: 0.75, gravity: -0.15, life: 1.5, size: 0.1, grow: 1.4 });
+      }
     }
-    // On-air signal rings spread from the tower.
-    for (const w of [...this.waves]) {
-      w.t += dt * 0.7;
-      if (w.t < 0) { w.mesh.visible = false; moving = true; continue; }
-      w.mesh.visible = true;
-      w.mesh.scale.setScalar(0.5 + w.t * 7);
-      (w.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.7 * (1 - w.t));
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.t += dt / p.life;
+      p.v.y -= p.gravity * dt;
+      p.mesh.position.addScaledVector(p.v, dt);
+      if (p.spin) { p.mesh.rotation.x += dt * p.spin; p.mesh.rotation.z += dt * p.spin * 0.7; }
+      if (p.grow) p.mesh.scale.setScalar((p.mesh.userData.size as number) * (1 + p.t * p.grow));
+      (p.mesh.material as THREE.MeshLambertMaterial).opacity = p.opacity * (1 - p.t * p.t);
+      if (p.t >= 1 || p.mesh.position.y < -0.05) { this.scene.remove(p.mesh); (p.mesh.material as THREE.Material).dispose(); this.particles.splice(i, 1); }
       moving = true;
-      if (w.t >= 1) { this.scene.remove(w.mesh); w.mesh.geometry.dispose(); (w.mesh.material as THREE.Material).dispose(); this.waves.splice(this.waves.indexOf(w), 1); }
     }
-    // The tower's light blinks.
-    for (const { group } of this.meshes.values()) {
-      const beacon = group.getObjectByName('beacon') as THREE.Mesh | undefined;
-      if (beacon) beacon.visible = Math.floor(now / 600) % 2 === 0;
+
+    // On-air signal rings spread from the tower.
+    for (let i = this.waves.length - 1; i >= 0; i--) {
+      const w = this.waves[i];
+      w.t += dt * 0.6;
+      moving = hot = true;
+      if (w.t < 0) continue;
+      w.mesh.visible = true;
+      w.mesh.scale.setScalar(0.5 + easeInOut(Math.min(1, w.t)) * 9);
+      (w.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 0.8 * (1 - w.t));
+      if (w.t >= 1) { this.scene.remove(w.mesh); w.mesh.geometry.dispose(); (w.mesh.material as THREE.Material).dispose(); this.waves.splice(i, 1); }
     }
+
+    // The selection frame breathes; the placement ghost hovers.
+    if (this.selection.visible) {
+      const [sx, sy] = this.selection.userData.size as [number, number];
+      const k = 1 + 0.03 * Math.sin(now / 260);
+      this.selection.scale.set(sx * k, sy * k, 1);
+      moving = true;
+    }
+    if (this.ghost) { this.ghost.position.y = 0.06 + 0.04 * Math.sin(now / 240); moving = true; }
+
+    if (hot) this.hotUntil = Math.max(this.hotUntil, now + 200);
     this.renderer.render(this.scene, this.camera);
     this.emitLabels();
-    if (moving) this.raf = requestAnimationFrame(this.frame);
+    if (moving || now < this.hotUntil) this.raf = requestAnimationFrame(this.frame);
   };
 
-  /** Screen positions for the HTML labels over each building. */
+  /** Screen positions for the HTML labels over each building (sent only when they change). */
   private emitLabels() {
     const m = this.model;
     if (!m) return;
@@ -583,25 +793,13 @@ export class LotScene {
     const out: LotLabel[] = [];
     for (const b of m.buildings) {
       if (!buildingDef(b.kind).stage && b.kind !== 'tower') continue;
-      const p = this.centerOf(b).add(new THREE.Vector3(0, 1.1 + b.level * 0.35, 0)).project(this.camera);
-      out.push({ id: b.id, x: (p.x + 1) / 2 * r.width, y: (1 - p.y) / 2 * r.height, visible: p.z < 1 });
+      const p = this.centerOf(b).add(new THREE.Vector3(0, this.topOf(b.id) + (buildingDef(b.kind).stage ? 0.95 : 0.25), 0)).project(this.camera);
+      out.push({ id: b.id, x: Math.round((p.x + 1) / 2 * r.width), y: Math.round((1 - p.y) / 2 * r.height), visible: p.z < 1 });
     }
+    const key = out.map((l) => `${l.id}:${l.x}:${l.y}`).join('|');
+    if (key === this.labelKey) return;
+    this.labelKey = key;
     this.handlers.onLabels(out);
-  }
-
-  /** A week went on air: signal rings spread out from the tower. */
-  broadcast() {
-    const tower = this.model?.buildings.find((b) => b.kind === 'tower');
-    if (!tower) return;
-    for (let i = 0; i < 3; i++) {
-      const mesh = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.04, 4, 32), new THREE.MeshBasicMaterial({ color: '#5ce1ff', transparent: true, opacity: 0.7 }));
-      mesh.rotation.x = Math.PI / 2;
-      mesh.position.copy(this.centerOf(tower)).add(new THREE.Vector3(0, 2.4, 0));
-      mesh.visible = false;
-      this.scene.add(mesh);
-      this.waves.push({ mesh, t: -i * 0.3 });
-    }
-    this.kick();
   }
 
   /** Screen point of a building (for floating feedback). */
@@ -609,7 +807,7 @@ export class LotScene {
     const b = this.model?.buildings.find((x) => x.id === id);
     if (!b) return null;
     const r = this.canvas.getBoundingClientRect();
-    const p = this.centerOf(b).add(new THREE.Vector3(0, 2, 0)).project(this.camera);
+    const p = this.centerOf(b).add(new THREE.Vector3(0, this.topOf(id) + 0.5, 0)).project(this.camera);
     return { x: (p.x + 1) / 2 * r.width, y: (1 - p.y) / 2 * r.height };
   }
 }

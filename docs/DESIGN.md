@@ -465,6 +465,12 @@ at the side on tablets and laptops.
 - **Life.** Productions travel as film reels from building to building and fly to the tower
   when finished; free staff wander; pop-ups show scripts done, shows ready, waits and the
   week's money. Rendering is on demand and pauses when the page is hidden.
+- **Look.** A floating island in afternoon light: lawn with flowers, hedges, a studio gate,
+  pavement, a road with passing cars and the parked news van. Models live in
+  `src/ui/lot/lotModels.ts` (shared flat-shaded materials). Windows light up and the stage
+  searchlight sweeps while a production is inside; new buildings pop up in dust, expanded
+  ones bounce under confetti, reels leave sparkles, staff walk around buildings (never
+  through them). The tile grid shows only while placing. Reduced-motion is respected.
 - Saves v15 add `lot` and `Project.buildingId`; older saves get a lot sized for their tier.
 
 ## 13. Build waves
