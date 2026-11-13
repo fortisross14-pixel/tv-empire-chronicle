@@ -73,11 +73,11 @@ export function WeekScreen({
           <div className="body">
             <span className="kicker">WELCOME TO {state.stationName.toUpperCase()}</span>
             <h2>{state.projects.length ? 'Your first show is in the works' : 'Make your first show'}</h2>
-            <div className="meta">{state.projects.length ? 'Air weeks to move it through script, production and post.' : 'Pick a format and topic, choose the team, split the focus points.'}</div>
+            <div className="meta">{state.projects.length ? 'Air weeks to get it written, then drag its card to the Sound Stage, the Post-production Suite and the tower.' : 'Start with a script at the Writers’ Room: a format, a topic and a writer.'}</div>
             <div className="acts">
               {state.projects.length
                 ? <button className="btn primary" onClick={() => goTab('studio')}>See the studio</button>
-                : <button className="btn primary" onClick={onNewShow} disabled={state.formats.length === 0}>+ New show</button>}
+                : <button className="btn primary" onClick={onNewShow} disabled={state.formats.length === 0}>✍️ Write a script</button>}
             </div>
           </div>
         </section>

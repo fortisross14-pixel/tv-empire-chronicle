@@ -30,9 +30,9 @@ export interface LevelDef {
 }
 
 export const LEVELS: Record<ProductionLevel, LevelDef> = {
-  basic: { label: 'Basic', blurb: '1 writer, 1 crew lead covers everything, 10 focus points.', points: FOCUS_POINTS, maxPerArea: MAX_POINTS_PER_AREA, costMult: 1, extraWeeks: 0 },
-  advanced: { label: 'Advanced', blurb: 'Up to 2 writers, a specialist per area, 15 focus points, 2 topics.', points: 15, maxPerArea: 7, costMult: 1.6, extraWeeks: 1 },
-  aaa: { label: 'AAA', blurb: 'Up to 3 writers, a full crew of 6, 20 focus points, 2 topics. Big budget, big audience.', points: 20, maxPerArea: 8, costMult: 2.6, extraWeeks: 2 },
+  basic: { label: 'Basic', blurb: '1 writer, 10 focus points (6 in the studio, 4 in post).', points: FOCUS_POINTS, maxPerArea: MAX_POINTS_PER_AREA, costMult: 1, extraWeeks: 0 },
+  advanced: { label: 'Advanced', blurb: 'Up to 2 writers, 15 focus points (9 + 6), 2 topics.', points: 15, maxPerArea: 7, costMult: 1.6, extraWeeks: 1 },
+  aaa: { label: 'AAA', blurb: 'Up to 3 writers, 20 focus points (12 + 8), 2 topics. Big budget, big audience.', points: 20, maxPerArea: 8, costMult: 2.6, extraWeeks: 2 },
 };
 
 /** Lowest tier each production level needs. */

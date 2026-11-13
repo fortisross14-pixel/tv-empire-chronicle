@@ -20,3 +20,12 @@ Changes:
 
 Missions (6 seeds): Beginner 5–6/6 each with 2 stars; every Local, State and National
 mission 4/6 or better (State Bound 5/6, National Ambition 4/6, Coast to Coast 4/6).
+
+## After step-by-step production (same day, save v16)
+
+New skills, parts and a crew card per slider at every level. Bot still plans shows in one go.
+
+- Economy (6 seeds): State median week 63, National 6/6 (median week 140), #1 crown 5/6, no bankruptcies.
+- Missions (6 seeds): Beginner all 6/6. Most others 5–6/6. To revisit in the balance pass:
+  Glimmy Night 3/6 (lost the award), National Ambition 4/6, Bleeding Money 5/6 (one bankruptcy).
+- Not measured: a player who waits between steps (the bot never does), and marketing spend.

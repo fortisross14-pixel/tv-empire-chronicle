@@ -28,7 +28,7 @@ export function TargetPicker({ state, cardId, onPick, onClose }: {
       <div style={{ maxWidth: 240, margin: '0 auto 14px' }}><NetworkCardView defId={def.id} /></div>
       <div className="stack-sm">
         {targets.length === 0 && (
-          <div className="empty">{def.kind === 'promo' ? 'Promos work on shows before their premiere. Start a new show first.' : 'No show without a sponsor.'}</div>
+          <div className="empty">{def.kind === 'promo' ? 'Promos work on shows before their premiere. Write a script first.' : 'No show without a sponsor.'}</div>
         )}
         {targets.map((t) => (
           <button key={t.id} className="todo" onClick={() => onPick(t.id)}>
