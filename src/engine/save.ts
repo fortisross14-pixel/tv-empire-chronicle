@@ -1,5 +1,9 @@
+import { getItem, removeItem, setItem } from './storage';
 import { genderOf } from './people';
 import { rolesFor } from './data/roles';
+import { rightsById } from './data/rights';
+import { LOT_SIZE } from './data/buildings';
+import { addAnnex } from './lot';
 import type { GameState } from './types';
 import { emptyProfile, type Profile } from './mission';
 import { SAVE_VERSION } from './game';
@@ -119,6 +123,21 @@ const MIGRATIONS: Record<number, (s: RawSave) => RawSave> = {
       version: 16,
     };
   },
+  // v17: a slightly bigger lot with a Head Office; stations that already deal in sports or
+  // licenses (or are past Local) get the Sports Truck and the Licensing Office.
+  16: (s) => {
+    type Raw = Record<string, unknown>;
+    const tier = s.tier as 'local' | 'state' | 'national';
+    const lot = structuredClone(s.lot) as { w: number; h: number; buildings: { id: string; kind: string; x: number; y: number; rot: number; level: number }[] };
+    lot.w = Math.max(lot.w, LOT_SIZE[tier].w);
+    lot.h = Math.max(lot.h, LOT_SIZE[tier].h);
+    const draft = { lot, nextId: Number(s.nextId) || 0 } as unknown as Pick<GameState, 'lot' | 'nextId'>;
+    addAnnex(draft, 'office');
+    const sports = (s.rights as Raw[]).some((r) => rightsById(String(r.defId))?.kind === 'sports');
+    if (sports || tier !== 'local') addAnnex(draft, 'truck');
+    if ((s.ips as Raw[]).some((x) => !!x.defId) || tier !== 'local') addAnnex(draft, 'licensing');
+    return { ...s, lot: draft.lot, nextId: draft.nextId, rightsMarket: null, version: 17 };
+  },
 };
 
 export interface LoadResult {
@@ -145,7 +164,7 @@ export function migrate(raw: RawSave): GameState | null {
 
 function read(key: string): RawSave | null {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = getItem(key);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     return looksLikeSave(parsed) ? parsed : null;
@@ -163,36 +182,36 @@ export function loadGame(slot = 0): LoadResult {
     return { state: null, notice: null };
   }
   if (!raw) {
-    const hadSomething = (() => { try { return !!localStorage.getItem(KEY); } catch { return false; } })();
+    const hadSomething = !!getItem(KEY);
     return { state: null, notice: hadSomething ? 'This saved game could not be read.' : null };
   }
   if (raw.version > SAVE_VERSION) return { state: null, notice: 'This save is from a newer version of the game.' };
   if (raw.version < OLDEST_MIGRATABLE) {
     return { state: null, notice: 'This save is from an early test version and can’t be upgraded.' };
   }
-  const state = migrate(raw);
+  let state: GameState | null = null;
+  try { state = migrate(raw); } catch { state = null; }
   return state ? { state, notice: null } : { state: null, notice: 'This saved game could not be upgraded.' };
 }
 
 /** Saves the game in a slot. Returns false when the browser refused (storage full or blocked). */
 export function saveGame(state: GameState, slot = 0): boolean {
-  try {
-    const previous = localStorage.getItem(keyOf(slot));
-    localStorage.setItem(keyOf(slot), JSON.stringify(state));
-    if (previous) localStorage.setItem(backupOf(slot), previous);
+  let json: string;
+  try { json = JSON.stringify(state); } catch { return false; }
+  const previous = getItem(keyOf(slot));
+  if (setItem(keyOf(slot), json)) {
+    // The previous save is kept as a spare; it's fine if there is no room for it.
+    if (previous && previous !== json) setItem(backupOf(slot), previous);
     return true;
-  } catch {
-    return false;
   }
+  // No room: drop our own spare copies and try once more.
+  for (let i = 0; i < SLOT_COUNT; i++) removeItem(backupOf(i));
+  return setItem(keyOf(slot), json);
 }
 
 export function clearSave(slot = 0): void {
-  try {
-    localStorage.removeItem(keyOf(slot));
-    localStorage.removeItem(backupOf(slot));
-  } catch {
-    // ignore
-  }
+  removeItem(keyOf(slot));
+  removeItem(backupOf(slot));
 }
 
 /** What each slot holds, for the title screen. */
@@ -204,7 +223,7 @@ export function loadSlots(): LoadResult[] {
 
 export function loadProfile(): Profile {
   try {
-    const raw = localStorage.getItem(PROFILE_KEY);
+    const raw = getItem(PROFILE_KEY);
     const p = raw ? (JSON.parse(raw) as Profile) : null;
     return p && typeof p.stars === 'object' && p.stars ? { stars: { ...p.stars } } : emptyProfile();
   } catch {
@@ -216,6 +235,6 @@ export function loadProfile(): Profile {
 export function recordMission(missionId: string, stars: number): Profile {
   const p = loadProfile();
   p.stars[missionId] = Math.max(p.stars[missionId] ?? 0, stars);
-  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { /* ignore */ }
+  setItem(PROFILE_KEY, JSON.stringify(p));
   return p;
 }

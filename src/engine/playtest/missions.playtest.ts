@@ -6,11 +6,14 @@
 //   DIAG=1             print a weekly trace for seed 1
 import { test } from 'vitest';
 import {
-  airWeek, answerEvent, bidOnRights, buyPack, createShow, dismissReveal, expandToNational, expandToState, licenseGaps, newMissionGame,
+  airWeek, answerEvent, buySportsRights, keepPackCards, buyPack, createShow, dismissReveal, expandToNational, expandToState, licenseGaps, newMissionGame,
   openPack, scheduleShow, signAffiliate, usePromo, useSponsor, cancelShow, ackMission, nextLicense, upgradeBuilding, buildBuilding,
 } from '../game';
 import { formatById, AREAS, AREA_SKILL } from '../data/formats';
 import { leadRole, roleScore, rolesFor } from '../data/roles';
+import { sportsOffers, sportsPrice } from '../rights';
+import { inSeason, weeksToSeasonStart } from '../data/rights';
+import { IP_PACK_PRICE, ipPool } from '../packs';
 import { topicById } from '../data/topics';
 import { LEVELS, TIER_COST, freshIdeas, levelsFor, previewPlan, projectPeople, type ShowPlan } from '../production';
 import { appeal } from '../appeal';
@@ -221,14 +224,38 @@ export function playState(start0: GameState, goals: Goal[], weeks: number, onWee
         }
       } catch { /* */ }
     }
-    if (s.rightsMarket) {
-      let committed = 0;
-      for (const lot of s.rightsMarket.lots) {
-        if (lot.locked || lot.bid) { committed += lot.bid ?? 0; continue; }
-        const value = lot.ip ? ipDefById(lot.defId)!.value : rightsById(lot.defId).value;
-        const keen = lot.ip ? wantIp : (wantSports && (!sportsIds.length || sportsIds.includes(lot.defId)));
-        const bid = Math.round(value * (keen ? 2.2 : 1.05));
-        if ((keen || (!lot.ip && !wantTier)) && spend() - committed - bid > (keen ? -buffer * 0.8 : 0)) { try { s = bidOnRights(s, lot.id, bid); committed += bid; } catch { /* */ } }
+    // Sports: bought any time (with a Sports Truck). Keen on mission goals; otherwise a
+    // competition is worth it when it is about to play and there is cash to spare.
+    {
+      const have = (kind: 'truck' | 'licensing') => s.lot.buildings.some((b) => b.kind === kind);
+      const annex = (kind: 'truck' | 'licensing', reserve: number) => {
+        if (have(kind) || s.cash - buildCost(s, kind) < reserve) return;
+        for (let y = 0; y < s.lot.h && !have(kind); y++) for (let x = 0; x < s.lot.w && !have(kind); x++) {
+          if (!placementProblem(s.lot, { kind, x, y, rot: 0 })) { try { s = buildBuilding(s, kind, x, y, 0); } catch { /* */ } }
+        }
+      };
+      const offers = sportsOffers(s).filter((d) => !s.rights.some((r) => r.defId === d.id));
+      for (const def of offers.sort((a, b) => b.value - a.value)) {
+        const keen = wantSports && (!sportsIds.length || sportsIds.includes(def.id));
+        const soon = inSeason(def, s.week) || weeksToSeasonStart(def, s.week) <= 4;
+        if (!keen && (wantTier || !soon)) continue;
+        const price = sportsPrice(s, def);
+        if (spend() - price <= (keen ? -buffer * 0.8 : price)) continue;
+        annex('truck', keen ? 0 : buffer);
+        if (!have('truck')) continue;
+        try { s = buySportsRights(s, def.id); } catch { /* clash or no room */ }
+      }
+      // IP: a license pack when the mission asks for IP, or when the station is rich enough to play with one.
+      if (s.shopUnlocked && (wantIp || (!wantTier && spend() > IP_PACK_PRICE[s.tier] * 4)) && usableIps(s).filter((x) => x.defId).length < 2 && ipPool(s).length > 0
+        && spend() - IP_PACK_PRICE[s.tier] > (wantIp ? -buffer * 0.5 : 0)) {
+        annex('licensing', wantIp ? 0 : buffer);
+        if (have('licensing')) {
+          try {
+            s = buyPack(s, 'ip');
+            const best = s.reveal!.cards.map((c, i) => ({ i, r: c.type === 'ip' ? ipDefById(c.defId)!.rating : 0 })).sort((a, b) => b.r - a.r)[0].i;
+            s = keepPackCards(s, [best]);
+          } catch { /* */ }
+        }
       }
     }
     if (s.shopUnlocked) {

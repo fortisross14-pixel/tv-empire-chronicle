@@ -1,18 +1,18 @@
 import type { GameState, Pack, PackKind, PosterSpec, SlotId } from './types';
 import { CITY } from './data/names';
 import { addHouseCards } from './people';
-import { applyPack, makePack, MOVIE_PACK_PRICE, PRICES } from './packs';
+import { applyPack, ipPool, IP_PACK_PRICE, keepCards, makePack, MOVIE_PACK_PRICE, PRICES } from './packs';
 import { GameError, TIER_COST, projectPeople, startPost, startProject, startScript, startShoot, type PostPlan, type ScriptPlan, type ShootPlan, type ShowPlan } from './production';
 import { makeRivals } from './rivals';
 import { applyPromo, applySponsor } from './network';
 import { resolvePendingEvent } from './events';
 import { rightsById } from './data/rights';
-import { assignTeam, onSportsTeam, placeBid, refreshMarketLocks } from './rights';
+import { assignTeam, buySports, moveSports, onSportsTeam } from './rights';
 import { AFFILIATE_MAX, affiliateCost, emptySchedule, reachOf, slotsOf, tierSlot } from './schedule';
 import { addNews, round1 } from './news';
 import { simulateWeek, CHAMPION_WEEKS, LOAN } from './sim';
 import { applyMission, applySandbox } from './mission';
-import { build, growLot, licenseUpgrades, move, presetLot, sell, starterLot, upgrade } from './lot';
+import { build, growLot, hasBuilding, licenseUpgrades, move, presetLot, sell, starterLot, upgrade } from './lot';
 import type { BuildingKind } from './types';
 import type { SandboxDifficulty } from './types';
 import { missionById } from './data/missions';
@@ -25,11 +25,17 @@ export function newMissionGame(
   const s = newGame(seed, stationName);
   if (missionId && missionId !== 'sandbox') applyMission(s, missionById(missionId));
   else if (sandbox) applySandbox(s, sandbox.difficulty, sandbox.goals);
-  presetLot(s);
+  // Stations that start with sports or licenses, or have to get them, come with the annex for it.
+  const def = missionId && missionId !== 'sandbox' ? missionById(missionId) : null;
+  const goalKinds = def ? [...def.goals, ...(def.bonus ? [def.bonus] : [])].map((g) => g.kind as string) : [];
+  presetLot(s, {
+    truck: s.rights.some((r) => rightsById(r.defId).kind === 'sports') || goalKinds.some((k) => k === 'sportsGames' || k === 'rights'),
+    licensing: s.ips.some((x) => x.defId) || goalKinds.includes('ips'),
+  });
   return s;
 }
 
-export const SAVE_VERSION = 16;
+export const SAVE_VERSION = 17;
 
 /** What it takes to become a State network. */
 export const STATE_LICENSE = { reputation: 30, cash: 250, fee: 200 };
@@ -124,14 +130,33 @@ export const openPack = (state: GameState, packId: string) =>
     s.reveal = applyPack(s, pack);
   });
 
-export const dismissReveal = (state: GameState) => produce(state, (s) => void (s.reveal = null), { duringEvent: true });
+/** Close the pack screen. A choice left unmade keeps the first cards. */
+export const dismissReveal = (state: GameState) =>
+  produce(state, (s) => {
+    if (s.reveal?.choose) keepCards(s, s.reveal, Array.from({ length: s.reveal.choose }, (_, i) => i));
+    s.reveal = null;
+  }, { duringEvent: true });
 
-export const packPrice = (s: Pick<GameState, 'tier'>, kind: Extract<PackKind, 'program' | 'people' | 'network' | 'movies'>) =>
-  kind === 'movies' ? MOVIE_PACK_PRICE[s.tier] : PRICES[kind];
+/** Movie and IP packs: keep these cards (by position) and discard the rest. */
+export const keepPackCards = (state: GameState, keep: number[]) =>
+  produce(state, (s) => {
+    if (!s.reveal?.choose) throw new GameError('There is no pack to choose from.');
+    if (new Set(keep).size !== s.reveal.choose) throw new GameError(`Keep exactly ${s.reveal.choose}.`);
+    keepCards(s, s.reveal, keep);
+    s.reveal = null;
+  }, { duringEvent: true });
 
-export const buyPack = (state: GameState, kind: Extract<PackKind, 'program' | 'people' | 'network' | 'movies'>) =>
+type ShopPack = Extract<PackKind, 'program' | 'people' | 'network' | 'movies' | 'ip'>;
+export const packPrice = (s: Pick<GameState, 'tier'>, kind: ShopPack) =>
+  kind === 'movies' ? MOVIE_PACK_PRICE[s.tier] : kind === 'ip' ? IP_PACK_PRICE[s.tier] : PRICES[kind];
+
+export const buyPack = (state: GameState, kind: ShopPack) =>
   produce(state, (s) => {
     if (!s.shopUnlocked) throw new GameError('The shop opens after your first show airs.');
+    if (kind === 'ip') {
+      if (!hasBuilding(s, 'licensing')) throw new GameError('Build a Licensing Office on your lot first.');
+      if (ipPool(s).length === 0) throw new GameError('You hold every license at your level.');
+    }
     const price = packPrice(s, kind);
     if (s.cash < price) throw new GameError('Not enough cash.');
     s.cash = round1(s.cash - price);
@@ -261,8 +286,13 @@ export const useSponsor = (state: GameState, cardId: string, showId: string) =>
 export const answerEvent = (state: GameState, choice: number) =>
   produce(state, (s) => addNews(s, resolvePendingEvent(s, choice), 'neutral'), { duringEvent: true });
 
-export const bidOnRights = (state: GameState, lotId: string, amount: number | null) =>
-  produce(state, (s) => placeBid(s, lotId, amount));
+/** Buy a competition's rights (needs a Sports Truck). Its games air in `slot`, or its first free slot. */
+export const buySportsRights = (state: GameState, defId: string, slot?: SlotId) =>
+  produce(state, (s) => { buySports(s, defId, slot); });
+
+/** Move a competition's games to another of its slots. */
+export const moveSportsRights = (state: GameState, rightsId: string, slot: SlotId) =>
+  produce(state, (s) => moveSports(s, rightsId, slot));
 
 export const assignSportsTeam = (state: GameState, rightsId: string, crewId: string, talentId: string) =>
   produce(state, (s) => assignTeam(s, rightsId, crewId, talentId));
@@ -318,7 +348,6 @@ function moveUp(s: GameState) {
   s.rivals = makeRivals(s);
   // Rival-owned rights belonged to the old competitors; they go back on the market.
   s.rivalRights = [];
-  refreshMarketLocks(s);
   s.sweeps = { shareSum: 0, samples: 0 };
   s.milestone = lic.tier;
   growLot(s);

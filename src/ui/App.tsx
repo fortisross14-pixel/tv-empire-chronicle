@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   GameError, airWeek, buildBuilding, moveBuilding, upgradeBuilding, sellBuilding, buildingDef, buyBusinessCard, buyPack, cancelProject, archiveShow, writeScript, shootScript, postShow, releaseShow, ackMission, newMissionGame, recordMission,
-  dateLabel, dismissFinished, dismissReveal, openPack, saveGame, scheduleShow, useBusinessCard,
-  setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
+  dateLabel, dismissFinished, dismissReveal, openPack, saveGame, storageHealth, scheduleShow, useBusinessCard,
+  setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, TIERS, releasePerson, usePromo, useSponsor, networkById, buySportsRights, moveSportsRights, keepPackCards, assignSportsTeam,
   reachOf, SANDBOX_GOALS, type GameState, type Goal,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
@@ -22,7 +22,7 @@ import { WeekScreen } from './screens/WeekScreen';
 import { ScheduleScreen } from './screens/ScheduleScreen';
 import { StudioScreen } from './screens/StudioScreen';
 import { CardsScreen } from './screens/CardsScreen';
-import { ShopScreen } from './screens/ShopScreen';
+import { ShopScreen, type MarketTab } from './screens/ShopScreen';
 import { MenuScreen } from './screens/MenuScreen';
 import { buildTodos } from './todos';
 import { LotHome } from './lot/LotHome';
@@ -84,6 +84,8 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
   const [wizard, setWizard] = useState<{ renew?: string; spinoff?: string } | null>(null);
   const [prod, setProd] = useState<{ id: string; mode: 'shoot' | 'post' } | null>(null);
   const [release, setRelease] = useState<string | null>(null);
+  const [marketTab, setMarketTab] = useState<MarketTab>('packs');
+  const goMarket = (t: MarketTab) => { setMarketTab(t); setTab('shop'); };
   const [showResults, setShowResults] = useState(false);
   const [usingCard, setUsingCard] = useState<string | null>(null);
   const [openShow, setOpenShow] = useState<string | null>(null);
@@ -94,9 +96,14 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
   const ask = useConfirm();
   const saveWarned = useRef(false);
   useEffect(() => {
-    if (!saveGame(state, slot) && !saveWarned.current) {
+    const ok = saveGame(state, slot);
+    if (saveWarned.current) return;
+    if (!ok) {
       saveWarned.current = true;
-      say('Your browser blocked saving: progress will be lost when you close this page.');
+      say('This browser is not letting the game save. In Chrome: Settings → Privacy → Site settings → allow this site to save data (cookies). Until then, progress is lost when you close the page.');
+    } else if (storageHealth() === 'backup') {
+      saveWarned.current = true;
+      say('The browser’s normal storage is full or blocked, so your game is being saved in its backup storage instead.');
     }
   }, [state]);
   useEffect(() => { window.scrollTo({ top: 0 }); }, [tab]);
@@ -157,7 +164,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
   const scheduled = new Set(Object.values(state.schedule));
 
   const finishedShows = state.newlyFinished.map((id) => state.shows.find((s) => s.id === id)).filter(Boolean) as GameState['shows'];
-  const shopDot = (state.shopUnlocked && state.cash >= 40 && state.unopened.length === 0) || !!state.rightsMarket;
+  const shopDot = state.shopUnlocked && state.cash >= 40 && state.unopened.length === 0;
   const scheduleDot = state.shows.some((s) => s.episodesLeft > 0 && !scheduled.has(s.id));
 
   return (
@@ -184,7 +191,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
             onSell={(id) => run((s) => sellBuilding(s, id), 'Sold.')}
             onWrite={() => setWizard({})} onShoot={(id) => setProd({ id, mode: 'shoot' })} onPost={(id) => setProd({ id, mode: 'post' })}
             onRelease={(id) => { if (state.shows.find((s) => s.id === id)?.released) setTab('schedule'); else setRelease(id); }}
-            onOpenPack={(id) => run((s) => openPack(s, id))} goTab={setTab} onOpenShow={setOpenShow}>
+            onOpenPack={(id) => run((s) => openPack(s, id))} goTab={setTab} onOpenShow={setOpenShow} goMarket={goMarket}>
           <WeekScreen state={state} todos={todos} onMenu={onMenu}
             onExpand={() => {
               void ask({ title: 'Buy the license?', text: 'Running costs rise a lot, but so does the audience. Make sure you have shows ready for the bigger schedule.', confirm: 'Buy license' })
@@ -212,10 +219,12 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
             onUseNetworkCard={(id) => setUsingCard(id)} />
         )}
         {tab === 'shop' && (
-          <ShopScreen state={state}
+          <ShopScreen state={state} tab={marketTab} setTab={setMarketTab}
             onBuyPack={(kind) => run((s) => buyPack(s, kind))}
             onBuyBusinessCard={() => run(buyBusinessCard, 'Business Card added to your collection.')}
-            onBid={(lot, amount) => run((s) => bidOnRights(s, lot, amount), amount === null ? 'Bid withdrawn.' : 'Sealed bid placed.')} />
+            onBuySports={(id, slot) => run((s) => buySportsRights(s, id, slot), 'The rights are yours! Games air when the season is on. 🏟️')}
+            onMoveSports={(id, slot) => run((s) => moveSportsRights(s, id, slot), 'Games moved.')}
+            goHome={() => setTab('week')} />
         )}
       </main>
 
@@ -226,8 +235,8 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
       <nav className="tabbar">
         <div className="tabbar-inner">
           {TABS.map((t) => (
-            <button key={t.id} className={cx('tab', tab === t.id && 'active', t.id === 'shop' && !state.shopUnlocked && !state.rightsMarket && 'locked')} onClick={() => setTab(t.id)}>
-              <span className="tab-icon">{t.id === 'shop' && !state.shopUnlocked && !state.rightsMarket ? '🔒' : t.icon}</span>
+            <button key={t.id} className={cx('tab', tab === t.id && 'active', false)} onClick={() => setTab(t.id)}>
+              <span className="tab-icon">{t.icon}</span>
               {t.label}
               {((t.id === 'week' && state.unopened.length > 0) || (t.id === 'shop' && shopDot) || (t.id === 'schedule' && scheduleDot)) && <span className="dot" />}
             </button>
@@ -252,7 +261,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
         <MissionResult state={state} onMenu={onMenu} onRetry={onRetry}
           onContinue={() => run(ackMission)} />
       )}
-      {state.reveal && <PackReveal key={state.reveal.id} pack={state.reveal} onDone={() => run(dismissReveal)} />}
+      {state.reveal && <PackReveal key={state.reveal.id} pack={state.reveal} onDone={() => run(dismissReveal)} onKeep={(keep) => run((s) => keepPackCards(s, keep))} />}
       {!state.reveal && showResults && state.lastResult && (
         <WeekResults result={state.lastResult} state={state} onClose={() => setShowResults(false)} />
       )}

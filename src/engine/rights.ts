@@ -1,15 +1,9 @@
-import type { GameState, OwnedRights, RightsLot } from './types';
-import { clamp, pick, randInt, shuffle } from './rng';
-import {
-  MARKET_OPEN_WEEKS, MARKET_WEEKS, RIGHTS, TIER_RANK, inSeason, rightsById, weeksToSeasonEnd, weeksToSeasonStart,
-  type RightsDef,
-} from './data/rights';
+import type { GameState, OwnedRights, SlotId } from './types';
+import { clamp, pick, randInt } from './rng';
+import { RIGHTS, TIER_RANK, inSeason, rightsById, weeksToSeasonEnd, weeksToSeasonStart, type RightsDef } from './data/rights';
 import { GameError } from './errors';
 import { newId } from './people';
-import { rivalBids } from './rivals';
-import { tierSlot } from './schedule';
-import { IPS, ipDefById, type IpDef } from './data/ips';
-import { licenseIp } from './ip';
+import { slotsOf, tierSlot } from './schedule';
 
 /** Pack movies: classics have little novelty; new releases premiere at full novelty. */
 export const MOVIE_NOVELTY = { classic: 30, fresh: 100 };
@@ -20,96 +14,67 @@ export const absWeek = (s: Pick<GameState, 'week' | 'year'>) => s.year * 52 + s.
 export const SPORTS_AIRINGS = 2.5;
 export const SPORTS_CPM_BONUS = 1.2;
 
-const owned = (s: GameState, defId: string) =>
-  s.rights.some((r) => r.defId === defId) || s.rivalRights.some((r) => r.defId === defId)
-  || s.ips.some((x) => x.defId === defId) || s.rivalIps.some((x) => x.defId === defId);
-
-/** Name, icon and tier of a lot, whether it is sports rights or an IP license. */
-export function lotInfo(lot: Pick<RightsLot, 'defId' | 'ip'>): { name: string; icon: string; tier: IpDef['tier']; value: number; text: string } {
-  const d = lot.ip ? ipDefById(lot.defId)! : rightsById(lot.defId);
-  return { name: d.name, icon: d.icon, tier: d.tier, value: d.value, text: d.text };
-}
-
-/** IP licenses offered per market. */
-export const IP_LOTS = { local: 2, state: 3, national: 3 } as const;
-
-/** Open the market for this week, if it is a market week. Returns a news line. */
-export function maybeOpenMarket(s: GameState): string | null {
-  if (s.rightsMarket || !MARKET_WEEKS.includes(s.week)) return null;
-  const lots: RightsLot[] = [];
-  const rank = TIER_RANK[s.tier];
-  const allowed = (d: RightsDef) => TIER_RANK[d.tier] <= rank;
-  // Sports: every competition your tier can enter is on sale at every market (Local sees
-  // local leagues; State adds college sports; National sees everything).
-  for (const sport of RIGHTS.filter((d) => d.kind === 'sports' && allowed(d) && !owned(s, d.id))) lots.push(makeLot(s, sport, false));
-  // IP licenses: books, games, toys, chefs… The biggest of your tier first.
-  const ips = shuffle(s, IPS.filter((d) => TIER_RANK[d.tier] <= rank && !owned(s, d.id)))
-    .sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier]).slice(0, IP_LOTS[s.tier]);
-  ips.forEach((d) => lots.push(makeLot(s, d, false, true)));
-  s.rightsMarket = { closesWeek: ((s.week + MARKET_OPEN_WEEKS - 1) % 52) + 1, closesAt: absWeek(s) + MARKET_OPEN_WEEKS, lots };
-  return `The Rights Market is open for ${MARKET_OPEN_WEEKS} weeks: ${lots.filter((l) => !l.locked).map((l) => lotInfo(l).name).join(', ')}.`;
-}
-
-function makeLot(s: GameState, def: { id: string; value: number }, locked: boolean, ip = false): RightsLot {
-  return { id: newId(s, 'lot'), defId: def.id, minBid: Math.round(def.value * 0.6), bid: null, locked, ...(ip ? { ip: true } : {}) };
-}
-
-export function placeBid(s: GameState, lotId: string, amount: number | null): void {
-  const lot = s.rightsMarket?.lots.find((l) => l.id === lotId);
-  if (!lot) throw new GameError('That lot is not on the market.');
-  if (lot.locked) throw new GameError('Only bigger networks can bid on this.');
-  if (amount === null) {
-    lot.bid = null;
-    return;
-  }
-  if (amount < lot.minBid) throw new GameError(`The minimum bid is $${lot.minBid}K.`);
-  const clash = lot.ip ? null : sportsClash(s, rightsById(lot.defId));
-  if (clash) throw new GameError(`${clash} already plays in that slot during the same weeks.`);
-  const committed = s.rightsMarket!.lots.reduce((sum, l) => sum + (l.id !== lotId && l.bid ? l.bid : 0), 0);
-  if (amount + committed > s.cash) throw new GameError('Your bids add up to more cash than you have.');
-  lot.bid = Math.round(amount);
-}
-
-/** Close the market: sealed bids against the rival. Returns news lines. */
-export function maybeCloseMarket(s: GameState): string[] {
-  const m = s.rightsMarket;
-  if (!m || absWeek(s) < m.closesAt) return [];
-  const news: string[] = [];
-  for (const lot of m.lots.filter((l) => !l.locked)) {
-    if (lot.ip) { news.push(...closeIpLot(s, lot)); continue; }
-    const def = rightsById(lot.defId);
-    const top = rivalBids(s, def.value, def.kind === 'sports')[0];
-    const rival = top?.rival;
-    const rivalBid = top?.bid ?? 0;
-    if (lot.bid && lot.bid >= rivalBid && lot.bid <= s.cash) {
-      s.cash = Math.round((s.cash - lot.bid) * 10) / 10;
-      s.rights.push(acquire(s, def));
-      news.push(`You win the rights to ${def.name} for $${lot.bid}K${rivalBid ? ` (${rival?.short} bid $${rivalBid}K)` : ''}.`);
-    } else if (rivalBid && rival) {
-      s.rivalRights.push({ defId: def.id, rivalId: rival.id, expires: expiryFor(s, def) });
-      news.push(`${rival.short} takes ${def.name} for $${rivalBid}K.${lot.bid ? ` Your bid was $${lot.bid}K.` : ''}`);
-    } else if (lot.bid) {
-      news.push(`Your bid for ${def.name} fell through: not enough cash.`);
-    }
-  }
+/** The old timed auction is gone: sports and IP are bought directly. Clears one left in an old save. */
+export function closeOldMarket(s: GameState): void {
   s.rightsMarket = null;
-  return news;
 }
 
-function closeIpLot(s: GameState, lot: RightsLot): string[] {
-  const def = ipDefById(lot.defId)!;
-  const top = rivalBids(s, def.value, false)[0];
-  const rivalBid = top?.bid ?? 0;
-  if (lot.bid && lot.bid >= rivalBid && lot.bid <= s.cash) {
-    s.cash = Math.round((s.cash - lot.bid) * 10) / 10;
-    licenseIp(s, def);
-    return [`You license ${def.icon} ${def.name} for $${lot.bid}K${rivalBid ? ` (${top.rival.short} bid $${rivalBid}K)` : ''}. Base new shows on it in the Studio.`];
-  }
-  if (rivalBid && top) {
-    s.rivalIps.push({ defId: def.id, rivalId: top.rival.id, expires: absWeek(s) + def.weeks });
-    return [`${top.rival.short} licenses ${def.name} for $${rivalBid}K.${lot.bid ? ` Your bid was $${lot.bid}K.` : ''}`];
-  }
-  return lot.bid ? [`Your bid for ${def.name} fell through: not enough cash.`] : [];
+/** The slot a sports deal's games take over, on the station's current schedule. */
+export const rightsSlot = (s: Pick<GameState, 'tier'>, r: Pick<OwnedRights, 'defId' | 'slot'>): SlotId =>
+  tierSlot((r.slot ?? rightsById(r.defId).slot)!, s.tier);
+
+/** Competitions on sale: every one at the station's level or below. */
+export const sportsOffers = (s: Pick<GameState, 'tier'>): RightsDef[] =>
+  RIGHTS.filter((d) => d.kind === 'sports' && !d.retired && TIER_RANK[d.tier] <= TIER_RANK[s.tier]);
+
+/** Where a competition's games can be shown on the current schedule. */
+export function sportsSlots(s: Pick<GameState, 'tier'>, def: RightsDef): SlotId[] {
+  const all = slotsOf(s);
+  if (def.anySlot) return all;
+  return [...new Set((def.slots ?? [def.slot!]).map((x) => tierSlot(x, s.tier)))].filter((x) => all.includes(x));
+}
+
+/** The price now: a full season, or what is left of the one being played (never under 40%). */
+export function sportsPrice(s: Pick<GameState, 'week'>, def: RightsDef): number {
+  if (!inSeason(def, s.week)) return def.value;
+  const [a, b] = def.season!;
+  const length = ((b - a + 52) % 52) + 1;
+  return Math.round(def.value * Math.max(0.4, weeksToSeasonEnd(def, s.week) / length));
+}
+
+/** Buy a competition's rights for its current (or next) season and pick the slot its games air in. */
+export function buySports(s: GameState, defId: string, slot?: SlotId): OwnedRights {
+  const def = rightsById(defId);
+  if (!def || def.kind !== 'sports') throw new GameError('That is not a sports competition.');
+  if (!s.lot.buildings.some((b) => b.kind === 'truck')) throw new GameError('Build a Sports Truck on your lot first.');
+  if (TIER_RANK[def.tier] > TIER_RANK[s.tier]) throw new GameError('Only bigger networks can buy these rights.');
+  if (s.rights.some((r) => r.defId === defId)) throw new GameError('You already hold these rights.');
+  const options = sportsSlots(s, def);
+  const chosen = slot ?? options.find((x) => !sportsClash(s, def, x));
+  if (!chosen || !options.includes(chosen)) throw new GameError('Its games are not played at that time.');
+  const clash = sportsClash(s, def, chosen);
+  if (clash) throw new GameError(`${clash} already plays in that slot during the same weeks.`);
+  const price = sportsPrice(s, def);
+  if (s.cash < price) throw new GameError('Not enough cash.');
+  s.cash = Math.round((s.cash - price) * 10) / 10;
+  const r = { ...acquire(s, def), slot: def.anySlot ? chosen : baseSlot(s, def, chosen) };
+  s.rights.push(r);
+  return r;
+}
+
+/** The slot as the competition lists it (so it follows the station to a bigger schedule). */
+const baseSlot = (s: Pick<GameState, 'tier'>, def: RightsDef, slot: SlotId): SlotId =>
+  (def.slots ?? [def.slot!]).find((x) => tierSlot(x, s.tier) === slot) ?? slot;
+
+/** Move a competition's games to another of its slots. */
+export function moveSports(s: GameState, rightsId: string, slot: SlotId): void {
+  const r = s.rights.find((x) => x.id === rightsId);
+  const def = r ? rightsById(r.defId) : undefined;
+  if (!r || !def || def.kind !== 'sports') throw new GameError('Sports rights not found.');
+  if (!sportsSlots(s, def).includes(slot)) throw new GameError('Its games are not played at that time.');
+  const clash = sportsClash(s, def, slot);
+  if (clash) throw new GameError(`${clash} already plays in that slot during the same weeks.`);
+  r.slot = def.anySlot ? slot : baseSlot(s, def, slot);
 }
 
 /** A movie from a Shop pack, ready to schedule. */
@@ -150,24 +115,19 @@ const overlaps = (a: RightsDef, b: RightsDef) => {
   return [...seasonWeeks(b)].some((w) => wa.has(w));
 };
 
-/** Name of an owned sport that would play in the same slot at the same time, if any. */
-export function sportsClash(s: GameState, def: RightsDef): string | null {
+/** Name of an owned sport that plays in this slot during the same weeks, if any. */
+export function sportsClash(s: GameState, def: RightsDef, slot: SlotId): string | null {
   if (def.kind !== 'sports') return null;
-  const mine = tierSlot(def.slot!, s.tier);
-  const other = s.rights.map((r) => rightsById(r.defId))
-    .find((d) => d.kind === 'sports' && d.id !== def.id && tierSlot(d.slot!, s.tier) === mine && overlaps(d, def));
-  return other?.name ?? null;
+  const other = s.rights.find((r) => {
+    const d = rightsById(r.defId);
+    return d.kind === 'sports' && d.id !== def.id && rightsSlot(s, r) === slot && overlaps(d, def);
+  });
+  return other ? rightsById(other.defId).name : null;
 }
 
 /** Is this person calling games for one of our sports rights? */
 export const onSportsTeam = (s: GameState, personId: string) =>
   s.rights.some((r) => r.crewId === personId || r.talentId === personId);
-
-/** After a tier change, lots in an open market unlock for the new tier. */
-export function refreshMarketLocks(s: GameState): void {
-  if (!s.rightsMarket) return;
-  for (const lot of s.rightsMarket.lots) lot.locked = TIER_RANK[lotInfo(lot).tier] > TIER_RANK[s.tier];
-}
 
 /** Change the sports broadcast team. Pack cards spend 1 use for the season. */
 export function assignTeam(s: GameState, rightsId: string, crewId: string, talentId: string): void {
@@ -196,7 +156,7 @@ export function assignTeam(s: GameState, rightsId: string, crewId: string, talen
 export function sportsRightsForSlot(s: GameState, slot: string): OwnedRights | undefined {
   return s.rights.find((r) => {
     const def = rightsById(r.defId);
-    return def.kind === 'sports' && !!def.slot && tierSlot(def.slot, s.tier) === slot;
+    return def.kind === 'sports' && rightsSlot(s, r) === slot;
   });
 }
 
@@ -204,7 +164,7 @@ export function sportsRightsForSlot(s: GameState, slot: string): OwnedRights | u
 export function sportsInSlot(s: GameState, slot: string): OwnedRights | null {
   return s.rights.find((r) => {
     const def = rightsById(r.defId);
-    return def.kind === 'sports' && tierSlot(def.slot!, s.tier) === slot && inSeason(def, s.week) && absWeek(s) <= r.expires;
+    return def.kind === 'sports' && rightsSlot(s, r) === slot && inSeason(def, s.week) && absWeek(s) <= r.expires;
   }) ?? null;
 }
 
@@ -255,4 +215,6 @@ export function expireRights(s: GameState): string[] {
 }
 
 export const opponent = (s: GameState, def: RightsDef) => pick(s, def.opponents ?? ['Visitors']);
+/** What a broadcast is called this week: "Pelicans vs Gulls", or "Tennis Tour: The Clay Open". */
+export const gameName = (s: GameState, def: RightsDef) => `${def.short ?? def.name}${def.events ? ': ' : ' vs '}${opponent(s, def)}`;
 export const excitement = (s: GameState) => randInt(s, -10, 20);

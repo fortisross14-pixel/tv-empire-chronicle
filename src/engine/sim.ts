@@ -13,14 +13,14 @@ import { AWARD_LEVELS, AWARD_WEEKS, holdCeremony } from './awards';
 import { advanceProjects } from './production';
 import { advanceRivals, recordRivalShares } from './rivals';
 import {
-  excitement, expireRights, maybeCloseMarket, maybeOpenMarket, opponent, rivalSportsInSlot, sportsInSlot, sportsQuality,
+  excitement, expireRights, closeOldMarket, gameName, rivalSportsInSlot, sportsInSlot, sportsQuality,
   SPORTS_AIRINGS, SPORTS_CPM_BONUS,
 } from './rights';
 import {
   AIRINGS, CPM, FILLER_APPEAL, FILLER_NAME, HUT, OTHER_APPEAL, TIERS, overheadOf, reachOf, slotsOf,
 } from './schedule';
 import { addNews, round1 } from './news';
-import { expireIps, settleSeasonIp } from './ip';
+import { ipPremium, expireIps, settleSeasonIp } from './ip';
 import { rankOf, trackMission } from './mission';
 import { MOVIE_NOVELTY } from './rights';
 
@@ -108,6 +108,9 @@ export function airSlots(s: GameState): WeekContext {
         if (premiere) ours *= fall ? APPEAL.fallPremiere : APPEAL.premiere;
         ours *= 1 + (show.hype / 100) * HYPE_POWER;
         ours *= wordOfMouth(show.reviews);
+        // A known name sells: ads on a show based on an IP are worth more.
+        const brand = show.ipId ? s.ips.find((x) => x.id === show.ipId) : undefined;
+        if (brand) cpmBonus = 1 + ipPremium(brand, show.formatId);
       } else if (film) {
         kind = 'film';
         const def = rightsById(film.defId);
@@ -120,7 +123,7 @@ export function airSlots(s: GameState): WeekContext {
         kind = 'sports';
         const def = rightsById(sports.defId);
         const q = sportsQuality(s, sports);
-        entryName = `${def.short} vs ${opponent(s, def)}`;
+        entryName = gameName(s, def);
         ours = appeal({ quality: q.quality, novelty: clamp(80 + excitement(s), 0, 100), fame: q.fame, formatId: 'sports', block, part });
         if (weeksToSeasonEnd(def, s.week) <= 2) { ours *= APPEAL.playoffs; entryName += ' · Playoffs!'; }
         airings = SPORTS_AIRINGS;
@@ -341,9 +344,7 @@ export function nextWeek(s: GameState, ctx: WeekContext): void {
     for (const r of s.rivals) r.winsVsYou = 0;
   }
   for (const line of advanceRivals(s, s.week === 36, ctx.slots)) addNews(s, line, 'bad');
-  for (const line of maybeCloseMarket(s)) addNews(s, line, line.startsWith('You win') ? 'good' : 'neutral');
-  const opened = maybeOpenMarket(s);
-  if (opened) addNews(s, opened, 'good');
+  closeOldMarket(s);
   for (const line of expireRights(s)) addNews(s, line, 'neutral');
   for (const line of expireIps(s)) addNews(s, line, 'neutral');
   if (s.week === 36) addNews(s, 'Fall premiere season starts! New shows get a big boost for the next 5 weeks.', 'neutral');

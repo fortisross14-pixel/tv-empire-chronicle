@@ -76,8 +76,8 @@ test('building rules: inside the lot, no overlaps, enough cash; moving and selli
   s = buildBuilding(s, 'writers', 1, 4);
   const extra = s.lot.buildings.at(-1)!;
   expect(stageUse(s, 'script').capacity).toBe(2);
-  s = moveBuilding(s, extra.id, 6, 4, 1);
-  expect(footprint(s.lot.buildings.at(-1)!)).toMatchObject({ x: 6, y: 4 });
+  s = moveBuilding(s, extra.id, 11, 3, 1);
+  expect(footprint(s.lot.buildings.at(-1)!)).toMatchObject({ x: 11, y: 3 });
   const before = s.cash;
   s = sellBuilding(s, extra.id);
   expect(s.cash).toBeGreaterThan(before);
@@ -188,4 +188,26 @@ test('version 15 saves get the new skills, sliders and casts', () => {
   expect(pr.points).toEqual({ direction: 3, wardrobe: 0, image: 2, set: 1, sound: 3, music: 1, fx: 0 });
   expect(pr.specialists).toEqual({ set: pr.crewId });
   expect(pr).toMatchObject({ auto: true, hold: null, cast: { [rolesFor(pr.formatId)[0].id]: pr.talentId } });
+});
+
+test('version 16 saves get the bigger lot, a Head Office, and the annexes they already use', () => {
+  const now = ready(10);
+  const old = structuredClone(now) as unknown as Record<string, any>;
+  old.version = 16;
+  old.lot = { w: 12, h: 10, buildings: old.lot.buildings.filter((b: any) => b.kind !== 'office') };
+  old.rights = [{ id: 'r1', defId: 'pelicans', airingsLeft: 0, novelty: 100, expires: 9999, crewId: null, talentId: null, games: 0 }];
+  const up = migrate(old as never)!;
+  expect({ w: up.lot.w, h: up.lot.h }).toEqual(LOT_SIZE.local);
+  expect(up.lot.buildings.filter((b) => b.kind === 'office')).toHaveLength(1);
+  expect(up.lot.buildings.some((b) => b.kind === 'truck')).toBe(true); // it has sports rights
+  expect(up.lot.buildings.some((b) => b.kind === 'licensing')).toBe(false);
+  expect(() => sellBuilding(up, up.lot.buildings.find((b) => b.kind === 'truck')!.id)).toThrow(/sports rights/);
+});
+
+test('annexes: one Sports Truck and one Licensing Office per lot', () => {
+  let s = ready(11);
+  s = buildBuilding(s, 'truck', 8, 7);
+  expect(() => buildBuilding(s, 'truck', 10, 9)).toThrow(/already have/);
+  s = buildBuilding(s, 'licensing', 8, 9);
+  expect(s.lot.buildings.filter((b) => b.kind === 'truck' || b.kind === 'licensing')).toHaveLength(2);
 });

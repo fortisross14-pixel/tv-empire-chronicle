@@ -29,9 +29,16 @@ export interface RightsDef {
   isNew?: boolean;
   /** Kept only so old saves still load; never offered. */
   retired?: boolean;
-  /** Sports: season weeks (may wrap past New Year), the slot games take over, market week. */
+  /** Sports: season weeks (may wrap past New Year). Games only happen then. */
   season?: [number, number];
+  /** Sports: the slot games take over unless the player picks another (the first of `slots`). */
   slot?: SlotId;
+  /** Sports: when games can be shown (days and time of day). You air them in one of these. */
+  slots?: SlotId[];
+  /** Sports: played all week long, so it can go in any slot. */
+  anySlot?: boolean;
+  /** Sports: `opponents` are event names ("Tour: The Clay Open"), not teams to play against. */
+  events?: boolean;
   short?: string;
   opponents?: string[];
 }
@@ -41,13 +48,18 @@ const r = (x: RightsDef) => x;
 const m = (id: string, tier: RightsTier, rarity: Rarity, name: string, icon: string, topicId: string, quality: number, fame: number, text: string, extra: Partial<RightsDef> = {}) =>
   r({ id, kind: 'film', tier, rarity, name, icon, topicId, quality, fame, text, value: 0, airings: 3, weeks: 52, decay: 0, ...extra });
 
+/** A competition: on sale all year, played only in its season, shown in one of its slots. */
+const sp = (id: string, tier: RightsTier, name: string, short: string, icon: string, text: string, value: number, quality: number, fame: number,
+  season: [number, number], slots: SlotId[], opponents: string[], extra: Partial<RightsDef> = {}) =>
+  r({ id, kind: 'sports', tier, name, short, icon, text, value, quality, fame, season, slots, slot: slots[0], opponents, ...extra });
+
 export const RIGHTS: RightsDef[] = [
   // Movie packs (Shop). Classics: steady, little novelty. New releases: a premiere, then like a classic.
   m('monster-matinee', 'local', 'common', 'Monster Matinee Classics', '🧟', 'scifi', 45, 5, 'Rubber-suit monsters from the 50s. Cheap, cheerful, cult following.', { airings: 6 }),
   m('kungfu-theater', 'local', 'common', 'Kung Fu Theater', '🥋', 'martial-arts', 48, 8, 'Dubbed martial-arts classics. Saturday afternoon gold.', { airings: 6 }),
   m('holiday-bundle', 'local', 'rare', 'Holiday Movie Bundle', '🎄', 'family', 50, 6, 'Cozy holiday films. Huge in December.', { airings: 5, boostWeeks: [48, 52] }),
-  m('rom-com', 'local', 'common', 'Rom-Com Collection', '💞', 'romance', 50, 10, 'Meet-cutes and airport chases.', { airings: 5 }),
-  m('westerns', 'local', 'common', 'Dusty Trails Westerns', '🤠', 'history', 42, 4, 'Old westerns. Older viewers love them.', { airings: 8 }),
+  m('rom-com', 'local', 'rare', 'Rom-Com Collection', '💞', 'romance', 50, 10, '12 films of meet-cutes and airport chases.', { airings: 12 }),
+  m('westerns', 'local', 'common', 'Dusty Trails Westerns', '🤠', 'history', 42, 4, '20 old westerns. Older viewers love them.', { airings: 20 }),
   m('cult-scifi', 'local', 'rare', 'Cult Sci-Fi Pack', '👽', 'scifi', 56, 12, 'Strange, beloved sci-fi from the 80s.', { airings: 4 }),
   m('attack-tomatoes', 'local', 'common', 'Attack of the Giant Tomatoes', '🍅', 'scifi', 38, 6, 'So bad it is good.'),
   m('beach-party', 'local', 'common', 'Beach Party Bingo', '🏖️', 'romance', 40, 5, 'Surf, songs and very little plot.'),
@@ -58,6 +70,7 @@ export const RIGHTS: RightsDef[] = [
   m('pelican-summer', 'local', 'epic', 'Pelican Summer', '🎬', 'family', 62, 18, 'New indie hit shot in Port Ellison. First TV airing!', { isNew: true, airings: 2 }),
   m('kitchen-confidential', 'local', 'epic', 'Night Kitchen', '🔪', 'cooking', 60, 16, 'New festival darling about a chef with a secret. First TV airing!', { isNew: true, airings: 2 }),
 
+  m('cape-vault', 'state', 'epic', 'Cape & Cowl Vault', '🦸', 'scifi', 70, 36, '8 superhero films. Everyone has a favourite.', { airings: 8 }),
   m('noir-library', 'state', 'rare', 'Detective Noir Library', '🕵️', 'police', 66, 20, 'Smoky classics in black and white.', { airings: 6 }),
   m('space-cadets', 'state', 'common', 'Space Cadets', '🚀', 'scifi', 58, 18, 'A crew of misfits saves the galaxy, twice.'),
   m('big-heist', 'state', 'common', 'The Big Heist', '💰', 'police', 60, 20, 'Seven thieves, one casino, zero plans.'),
@@ -78,24 +91,40 @@ export const RIGHTS: RightsDef[] = [
   // Old film libraries from earlier versions: kept so saves load, never sold.
   r({ id: 'galaxy-wars', kind: 'film', tier: 'national', name: 'Galaxy Wars Saga', icon: '🌌', text: 'The biggest film saga ever made.', value: 900, quality: 94, fame: 80, topicId: 'scifi', airings: 9, weeks: 104, decay: 4, retired: true }),
 
-  // Local sports
-  r({ id: 'pelicans', kind: 'sports', tier: 'local', name: 'Port Ellison Pelicans', short: 'Pelicans', icon: '⚾', text: 'Minor-league baseball, April to September. Games take over Weekend Evening.', value: 35, quality: 55, fame: 15, season: [14, 39], slot: 'weekend-evening', opponents: ['Harbor Gulls', 'Lakeside Loons', 'Mill City Millers', 'Riverside Otters'] }),
-  r({ id: 'friday-football', kind: 'sports', tier: 'local', name: 'Friday Night Football', short: 'Ellison High', icon: '🏈', text: 'High-school football, September to November. Games take over Weekday Prime time.', value: 25, quality: 50, fame: 8, season: [36, 47], slot: 'weekday-prime', opponents: ['Westfield Wildcats', 'St. Agnes Saints', 'Harbor Pirates', 'Pine Ridge Rams'] }),
-  r({ id: 'ice-hawks', kind: 'sports', tier: 'local', name: 'Lakeside Ice Hawks', short: 'Ice Hawks', icon: '🏒', text: 'Junior hockey, November to March. Games take over Weekend Prime time.', value: 30, quality: 52, fame: 12, season: [44, 12], slot: 'weekend-prime', opponents: ['North Bay Bears', 'Capital Kings', 'Frostburg Wolves', 'Mill City Blades'] }),
-
-  // Bigger sports: visible in the market, locked until the station grows.
-  r({ id: 'state-college', kind: 'sports', tier: 'state', name: 'State College Football', short: 'State U', icon: '🏟️', text: 'Saturday college football. State networks only.', value: 120, quality: 72, fame: 35, season: [36, 48], slot: 'weekend-prime', opponents: ['Tech', 'A&M'] }),
-  r({ id: 'gridiron', kind: 'sports', tier: 'national', name: 'National Gridiron League', short: 'NGL', icon: '🏆', text: 'Pro football. The crown jewel of TV. National networks only.', value: 5000, quality: 90, fame: 90, season: [36, 5], slot: 'weekend-prime', opponents: ['Kings', 'Titans'] }),
+  // Sports. On sale all year at your level; games happen only in season, in one of their slots.
+  // Local
+  sp('pelicans', 'local', 'Port Ellison Pelicans', 'Pelicans', '⚾', 'Minor-league baseball, April to September.', 35, 55, 15, [14, 39], ['weekend-evening', 'weekend-morning'],
+    ['Harbor Gulls', 'Lakeside Loons', 'Mill City Millers', 'Riverside Otters']),
+  sp('friday-football', 'local', 'Friday Night Football', 'Ellison High', '🏈', 'High-school football, September to November.', 25, 50, 8, [36, 47], ['weekday-prime'],
+    ['Westfield Wildcats', 'St. Agnes Saints', 'Harbor Pirates', 'Pine Ridge Rams']),
+  sp('ice-hawks', 'local', 'Lakeside Ice Hawks', 'Ice Hawks', '🏒', 'Junior hockey, November to March.', 30, 52, 12, [44, 12], ['weekend-prime', 'weekend-evening'],
+    ['North Bay Bears', 'Capital Kings', 'Frostburg Wolves', 'Mill City Blades']),
+  sp('harbor-soccer', 'local', 'Harbor Soccer League', 'Harbor FC', '⚽', 'Local soccer, January to June. Sunday afternoons and nights.', 28, 50, 10, [1, 26], ['weekend-evening', 'weekend-prime'],
+    ['Dockside United', 'Old Town Rovers', 'Cannery Athletic', 'Breakwater City']),
+  sp('bowling-league', 'local', 'Ellison Lanes Bowling League', 'Lanes League', '🎳', 'League bowling, August to December. Saturday mornings.', 12, 42, 5, [31, 52], ['weekend-morning'],
+    ['Pin Pals', 'Gutter Gang', 'The Split Decision', 'Alley Cats']),
+  // State
+  sp('state-college', 'state', 'State College Football', 'State U', '🏟️', 'Saturday college football, September to November.', 120, 72, 35, [36, 48], ['weekend-prime', 'weekend-afternoon'],
+    ['Tech', 'A&M', 'Northern', 'Valley State']),
+  sp('state-bowling', 'state', 'State Bowling Championship', 'State Bowling', '🎳', 'The statewide tournament, August to December. Weekend mornings and afternoons.', 45, 58, 15, [31, 52], ['weekend-morning', 'weekend-afternoon'],
+    ['Quarter-finals', 'The Masters Round', 'Doubles Night', 'The 300 Chase'], { events: true }),
+  sp('college-wrestling', 'state', 'State College Wrestling', 'College Wrestling', '🤼', 'The college tournament, May to September. Thursday and Friday nights.', 70, 62, 22, [18, 39], ['thufri-prime', 'thufri-late'],
+    ['Tech', 'A&M', 'Northern', 'Valley State']),
+  sp('state-hoops', 'state', 'State Basketball League', 'State Hoops', '🏀', 'Semi-pro basketball, November to March. Weeknights and weekend evenings.', 100, 68, 30, [44, 13], ['monwed-prime', 'monwed-evening', 'weekend-evening'],
+    ['Capital Comets', 'River City Rockets', 'Lakeside Lakers', 'Mill City Mavericks']),
+  // National
+  sp('gridiron', 'national', 'National Gridiron League', 'NGL', '🏆', 'Pro football, September to January. The crown jewel of TV.', 5000, 90, 90, [36, 5], ['weekend-prime', 'weekend-afternoon', 'montue-prime'],
+    ['Kings', 'Titans', 'Ironclads', 'Mustangs']),
+  sp('world-tennis', 'national', 'World Tennis Tour', 'Tennis Tour', '🎾', 'A tournament somewhere every week of the year. Air it in any slot.', 1800, 78, 60, [1, 52], [],
+    ['The Clay Open', 'Grass Court Classic', 'Harbor Masters', 'The Desert Cup'], { events: true, anySlot: true }),
+  sp('pro-hoops', 'national', 'Pro Hoops Association', 'PHA', '🏀', 'Pro basketball, October to May. Weeknights and weekend evenings.', 3000, 86, 80, [40, 22], ['wedthu-prime', 'fri-prime', 'weekend-evening'],
+    ['Comets', 'Thunder', 'Pioneers', 'Cyclones']),
+  sp('grand-prix', 'national', 'Grand Prix Racing', 'Grand Prix', '🏎️', 'Open-wheel racing around the world, March to October. Weekend mornings and afternoons.', 2200, 82, 70, [10, 43], ['weekend-afternoon', 'weekend-morning'],
+    ['Harbor Street Circuit', 'The Desert 500', 'Mountain Pass GP', 'Night Race'], { events: true }),
 ];
 
 export const RIGHTS_BY_ID: Record<string, RightsDef> = Object.fromEntries(RIGHTS.map((x) => [x.id, x]));
 export const rightsById = (id: string) => RIGHTS_BY_ID[id];
-
-/** Weeks the Rights Market opens; it stays open this many weeks. */
-export const MARKET_WEEKS = [10, 30, 42];
-export const MARKET_OPEN_WEEKS = 2;
-/** Which sports rights are sold at which market. */
-export const SPORTS_AT_MARKET: Record<number, string[]> = { 10: ['pelicans'], 30: ['friday-football', 'state-college', 'gridiron'], 42: ['ice-hawks'] };
 
 export const TIER_RANK: Record<RightsTier, number> = { local: 0, state: 1, national: 2 };
 
@@ -117,4 +146,14 @@ export function weeksToSeasonEnd(def: RightsDef, week: number): number {
 export function weeksToSeasonStart(def: RightsDef, week: number): number {
   if (inSeason(def, week)) return 0;
   return (def.season![0] - week + 52) % 52;
+}
+
+/** Month names for a season, e.g. "Apr–Sep" (or "All year"). */
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export function seasonText(def: RightsDef): string {
+  if (!def.season) return '';
+  const [a, b] = def.season;
+  if (a === 1 && b === 52) return 'All year';
+  const month = (w: number) => MONTH_SHORT[Math.min(11, Math.floor(((w - 1) * 12) / 52))];
+  return `${month(a)}–${month(b)}`;
 }

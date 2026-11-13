@@ -7,11 +7,18 @@ import { topicsForFormat } from './data/topics';
 import { newId, rollPeoplePack } from './people';
 import { FACILITY_REFUND, rollNetworkCards } from './network';
 import { networkById } from './data/network';
+import { IPS, ipDefById, ipRarity } from './data/ips';
+import { licenseIp } from './ip';
 
 export const PRICES = { program: 40, people: 25, network: 30, business: 8 } as const;
 /** Movie packs cost more as the station grows (bigger films). */
 export const MOVIE_PACK_PRICE: Record<GameState['tier'], number> = { local: 15, state: 45, national: 250 };
-export const MOVIE_PACK_SIZE = 4;
+/** A movie pack shows this many cards; you keep MOVIE_PACK_KEEP of them. */
+export const MOVIE_PACK_SIZE = 3;
+export const MOVIE_PACK_KEEP = 2;
+/** An IP pack shows three licenses; you keep one. Bigger names cost more. */
+export const IP_PACK_PRICE: Record<GameState['tier'], number> = { local: 30, state: 160, national: 1800 };
+export const IP_PACK_SIZE = 3;
 const MOVIE_RARITY: Record<Rarity, number> = { common: 62, rare: 26, epic: 10, legend: 2 };
 
 /** Movies for this tier (and a few from the tier below). */
@@ -19,10 +26,31 @@ function movieCards(state: GameState): PackCard[] {
   const rank = TIER_RANK[state.tier];
   const pool = RIGHTS.filter((d) => d.kind === 'film' && d.rarity && !d.retired && TIER_RANK[d.tier] <= rank);
   const cards: PackCard[] = [];
+  const seen = new Set<string>();
   for (let i = 0; i < MOVIE_PACK_SIZE; i++) {
-    const weights = Object.fromEntries(pool.map((d) => [d.id, MOVIE_RARITY[d.rarity!] * (TIER_RANK[d.tier] === rank ? 3 : 1)]));
+    // Three different cards, so the choice is a real one.
+    const weights = Object.fromEntries(pool.filter((d) => !seen.has(d.id)).map((d) => [d.id, MOVIE_RARITY[d.rarity!] * (TIER_RANK[d.tier] === rank ? 3 : 1)]));
     const id = weighted(state, weights);
+    seen.add(id);
     cards.push({ type: 'movie', defId: id, duplicate: false });
+  }
+  return cards;
+}
+
+/** IP licenses the station can still get: its level and below, not held already. */
+export const ipPool = (state: GameState) =>
+  IPS.filter((d) => TIER_RANK[d.tier] <= TIER_RANK[state.tier] && !state.ips.some((x) => x.defId === d.id));
+
+function ipCards(state: GameState): PackCard[] {
+  const rank = TIER_RANK[state.tier];
+  const pool = ipPool(state);
+  const cards: PackCard[] = [];
+  const seen = new Set<string>();
+  while (cards.length < IP_PACK_SIZE && seen.size < pool.length) {
+    const weights = Object.fromEntries(pool.filter((d) => !seen.has(d.id)).map((d) => [d.id, MOVIE_RARITY[ipRarity({ defId: d.id, rating: d.rating })] * (TIER_RANK[d.tier] === rank ? 4 : 1)]));
+    const id = weighted(state, weights);
+    seen.add(id);
+    cards.push({ type: 'ip', defId: id });
   }
   return cards;
 }
@@ -59,13 +87,25 @@ export function makePack(state: GameState, kind: PackKind): Pack {
   if (kind === 'people' || kind === 'starter-people') cards = rollPeoplePack(state).map((person) => ({ type: 'person' as const, person }));
   else if (kind === 'network') cards = rollNetworkCards(state).map((card) => ({ type: 'network' as const, card, duplicate: false }));
   else if (kind === 'movies') cards = movieCards(state);
+  else if (kind === 'ip') cards = ipCards(state);
   else cards = programCards(state, kind === 'starter');
-  return { id: newId(state, 'pk'), kind, cards };
+  // Movies and IP: you see the cards and keep some of them.
+  const choose = kind === 'movies' ? MOVIE_PACK_KEEP : kind === 'ip' ? 1 : undefined;
+  return { id: newId(state, 'pk'), kind, cards, ...(choose && cards.length > choose ? { choose } : {}) };
 }
 
-/** Adds a pack's cards to the collection. Duplicate topics become Twist tokens. */
+/**
+ * Adds a pack's cards to the collection. Duplicate topics become Twist tokens.
+ * A pack with a choice pending (`choose`) is left alone until the player picks (see keepCards).
+ */
 export function applyPack(state: GameState, pack: Pack): Pack {
+  if (pack.choose) return pack;
   const cards = pack.cards.map((card): PackCard => {
+    if (card.type === 'ip') {
+      const def = ipDefById(card.defId);
+      if (def && !state.ips.some((x) => x.defId === def.id)) licenseIp(state, def);
+      return card;
+    }
     if (card.type === 'format') {
       const duplicate = state.formats.includes(card.id);
       if (duplicate) state.cash = Math.round((state.cash + FORMAT_REFUND) * 10) / 10;
@@ -100,4 +140,12 @@ export function applyPack(state: GameState, pack: Pack): Pack {
     return card;
   });
   return { ...pack, cards };
+}
+
+/** Finish a pack with a choice: keep these cards (by position), discard the rest. */
+export function keepCards(state: GameState, pack: Pack, keep: number[]): Pack {
+  if (!pack.choose) throw new Error('This pack has no choice to make.');
+  const picks = [...new Set(keep)].filter((i) => i >= 0 && i < pack.cards.length);
+  if (picks.length !== pack.choose) throw new Error(`Keep exactly ${pack.choose}.`);
+  return applyPack(state, { id: pack.id, kind: pack.kind, cards: picks.map((i) => pack.cards[i]) });
 }

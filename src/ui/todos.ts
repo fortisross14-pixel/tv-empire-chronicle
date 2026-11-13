@@ -9,10 +9,9 @@ export function buildTodos(
   act: { openPack: (packId: string) => void; goTab: (tab: TabId) => void; newShow: () => void; shoot: (projectId: string) => void; post: (projectId: string) => void },
 ): Todo[] {
   const todos: Todo[] = [];
-  const week = state.year * 52 + state.week;
   for (const pack of state.unopened) {
     const people = pack.kind === 'starter-people' || pack.kind === 'people';
-    const label = { starter: 'program', 'starter-people': 'people', program: 'program', people: 'people', network: 'network', movies: 'movie' }[pack.kind];
+    const label = { starter: 'program', 'starter-people': 'people', program: 'program', people: 'people', network: 'network', movies: 'movie', ip: 'license' }[pack.kind];
     todos.push({
       id: `pack-${pack.id}`,
       emoji: people ? '👥' : pack.kind === 'network' ? '📡' : '🎁',
@@ -50,9 +49,6 @@ export function buildTodos(
   const promoTargets = state.projects.length + state.shows.filter((x) => !x.premiered).length;
   if (promoTargets > 0 && state.networkCards.some((c) => networkById(c.defId).kind === 'promo')) {
     todos.push({ id: 'promo', emoji: '📣', title: 'Build hype before the premiere', detail: 'You have promo cards. Use them in Cards → Network.', onClick: () => act.goTab('cards') });
-  }
-  if (state.rightsMarket && state.rightsMarket.lots.every((l) => !l.bid)) {
-    todos.push({ id: 'market', emoji: '📜', title: 'The Rights Market is open', detail: `Sports and IP licenses. Bids close in ${state.rightsMarket.closesAt - week} weeks.`, onClick: () => act.goTab('shop') });
   }
   const scheduled = new Set(Object.values(state.schedule));
   for (const r of state.rights) {

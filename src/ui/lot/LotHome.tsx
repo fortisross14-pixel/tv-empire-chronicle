@@ -1,6 +1,6 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react';
 import {
-  BUILDINGS, STAGE_LABEL, buildCost, buildingDef, capacityOf, formatById, grade, isHeldScript, isHeldShot, occupants, placementProblem, stageUse, upgradeCost,
+  BUILDINGS, STAGE_LABEL, buildCost, buildingDef, capacityOf, rightsById, formatById, grade, isHeldScript, isHeldShot, occupants, placementProblem, stageUse, upgradeCost,
   type Building, type BuildingKind, type GameState, type Tier,
 } from '../../engine';
 import { Sheet } from '../components/Sheet';
@@ -17,7 +17,7 @@ const TIER_ORDER: Tier[] = ['local', 'state', 'national'];
  * pulls up from the bottom on phones and sits at the side on tablets and laptops.
  */
 export function LotHome({
-  state, children, onBuild, onMove, onUpgrade, onSell, onWrite, onShoot, onPost, onRelease, onOpenPack, goTab, onOpenShow,
+  state, children, onBuild, onMove, onUpgrade, onSell, onWrite, onShoot, onPost, onRelease, onOpenPack, goTab, onOpenShow, goMarket,
 }: {
   state: GameState;
   children: ReactNode;
@@ -34,6 +34,8 @@ export function LotHome({
   /** The last step for a finished show (tower): poster and marketing, then the Guide. */
   onRelease: (showId: string) => void;
   onOpenPack: (packId: string) => void;
+  /** Open a part of the Market (the office and its annexes lead there). */
+  goMarket: (tab: 'packs' | 'movies' | 'sports' | 'ip') => void;
   goTab: (tab: 'schedule' | 'studio' | 'cards' | 'shop') => void;
   onOpenShow: (id: string) => void;
 }) {
@@ -124,13 +126,14 @@ export function LotHome({
           <div className="build-list">
             {Object.values(BUILDINGS).filter((d) => !d.fixed).map((d) => {
               const locked = TIER_ORDER.indexOf(state.tier) < TIER_ORDER.indexOf(d.tier);
+              const have = !!d.unique && state.lot.buildings.some((b) => b.kind === d.kind);
               const cost = buildCost(state, d.kind);
               return (
-                <button key={d.kind} className="build-item" disabled={locked || state.cash < cost} onClick={() => startPlacing(d.kind)}>
+                <button key={d.kind} className="build-item" disabled={locked || have || state.cash < cost} onClick={() => startPlacing(d.kind)}>
                   <span className="bi-icon">{d.icon}</span>
                   <span className="bi-main"><b>{d.name}</b><span className="tiny muted">{d.blurb}</span>
                     <span className="tiny muted">{d.size[0]}×{d.size[1]} tiles{d.capacity ? ` · holds ${d.capacity[0]}` : ''}</span></span>
-                  <span className="bi-cost">{locked ? '🔒' : money(cost)}</span>
+                  <span className="bi-cost">{locked ? '🔒' : have ? 'Built' : money(cost)}</span>
                 </button>
               );
             })}
@@ -141,7 +144,7 @@ export function LotHome({
       {building && !placing && (
         <Sheet title={`${buildingDef(building.kind).icon} ${buildingDef(building.kind).name}`} onClose={() => setSelected(null)}>
           <BuildingActions state={state} building={building} onWrite={() => act(onWrite)} onAdvance={advance}
-            onGuide={() => act(() => goTab('schedule'))} onOpenShow={(id) => act(() => onOpenShow(id))} />
+            onGuide={() => act(() => goTab('schedule'))} onOpenShow={(id) => act(() => onOpenShow(id))} onMarket={(t) => act(() => goMarket(t))} />
           <BuildingInfo state={state} id={building.id} />
           {(!buildingDef(building.kind).fixed || upgradeCost(state, building) !== null) && (
             <div className="lot-manage">
@@ -173,10 +176,10 @@ export function LotHome({
 
 /** What you do at this building: write at the Writers' Room, shoot at a Sound Stage, finish in post, release at the tower. */
 function BuildingActions({
-  state, building, onWrite, onAdvance, onGuide, onOpenShow,
+  state, building, onWrite, onAdvance, onGuide, onOpenShow, onMarket,
 }: {
   state: GameState; building: Building; onWrite: () => void; onAdvance: (kind: 'script' | 'shot' | 'show', id: string) => void;
-  onGuide: () => void; onOpenShow: (id: string) => void;
+  onGuide: () => void; onOpenShow: (id: string) => void; onMarket: (tab: 'packs' | 'movies' | 'sports' | 'ip') => void;
 }) {
   const scripts = state.projects.filter(isHeldScript);
   const shots = state.projects.filter(isHeldShot);
@@ -241,6 +244,43 @@ function BuildingActions({
       </div>
     );
   }
+  if (building.kind === 'office') {
+    const annex = (kind: 'truck' | 'licensing') => state.lot.buildings.some((b) => b.kind === kind);
+    return (
+      <div className="stack lot-actions">
+        <button className="btn primary big" onClick={() => onMarket('packs')}>🃏 Card packs: programs and people</button>
+        <button className="btn ghost big" onClick={() => onMarket('movies')}>🎞️ Movie packs</button>
+        <div className="panel stack-sm small">
+          <b>Annexes</b>
+          <div className="spread"><span>🚚 Sports Truck: buy sports rights, air live games</span><span className={annex('truck') ? 'pos' : 'muted'}>{annex('truck') ? 'Built' : 'Not built'}</span></div>
+          <div className="spread"><span>📜 Licensing Office: license books, games, toys, films</span><span className={annex('licensing') ? 'pos' : 'muted'}>{annex('licensing') ? 'Built' : 'Not built'}</span></div>
+          <p className="tiny muted">Add them from 🏗️ Build. More kinds of office will follow.</p>
+        </div>
+      </div>
+    );
+  }
+  if (building.kind === 'truck') {
+    const mine = state.rights.filter((r) => rightsById(r.defId).kind === 'sports');
+    return (
+      <div className="stack lot-actions">
+        <button className="btn primary big" onClick={() => onMarket('sports')}>🏟️ Sports rights</button>
+        {mine.length > 0
+          ? <div className="panel stack-sm small"><b>Your competitions</b>{mine.map((r) => <div key={r.id} className="spread"><span>{rightsById(r.defId).icon} {rightsById(r.defId).name}</span><span className="muted">{r.games} games aired</span></div>)}</div>
+          : <p className="small muted">No rights yet. They are on sale all year; games air only while the season is on.</p>}
+      </div>
+    );
+  }
+  if (building.kind === 'licensing') {
+    const licensed = state.ips.filter((x) => x.defId);
+    return (
+      <div className="stack lot-actions">
+        <button className="btn primary big" onClick={() => onMarket('ip')}>📜 License packs and your IP</button>
+        {licensed.length > 0
+          ? <div className="panel stack-sm small"><b>Licenses you hold</b>{licensed.map((x) => <div key={x.id} className="spread"><span>{x.icon} {x.name}</span><span className="muted">rating {x.rating}</span></div>)}</div>
+          : <p className="small muted">No license yet. Pick one from a pack, then choose it when you write a script.</p>}
+      </div>
+    );
+  }
   return null;
 }
 
@@ -253,7 +293,7 @@ function BuildingInfo({ state, id }: { state: GameState; id: string }) {
   const next = upgradeCost(state, b);
   return (
     <div className="stack">
-      {!def.stage && b.kind !== 'tower' && <p className="small muted">{def.blurb}</p>}
+      {!def.stage && !['tower', 'office', 'truck', 'licensing'].includes(b.kind) && <p className="small muted">{def.blurb}</p>}
       {def.capacity && (
         <div className="panel stack-sm small">
           <div className="spread"><span>Level</span><b>{'★'.repeat(b.level)}{'☆'.repeat(3 - b.level)}</b></div>

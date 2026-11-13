@@ -3,7 +3,8 @@ import { airWeek, answerEvent, cancelProject, cancelShow, createShow, newGame, o
 import { startEvent } from './events';
 import { holdCeremony } from './awards';
 import { migrate } from './save';
-import { placeBid, sportsClash } from './rights';
+import { buySports, sportsClash } from './rights';
+import { addAnnex } from './lot';
 import { rightsById } from './data/rights';
 import { FORMATS } from './data/formats';
 import { topicsForFormat } from './data/topics';
@@ -76,10 +77,14 @@ test('two sports in the same slot and weeks are refused', () => {
   const s = withShow(6);
   s.tier = 'state';
   s.rights.push({ id: 'r1', defId: 'ice-hawks', airingsLeft: 0, novelty: 100, expires: 9999, crewId: null, talentId: null, games: 0 });
-  expect(sportsClash(s, rightsById('state-college'))).toBe('Lakeside Ice Hawks');
+  expect(sportsClash(s, rightsById('state-college'), 'weekend-prime')).toBe('Lakeside Ice Hawks');
   s.cash = 999;
-  s.rightsMarket = { closesWeek: 1, closesAt: 9999, lots: [{ id: 'l', defId: 'state-college', minBid: 10, bid: null, locked: false }] };
-  expect(() => placeBid(s, 'l', 50)).toThrow(/already plays/);
+  expect(() => buySports(s, 'state-college')).toThrow(/Sports Truck/);
+  addAnnex(s, 'truck');
+  expect(() => buySports(s, 'state-college', 'weekend-prime')).toThrow(/already plays/);
+  expect(() => buySports(s, 'state-college', 'monwed-morning')).toThrow(/not played/);
+  // Left to itself it takes the competition's first slot that is free.
+  expect(buySports(s, 'state-college').slot).toBe('weekend-afternoon');
 });
 
 test('awards go to the right show even when names repeat', () => {
@@ -105,7 +110,7 @@ test('a version 9 save is upgraded, not wiped', () => {
   const up = migrate(old)!;
   expect(up.version).toBe(SAVE_VERSION);
   expect(up.shows[0].lastPlan).toBeNull();
-  expect(up.rightsMarket!.closesAt).toBe((s.year as number) * 52 + 32);
+  expect(up.rightsMarket).toBeNull(); // the timed market is gone
 });
 
 test('local sports keep a local audience after moving up', () => {

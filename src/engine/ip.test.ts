@@ -1,6 +1,7 @@
 // Wave 11: movie packs, licensed IP and our own shows becoming IP.
-import { airWeek, buyPack, createShow, newGame, openPack, scheduleShow, SAVE_VERSION } from './game';
-import { maybeCloseMarket, maybeOpenMarket } from './rights';
+import { airWeek, buyPack, createShow, dismissReveal, keepPackCards, newGame, openPack, scheduleShow, SAVE_VERSION } from './game';
+import { addAnnex } from './lot';
+import { ipPremium } from './ip';
 import { RIGHTS, rightsById } from './data/rights';
 import { IPS, ipDefById } from './data/ips';
 import { licenseIp, seasonScore, settleSeasonIp } from './ip';
@@ -36,8 +37,16 @@ test('a movie pack adds movies you can schedule straight away; duplicates add ai
   s.shopUnlocked = true;
   s.cash = 500;
   s = buyPack(s, 'movies');
+  // Three different movies to look at; you keep two.
   const movies = s.reveal!.cards.filter((c) => c.type === 'movie');
-  expect(movies).toHaveLength(4);
+  expect(movies).toHaveLength(3);
+  expect(new Set(movies.map((c) => c.type === 'movie' && c.defId)).size).toBe(3);
+  expect(s.reveal!.choose).toBe(2);
+  expect(s.rights).toHaveLength(0);
+  expect(() => keepPackCards(s, [0])).toThrow(/exactly 2/);
+  s = keepPackCards(s, [0, 2]);
+  expect(s.reveal).toBeNull();
+  expect(s.rights.map((r) => r.defId)).toEqual([movies[0], movies[2]].map((c) => c.type === 'movie' && c.defId));
   const film = s.rights.find((r) => rightsById(r.defId).kind === 'film')!;
   expect(film).toBeTruthy();
   expect(rightsById(film.defId).tier).toBe('local');
@@ -59,28 +68,31 @@ test('a movie pack adds movies you can schedule straight away; duplicates add ai
 
 test('every pack movie is a real movie, and no market sells films any more', () => {
   for (const d of RIGHTS.filter((x) => x.rarity)) expect(d.kind).toBe('film');
-  const s = started(4);
-  s.week = 30;
-  maybeOpenMarket(s);
-  const lots = s.rightsMarket!.lots;
-  expect(lots.some((l) => l.ip && !l.locked)).toBe(true);
-  for (const l of lots) if (!l.ip) expect(rightsById(l.defId).kind).toBe('sports');
-  // Local stations only see local IP unlocked.
-  for (const l of lots.filter((x) => x.ip && !x.locked)) expect(ipDefById(l.defId)!.tier).toBe('local');
+  let s = started(4);
+  s.shopUnlocked = true; s.cash = 500;
+  // IP comes in card packs, from the Licensing Office: three licenses, keep one.
+  expect(() => buyPack(s, 'ip')).toThrow(/Licensing Office/);
+  addAnnex(s, 'licensing');
+  s = buyPack(s, 'ip');
+  expect(s.reveal!.cards).toHaveLength(3);
+  expect(s.reveal!.choose).toBe(1);
+  // Local stations only see local IP.
+  for (const c of s.reveal!.cards) expect(c.type === 'ip' && ipDefById(c.defId)!.tier).toBe('local');
+  // Walking away keeps the first card.
+  const first = s.reveal!.cards[0];
+  s = dismissReveal(s);
+  expect(s.ips.map((x) => x.defId)).toEqual([first.type === 'ip' && first.defId]);
 });
 
 test('winning an IP lot licenses it; a show based on it gets fame and hype', () => {
   let s = started(5);
-  s.week = 10;
-  maybeOpenMarket(s);
-  const lot = s.rightsMarket!.lots.find((l) => l.ip && !l.locked)!;
-  lot.bid = 10_000;
-  s.cash = 20_000;
-  s.rivals.forEach((r) => (r.strength = 0));
-  s.rightsMarket!.closesAt = 0;
-  const news = maybeCloseMarket(s);
-  expect(news.join(' ')).toMatch(/You license/);
+  s.shopUnlocked = true; s.cash = 20_000;
+  addAnnex(s, 'licensing');
+  s = keepPackCards(buyPack(s, 'ip'), [1]);
   expect(s.ips).toHaveLength(1);
+  // A known name earns more from ads, most of all in a format made for it.
+  expect(ipPremium({ rating: 80, fits: { series: 3 } }, 'series')).toBeCloseTo(0.4);
+  expect(ipPremium({ rating: 80, fits: {} }, 'series')).toBeCloseTo(0.2);
   const ip = s.ips[0];
   ip.fits[s.formats[0]] = 3;
   s = createShow(s, plan(s, { ipId: ip.id }));
@@ -145,7 +157,7 @@ test('version 11 saves upgrade: IP fields added, film lots dropped from an open 
   expect(up.version).toBe(SAVE_VERSION);
   expect(up.ips).toEqual([]);
   expect(up.rivalIps).toEqual([]);
-  expect(up.rightsMarket!.lots.map((l) => l.defId)).toEqual(['pelicans']);
+  expect(up.rightsMarket).toBeNull(); // the timed market is gone
 });
 
 test('a State station that owns movies still finds its sports slots (Guide crash)', async () => {

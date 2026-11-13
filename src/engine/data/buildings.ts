@@ -16,8 +16,10 @@ export interface BuildingDef {
   upgrades?: [number, number];
   /** Lowest tier that can build it. */
   tier: Tier;
-  /** Can't be built or sold by the player (the broadcast tower). */
+  /** Can't be built or sold by the player (the broadcast tower, the head office). */
   fixed?: boolean;
+  /** Only one per lot: an office annex that opens a part of the Market. */
+  unique?: boolean;
   /** Body colour for the low-poly model. */
   color: string;
 }
@@ -31,6 +33,12 @@ export const BUILDINGS: Record<BuildingKind, BuildingDef> = {
     blurb: 'Editing, sound and effects. Each level fits one more show at a time.' },
   tower: { kind: 'tower', name: 'Broadcast Tower', icon: '📡', size: [1, 1], cost: 0, tier: 'local', fixed: true, color: '#ff4d6d',
     blurb: 'Where finished shows go on air.' },
+  office: { kind: 'office', name: 'Head Office', icon: '🏢', size: [2, 2], cost: 0, tier: 'local', fixed: true, color: '#b98cff',
+    blurb: 'Where the deals are made: program, people and movie packs. Build annexes to open more of the Market.' },
+  truck: { kind: 'truck', name: 'Sports Truck', icon: '🚚', size: [2, 1], cost: 40, tier: 'local', unique: true, color: '#5be3a1',
+    blurb: 'An outside-broadcast truck. With it you can buy sports rights and air live games.' },
+  licensing: { kind: 'licensing', name: 'Licensing Office', icon: '📜', size: [2, 2], cost: 60, tier: 'local', unique: true, color: '#ffc857',
+    blurb: 'Lawyers and agents. With it you can license books, games, toys, films and events to make shows from.' },
   tree: { kind: 'tree', name: 'Tree', icon: '🌳', size: [1, 1], cost: 1, tier: 'local', color: '#4caf6a', blurb: 'A bit of green for the lot.' },
   fountain: { kind: 'fountain', name: 'Fountain', icon: '⛲', size: [2, 2], cost: 8, tier: 'local', color: '#7ad7ff', blurb: 'Visitors love a fountain.' },
   sign: { kind: 'sign', name: 'Studio Sign', icon: '🪧', size: [2, 1], cost: 5, tier: 'local', color: '#ffd23f', blurb: 'Your name in big letters.' },
@@ -39,7 +47,7 @@ export const BUILDINGS: Record<BuildingKind, BuildingDef> = {
 export const buildingDef = (kind: BuildingKind) => BUILDINGS[kind];
 
 /** The lot grows with the station. */
-export const LOT_SIZE: Record<Tier, { w: number; h: number }> = { local: { w: 12, h: 10 }, state: { w: 16, h: 12 }, national: { w: 20, h: 14 } };
+export const LOT_SIZE: Record<Tier, { w: number; h: number }> = { local: { w: 14, h: 11 }, state: { w: 18, h: 13 }, national: { w: 22, h: 15 } };
 
 /** Share of the building price you get back when selling. */
 export const SELL_REFUND = 0.5;

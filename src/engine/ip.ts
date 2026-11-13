@@ -29,6 +29,13 @@ export function ipBonus(ip: OwnedIp, formatId: string) {
   return { fit, label: f.label, fame: Math.round(ip.rating * f.fame), hype: Math.round(ip.rating * f.hype), quality: f.quality };
 }
 
+/**
+ * Advertisers pay more for a name people know: extra ad revenue for a show based on an IP,
+ * up to +50% for a world-famous one in a format made for it.
+ */
+export const ipPremium = (ip: Pick<OwnedIp, 'rating' | 'fits'>, formatId: string): number =>
+  Math.min(0.5, (ip.rating / 200) * [0, 0.5, 0.8, 1][ipFit(ip, formatId)]);
+
 /** IPs a new show can be based on right now. */
 export const usableIps = (s: GameState) => s.ips.filter((x) => x.expires === null || x.expires >= absWeek(s));
 

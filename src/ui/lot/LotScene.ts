@@ -799,6 +799,7 @@ export class LotScene {
           case 'glow': ((o as THREE.Sprite).material as THREE.SpriteMaterial).opacity = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(now / 320)); break;
           case 'dish': if (!calm) o.rotation.y += dt * (lit ? 1.4 : 0.25); break;
           case 'beam': o.visible = true; o.getObjectByName('beamCone')!.visible = lit; o.rotation.set(0.35 * Math.sin(now / 1300 + (o.userData.phase as number)), 0, -0.35 + 0.3 * Math.cos(now / 1700 + (o.userData.phase as number))); break;
+          case 'flag': if (!calm) o.rotation.y = Math.sin(now / 300) * 0.35; break;
           case 'sway': if (!calm) o.rotation.z = Math.sin(now / 1100 + (o.userData.phase as number)) * 0.045; break;
           case 'jet': {
             const p = ((now / 1400 + (o.userData.phase as number)) % 1);
@@ -980,7 +981,7 @@ export class LotScene {
     const r = this.canvas.getBoundingClientRect();
     const out: LotLabel[] = [];
     for (const b of m.buildings) {
-      if (!buildingDef(b.kind).stage && b.kind !== 'tower') continue;
+      if (!buildingDef(b.kind).stage && !['tower', 'office', 'truck', 'licensing'].includes(b.kind)) continue;
       const p = this.centerOf(b).add(new THREE.Vector3(0, this.topOf(b.id) + (buildingDef(b.kind).stage ? 0.55 : 0.2), 0)).project(this.camera);
       out.push({ id: b.id, x: Math.round((p.x + 1) / 2 * r.width), y: Math.round((1 - p.y) / 2 * r.height), visible: p.z < 1 });
     }

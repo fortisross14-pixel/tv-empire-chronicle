@@ -199,6 +199,7 @@ export interface OwnedIp {
   originShowId: string | null;
 }
 
+
 /** A show poster: stacked art layers plus a title. Ids refer to the poster art library. */
 export interface PosterSpec {
   sky: string;
@@ -292,6 +293,8 @@ export interface OwnedRights {
   crewId: string | null;
   talentId: string | null;
   games: number;
+  /** Sports: the slot its games air in (one of the competition's slots). Unset: its first. */
+  slot?: SlotId;
 }
 
 export interface RivalRights {
@@ -401,7 +404,7 @@ export interface WeekResult {
   reputationDelta: number;
 }
 
-export type PackKind = 'program' | 'people' | 'network' | 'movies' | 'starter' | 'starter-people';
+export type PackKind = 'program' | 'people' | 'network' | 'movies' | 'ip' | 'starter' | 'starter-people';
 
 export type PackCard =
   | { type: 'format'; id: string; duplicate: boolean }
@@ -409,12 +412,16 @@ export type PackCard =
   | { type: 'person'; person: Person }
   | { type: 'network'; card: NetworkCard; duplicate: boolean }
   /** A movie: added to your rights, ready to schedule. A duplicate adds airings. */
-  | { type: 'movie'; defId: string; duplicate: boolean };
+  | { type: 'movie'; defId: string; duplicate: boolean }
+  /** An IP license: a book, game, toy, film or event to base shows on. */
+  | { type: 'ip'; defId: string };
 
 export interface Pack {
   id: string;
   kind: PackKind;
   cards: PackCard[];
+  /** Set while the player still has to choose: keep this many of the cards, the rest are discarded. */
+  choose?: number;
 }
 
 export interface NewsItem {
@@ -449,7 +456,7 @@ export interface MissionRun {
 
 export type SandboxDifficulty = 'easy' | 'normal' | 'hard';
 
-export type BuildingKind = 'writers' | 'stage' | 'post' | 'tower' | 'tree' | 'fountain' | 'sign';
+export type BuildingKind = 'writers' | 'stage' | 'post' | 'tower' | 'office' | 'truck' | 'licensing' | 'tree' | 'fountain' | 'sign';
 
 /** A building on the studio lot. x, y: the corner tile; rot: quarter turns. */
 export interface Building {

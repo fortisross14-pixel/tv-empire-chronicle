@@ -1,4 +1,4 @@
-import { CHAMPION_WEEKS, airWeek, answerEvent, bidOnRights, buyPack, expandToNational, expandToState, signAffiliate, stateLicenseGaps, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
+import { CHAMPION_WEEKS, airWeek, answerEvent, buySportsRights, keepPackCards, buyPack, expandToNational, expandToState, signAffiliate, stateLicenseGaps, createShow, newGame, openPack, releasePerson, scheduleShow, usePromo } from './game';
 import { startEvent } from './events';
 import { holdCeremony } from './awards';
 import { makeReviews } from './reviews';
@@ -7,7 +7,8 @@ import { topicsForFormat } from './data/topics';
 import { CLASSIC_QUALITY, computeScores, previewPlan, scriptStars, teamBonus, type ShowPlan } from './production';
 import type { GameState, SlotId } from './types';
 import { rightsById } from './data/rights';
-import { maybeOpenMarket } from './rights';
+import { sportsOffers, sportsSlots } from './rights';
+import { addAnnex } from './lot';
 import { TIERS, affiliateCost } from './schedule';
 
 const sum = (o: Record<string, number>) => Object.values(o).reduce((a, b) => a + b, 0);
@@ -264,27 +265,30 @@ describe('rights', () => {
     return s;
   };
 
-  test('every market sells all the sports your tier can enter, and nothing above it', () => {
-    let s = newGame(5, 'X');
-    s = advanceTo(s, 30);
-    expect(s.rightsMarket).not.toBeNull();
-    const sports = s.rightsMarket!.lots.filter((l) => !l.ip).map((l) => l.defId).sort();
-    expect(sports).toEqual(['friday-football', 'ice-hawks', 'pelicans']);
-    expect(s.rightsMarket!.lots.some((l) => l.locked)).toBe(false);
-    // State networks also see college football.
+  test('sports are on sale all year at your level, and nothing above it', () => {
+    const s = newGame(5, 'X');
+    expect(sportsOffers(s).map((d) => d.id).sort()).toEqual(['bowling-league', 'friday-football', 'harbor-soccer', 'ice-hawks', 'pelicans']);
+    // State networks also see college sports, and games fit the bigger schedule.
     const t = newGame(6, 'X');
-    t.tier = 'state'; t.week = 10;
-    maybeOpenMarket(t);
-    expect(t.rightsMarket!.lots.map((l) => l.defId)).toContain('state-college');
-    expect(t.rightsMarket!.lots.map((l) => l.defId)).not.toContain('gridiron');
+    t.tier = 'state';
+    const ids = sportsOffers(t).map((d) => d.id);
+    expect(ids).toContain('state-college');
+    expect(ids).not.toContain('gridiron');
+    expect(sportsSlots(t, rightsById('college-wrestling'))).toEqual(['thufri-prime', 'thufri-late']);
+    // A competition played all week can go anywhere.
+    t.tier = 'national';
+    expect(sportsSlots(t, rightsById('world-tennis'))).toHaveLength(20);
   });
 
   test('winning football: games take over weekday prime in season and pay well', () => {
     let s = newGame(5, 'X');
     s = advanceTo(s, 30);
     s.cash = 500;
-    const lot = s.rightsMarket!.lots.find((l) => l.defId === 'friday-football')!;
-    s = bidOnRights(s, lot.id, 200);
+    expect(() => buySportsRights(s, 'friday-football')).toThrow(/Sports Truck/);
+    addAnnex(s, 'truck');
+    s = buySportsRights(s, 'friday-football');
+    expect(s.cash).toBe(475); // a full season, bought before it starts
+    expect(() => buySportsRights(s, 'friday-football')).toThrow(/already/);
     s = advanceTo(s, 33);
     expect(s.rights.some((r) => r.defId === 'friday-football')).toBe(true);
     s = advanceTo(s, 36);
@@ -300,6 +304,7 @@ describe('rights', () => {
     s.shopUnlocked = true;
     s.cash = 500;
     s = buyPack(s, 'movies');
+    s = keepPackCards(s, [0, 1]);
     const film = s.rights.find((r) => rightsById(r.defId).kind === 'film')!;
     s = scheduleShow(s, 'weekday-evening', film.id);
     s = airWeek(s.pendingEvent ? answerEvent(s, s.pendingEvent.choices.length - 1) : s);

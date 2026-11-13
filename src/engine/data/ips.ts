@@ -1,11 +1,12 @@
+import type { Rarity } from '../types';
 import type { RightsTier } from './rights';
 
 /** What a licensed IP is in the world: a book saga, a toy line, a celebrity chef… */
-export type IpKind = 'book' | 'game' | 'tabletop' | 'toy' | 'film' | 'chef' | 'sport' | 'comic' | 'show';
+export type IpKind = 'book' | 'game' | 'tabletop' | 'toy' | 'film' | 'chef' | 'sport' | 'event' | 'comic' | 'show';
 
 export const IP_KIND_LABEL: Record<IpKind, string> = {
   book: 'Book', game: 'Video game', tabletop: 'Board game', toy: 'Toy line', film: 'Film franchise',
-  chef: 'Celebrity chef', sport: 'Sports event', comic: 'Comic book', show: 'Your show',
+  chef: 'Celebrity chef', sport: 'Sports event', event: 'Event', comic: 'Comic book', show: 'Your show',
 };
 
 /** How well an IP suits a format: 3 made for it, 2 works, 1 a stretch (the default). */
@@ -20,8 +21,10 @@ export interface IpDef {
   text: string;
   /** 0–100: how famous it is. Shows made from it start with fame and hype from this. */
   rating: number;
-  /** Typical license price in $K. Bids start at 60% of it. */
+  /** What the license is worth in $K (it comes from an IP card pack). */
   value: number;
+  /** How rare its card is. Filled in from the tier and rating when not given. */
+  rarity?: Rarity;
   /** How many weeks the production license lasts. */
   weeks: number;
   topicId: string;
@@ -45,6 +48,10 @@ export const IPS: IpDef[] = [
     text: 'A local web comic about a teen who talks to seagulls.', fits: { animation: 3, series: 2, sitcom: 2 } }),
   ip({ id: 'ellison-marathon', name: 'Port Ellison Marathon', icon: '🏃', kind: 'sport', tier: 'local', rating: 20, value: 25, weeks: 2 * Y, topicId: 'sports',
     text: 'The city run along the harbor wall. Ten thousand runners, one big day.', fits: { documentary: 3, reality: 3, magazine: 2, news: 2 } }),
+  ip({ id: 'harbor-buddies', name: 'Harbor Buddies', icon: '🧸', kind: 'toy', tier: 'local', rating: 19, value: 22, weeks: 2 * Y, topicId: 'family',
+    text: 'Plush sea animals sold in every shop on the pier.', fits: { animation: 3, sitcom: 2, contest: 2 } }),
+  ip({ id: 'chowder-fest', name: 'Chowder Festival', icon: '🥣', kind: 'event', tier: 'local', rating: 21, value: 26, weeks: 2 * Y, topicId: 'cooking',
+    text: 'One weekend a year the whole harbor smells of clams.', fits: { magazine: 3, contest: 3, reality: 2, documentary: 2 } }),
 
   // State: known across the state, or rising.
   ip({ id: 'moonlit-fangs', name: 'Moonlit Fangs', icon: '🧛', kind: 'book', tier: 'state', rating: 55, value: 180, weeks: 3 * Y, topicId: 'romance',
@@ -59,6 +66,10 @@ export const IPS: IpDef[] = [
     text: 'A golden-age comic hero due for a comeback.', fits: { animation: 3, series: 3, movie: 2 } }),
   ip({ id: 'zip-hedgehog', name: 'Zip the Hedgehog', icon: '🦔', kind: 'game', tier: 'state', rating: 54, value: 170, weeks: 3 * Y, topicId: 'family',
     text: 'The fastest blue mascot in gaming. Kids know every level.', fits: { animation: 3, contest: 2, movie: 2 } }),
+  ip({ id: 'botticelli-cipher', name: 'The Botticelli Cipher', icon: '🖼️', kind: 'book', tier: 'state', rating: 60, value: 220, weeks: 3 * Y, topicId: 'history',
+    text: 'A professor, a painting and a secret society. Everyone read it on the beach.', fits: { movie: 3, documentary: 3, series: 2, contest: 1 } }),
+  ip({ id: 'state-fair', name: 'The Great State Fair', icon: '🎡', kind: 'event', tier: 'state', rating: 46, value: 110, weeks: 3 * Y, topicId: 'local-life',
+    text: 'Prize pigs, fried everything and a very tall wheel.', fits: { magazine: 3, reality: 2, contest: 2, documentary: 2 } }),
 
   // National: only the giants can afford these.
   ip({ id: 'galaxy-wars-ip', name: 'Galaxy Wars', icon: '🌌', kind: 'film', tier: 'national', rating: 95, value: 2700, weeks: 4 * Y, topicId: 'scifi',
@@ -73,10 +84,23 @@ export const IPS: IpDef[] = [
     text: 'Every four years the whole planet watches. The road there is the story.', fits: { documentary: 3, reality: 3, news: 2, magazine: 2 } }),
   ip({ id: 'midnight-carnival', name: 'Midnight Carnival', icon: '🎪', kind: 'film', tier: 'national', rating: 74, value: 1350, weeks: 4 * Y, topicId: 'true-crime',
     text: 'A horror film series with a creepy clown. Every Halloween, a new one.', fits: { series: 3, movie: 3, documentary: 2 } }),
+  ip({ id: 'last-spores', name: 'The Last Spores', icon: '🍄', kind: 'game', tier: 'national', rating: 86, value: 2000, weeks: 4 * Y, topicId: 'survival',
+    text: 'A smuggler and a girl cross a ruined country. The game that made players cry.', fits: { series: 3, movie: 2, animation: 2, documentary: 1 } }),
+  ip({ id: 'eurotune', name: 'Eurotune Song Contest', icon: '🎤', kind: 'event', tier: 'national', rating: 84, value: 1900, weeks: 4 * Y, topicId: 'music',
+    text: 'Forty countries, wind machines and key changes. Douze points!', fits: { contest: 3, reality: 2, documentary: 2, talk: 2 } }),
+  ip({ id: 'dino-kingdom', name: 'Dino Kingdom', icon: '🦕', kind: 'film', tier: 'national', rating: 89, value: 2300, weeks: 4 * Y, topicId: 'nature',
+    text: 'The theme-park-gone-wrong films. Life finds a way to sell tickets.', fits: { movie: 3, animation: 3, documentary: 3, series: 2 } }),
 ];
 
 export const IP_BY_ID: Record<string, IpDef> = Object.fromEntries(IPS.map((x) => [x.id, x]));
 export const ipDefById = (id: string): IpDef | undefined => IP_BY_ID[id];
+
+/** Card rarity from how famous something is: small local names are common, world brands legendary. */
+export const rarityForRating = (rating: number): Rarity => (rating >= 88 ? 'legend' : rating >= 55 ? 'epic' : rating >= 22 ? 'rare' : 'common');
+export const ipRarity = (ip: { defId?: string | null; rating: number }): Rarity => {
+  const def = ip.defId ? IP_BY_ID[ip.defId] : undefined;
+  return def ? def.rarity ?? rarityForRating(def.rating) : rarityForRating(ip.rating);
+};
 
 /**
  * Formats a show of each format naturally turns into: its own format, then spin-off

@@ -1,3 +1,4 @@
+import { rightsById } from './data/rights';
 import type { Building, BuildingKind, GameState, Lot, Project, Stage, Tier } from './types';
 import { BUILDINGS, LOT_SIZE, SELL_REFUND, buildingDef } from './data/buildings';
 import { TIER_COST } from './production';
@@ -66,6 +67,7 @@ export function build(s: GameState, kind: BuildingKind, x: number, y: number, ro
   const def = buildingDef(kind);
   if (!def || def.fixed) throw new GameError('That can’t be built.');
   if (TIER_ORDER.indexOf(s.tier) < TIER_ORDER.indexOf(def.tier)) throw new GameError(`${def.name} needs a bigger network.`);
+  if (def.unique && hasBuilding(s, kind)) throw new GameError(`You already have a ${def.name}.`);
   const b: Building = { id: newId(s, 'b'), kind, x, y, rot: ((rot % 4) + 4) % 4, level: 1 };
   const problem = placementProblem(s.lot, b);
   if (problem) throw new GameError(problem);
@@ -102,11 +104,28 @@ export function sell(s: GameState, id: string): number {
   if (def.fixed) throw new GameError(`The ${def.name} stays.`);
   if (occupants(s, id).length) throw new GameError(`A production is inside the ${def.name}.`);
   if (def.stage && s.lot.buildings.filter((o) => o.kind === b.kind).length === 1) throw new GameError(`It’s your only ${def.name}: shows need one to get made.`);
+  if (b.kind === 'truck' && s.rights.some((r) => rightsById(r.defId).kind === 'sports')) throw new GameError('The truck is needed for your sports rights.');
   const spent = buildCost(s, b.kind) + (def.upgrades ?? []).slice(0, b.level - 1).reduce((a, c) => a + priceOf(s.tier, c), 0);
   const refund = Math.round(spent * SELL_REFUND);
   s.cash = Math.round((s.cash + refund) * 10) / 10;
   s.lot.buildings = s.lot.buildings.filter((o) => o.id !== id);
   return refund;
+}
+
+/** Does the lot have this kind of building? (The Sports Truck and the Licensing Office open parts of the Market.) */
+export const hasBuilding = (s: Pick<GameState, 'lot'>, kind: BuildingKind) => s.lot.buildings.some((b) => b.kind === kind);
+
+/** Put a building on the first free spot, nearest the head office first. Used for presets and old saves. */
+export function addAnnex(s: Pick<GameState, 'lot' | 'nextId'>, kind: BuildingKind): void {
+  if (hasBuilding(s, kind)) return;
+  const spots: [number, number][] = [[8, 5], [6, 7], [8, 7], [4, 5]];
+  for (let y = 0; y < s.lot.h; y++) for (let x = 0; x < s.lot.w; x++) spots.push([x, y]);
+  for (const [x, y] of spots) {
+    if (placementProblem(s.lot, { kind, x, y, rot: 0 })) continue;
+    s.nextId += 1;
+    s.lot.buildings.push({ id: `b${s.nextId}`, kind, x, y, rot: 0, level: 1 });
+    return;
+  }
 }
 
 // ---------- Starting lots ----------
@@ -121,10 +140,11 @@ export function starterLot(s: GameState): void {
   place(s, 'stage', 4, 1);
   place(s, 'post', 8, 1);
   place(s, 'tower', 10, 6);
-  place(s, 'sign', 4, 7);
+  place(s, 'office', 6, 5);
+  place(s, 'sign', 4, 8);
   place(s, 'tree', 1, 7);
   place(s, 'tree', 2, 8);
-  place(s, 'tree', 10, 8);
+  place(s, 'tree', 12, 8);
 }
 
 /** The lot grows with the license; buildings stay where they are. */
@@ -140,8 +160,10 @@ export function licenseUpgrades(s: GameState): void {
 }
 
 /** Mission stations that start big get a lot to match: expanded rooms, a second stage at National. */
-export function presetLot(s: GameState): void {
+export function presetLot(s: GameState, needs: { truck?: boolean; licensing?: boolean } = {}): void {
   growLot(s);
+  if (needs.truck || s.tier !== 'local') addAnnex(s, 'truck');
+  if (needs.licensing || s.tier !== 'local') addAnnex(s, 'licensing');
   if (s.tier === 'local') return;
   const level: Building['level'] = s.tier === 'state' ? 2 : 3;
   for (const b of s.lot.buildings) if (buildingDef(b.kind).stage) b.level = level;

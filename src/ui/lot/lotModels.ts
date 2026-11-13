@@ -269,6 +269,74 @@ function tower(): THREE.Group {
   return k.g;
 }
 
+function office(): THREE.Group {
+  const k = new Kit();
+  const W = 1.6, D = 1.5, y0 = 0.06;
+  k.apron(2, 2, '#e9e2f5');
+  k.box('#7c5bd0', W + 0.06, 0.14, D + 0.06, 0, y0, 0);
+  // Three glassy floors, the top one set back, with a flag on the roof.
+  for (let i = 0; i < 3; i++) {
+    const inset = i === 2 ? 0.3 : 0;
+    const y = y0 + i * 0.5;
+    k.box(i % 2 ? '#c7a8ff' : '#b98cff', W - inset, 0.5, D - inset, 0, y, 0);
+    k.win('z', 0, y + 0.16, (D - inset) / 2, (W - inset) * 0.78, 0.22);
+    k.win('x', 0, y + 0.16, (W - inset) / 2, (D - inset) * 0.74, 0.22);
+    k.box('#ffffff', W - inset + 0.05, 0.04, D - inset + 0.05, 0, y + 0.5, 0, false);
+  }
+  k.box('#2b3a67', 0.34, 0.4, 0.05, 0.4, y0, D / 2 + 0.01, false);
+  k.box('#ffd23f', 0.5, 0.05, 0.22, 0.4, y0 + 0.44, D / 2 + 0.1);
+  k.cyl('#3b3560', 0.015, 0.015, 0.6, 4, -0.3, y0 + 1.54, -0.2, false);
+  const flag = k.box('#ffd23f', 0.3, 0.18, 0.02, -0.14, y0 + 1.94, -0.2, false);
+  flag.userData.fx = 'flag';
+  k.g.userData.top = y0 + 2.2;
+  return k.g;
+}
+
+/** The outside-broadcast truck: a van with a mast and a dish, cables to a small kit box. */
+function truck(): THREE.Group {
+  const k = new Kit();
+  k.box('#d9d2ea', 1.9, 0.04, 0.9, 0, 0, 0, false);
+  k.box('#ffffff', 1.25, 0.5, 0.6, -0.2, 0.14, 0);
+  k.box('#5be3a1', 1.27, 0.12, 0.62, -0.2, 0.3, 0, false);
+  k.box('#f4f4fb', 0.42, 0.36, 0.56, 0.64, 0.14, 0);
+  const glass = k.box('#4a6fb5', 0.03, 0.18, 0.46, 0.855, 0.28, 0, false);
+  glass.userData.win = true;
+  for (const x of [-0.6, 0.55]) for (const z of [-0.3, 0.3]) {
+    const wheel = k.add(new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.07, 8), M('#2b2540')));
+    wheel.rotation.x = Math.PI / 2; wheel.position.set(x, 0.12, z);
+  }
+  k.cyl('#aab0c4', 0.025, 0.035, 0.7, 5, -0.5, 0.64, 0, false);
+  const dish = new THREE.Group();
+  const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2.6), new THREE.MeshLambertMaterial({ color: '#f4f4fb', flatShading: true, side: THREE.DoubleSide }));
+  bowl.rotation.x = Math.PI - 0.9; bowl.position.set(0, 0.16, 0.1); bowl.castShadow = true;
+  dish.add(bowl);
+  dish.position.set(-0.5, 1.3, 0); dish.userData.fx = 'dish';
+  k.add(dish);
+  k.box('#3b3560', 0.22, 0.2, 0.22, -0.78, 0.04, 0.3);
+  k.g.userData.top = 1.75;
+  return k.g;
+}
+
+/** The licensing office: a small columned building with a pediment, a scroll over the door. */
+function licensing(): THREE.Group {
+  const k = new Kit();
+  const W = 1.5, D = 1.3, y0 = 0.06;
+  k.apron(2, 2, '#f3ead0');
+  k.box('#d9c9aa', W + 0.2, 0.1, D + 0.3, 0, y0, 0.05);
+  k.box('#fff3d6', W, 0.8, D, 0, y0 + 0.1, 0);
+  for (const x of [-0.6, -0.2, 0.2, 0.6]) k.cyl('#ffffff', 0.06, 0.07, 0.8, 6, x, y0 + 0.1, D / 2 + 0.14);
+  k.box('#ffc857', W + 0.24, 0.1, D + 0.4, 0, y0 + 0.9, 0.06);
+  const roof = k.add(new THREE.Mesh(prism(W + 0.24, 0.34, D + 0.4), M('#e6a92f')));
+  roof.position.set(0, y0 + 1.0, 0.06); roof.castShadow = true;
+  k.box('#8a5a3a', 0.3, 0.46, 0.05, 0, y0 + 0.1, D / 2 + 0.01, false);
+  k.win('x', -0.3, y0 + 0.4, W / 2, 0.26, 0.3);
+  k.win('x', 0.3, y0 + 0.4, W / 2, 0.26, 0.3);
+  const seal = k.add(new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.04, 8), M('#ff4d6d')));
+  seal.rotation.x = Math.PI / 2; seal.position.set(0, y0 + 1.14, D / 2 + 0.27);
+  k.g.userData.top = y0 + 1.5;
+  return k.g;
+}
+
 function tree(seed: number): THREE.Group {
   const k = new Kit();
   const r = (n: number) => { const v = Math.sin(seed * 12.9898 + n * 78.233) * 43758.5453; return v - Math.floor(v); };
@@ -347,6 +415,9 @@ export function buildingMesh(b: Pick<Building, 'kind' | 'level'> & { x?: number;
     case 'stage': return stage(lv);
     case 'post': return post(lv);
     case 'tower': return tower();
+    case 'office': return office();
+    case 'truck': return truck();
+    case 'licensing': return licensing();
     case 'tree': return tree((b.x ?? 0) * 31 + (b.y ?? 0) * 17 + 1);
     case 'fountain': return fountain();
     case 'sign': return sign(stationName);

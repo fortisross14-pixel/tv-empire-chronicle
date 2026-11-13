@@ -915,3 +915,12 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
   .rv-bar i { animation: none; transform: none; }
   .lot-pack { animation: none; }
 }
+
+/* Packs with a choice: the cards you keep stand out, the rest fade. */
+.flip.keep { outline: 4px solid var(--good); outline-offset: 3px; border-radius: 18px; }
+.flip.drop { opacity: .45; filter: grayscale(.6); }
+.new-note.keep-note { background: var(--good); color: #0b2b1d; }
+.market-tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
+.market-tabs button { padding-left: 4px; padding-right: 4px; white-space: nowrap; font-size: 13px; }
+.lot-pick.selected { box-shadow: 0 0 0 2px var(--focus) inset; }
+.lot-pick:disabled { opacity: .55; cursor: default; }
