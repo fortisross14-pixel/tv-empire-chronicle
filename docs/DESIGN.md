@@ -341,7 +341,7 @@ colours + topic icon) until the poster editor and its art library
 
 ## 11. Screens (mobile-first, bottom tab bar)
 
-1. **Week** — calendar strip, cash, alerts, big *Air Week* button, results reveal
+1. **Home** — the 3D studio lot, with calendar, cash, alerts and news in a panel; big *Air Week* button, results reveal
 2. **Schedule** — slot grid of show cards
 3. **Studio** — projects in progress, and the button to start a new show
 4. **Cards** — album and collection (People / Programs / Network / Rights)
@@ -445,6 +445,27 @@ Movies are cheap content you air without producing: **Shop → Movie pack**
 - Duplicates add airings. A movie leaves once its airings are used (or after a year).
 - The Rights Market sells only **sports rights and IP licenses**.
 
+## 17. The studio lot (built)
+
+Home is a low-poly 3D studio lot (three.js, loaded only when Home opens). Today's Home
+(mission, up next, last week, news) sits in a panel: pulled up from the bottom on phones,
+at the side on tablets and laptops.
+
+- **Buildings host stages.** Writers' Room (script), Sound Stage (production) and
+  Post-production Suite (post) each hold **1** production at level 1, 2 at level 2 and 3 at
+  level 3. A production whose next building is full waits outside ("⏳ Waiting for room").
+- **Build mode.** Free grid placement: pick a building, tap a tile, rotate, confirm. Tap a
+  building to see who is inside and who queues, then Move, Expand or Sell (half back). The
+  Broadcast Tower is fixed, and the last building of a stage can't be sold.
+- **Prices** use the tier multiplier (Local 1×, State 1.8×, National 2.5×). Decorations
+  (tree, fountain, sign) are cheap and just for looks.
+- **The lot grows** with each license: 12×10 → 16×12 → 20×14. State and National mission
+  stations start with expanded rooms (and a second Sound Stage at National).
+- **Life.** Productions travel as film reels from building to building and fly to the tower
+  when finished; free staff wander; pop-ups show scripts done, shows ready, waits and the
+  week's money. Rendering is on demand and pauses when the page is hidden.
+- Saves v15 add `lot` and `Project.buildingId`; older saves get a lot sized for their tier.
+
 ## 13. Build waves
 
 0. **Foundation** — remove the old code, TS + engine/UI split, card components,
@@ -484,6 +505,7 @@ Next (planned):
 14. **Best practices** ✅ — playtest tool, invariant and save tests, error boundary.
 15. **Visual and navigation polish** ✅ — see docs/audits/2026-11-11-polish.md.
 16. **Balancing** ✅ — casual target; see docs/audits/2026-11-11-balance.md.
+17. **The studio lot** ✅ — 3D Home, buildings with capacity, build mode (section 17).
 
 The last three waves are always:
 

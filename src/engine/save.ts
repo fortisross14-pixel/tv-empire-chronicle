@@ -46,6 +46,20 @@ const MIGRATIONS: Record<number, (s: RawSave) => RawSave> = {
   12: (s) => ({ ...s, mission: null, version: 13 }),
   // 13 → 14: the #1-network crown is won in prime time.
   13: (s) => ({ ...s, primeStreak: 0, version: 14 }),
+  // 14 → 15: the studio lot. Older stations get a lot sized for their tier, with rooms
+  // expanded to match their size; productions find their building next week.
+  14: (s) => {
+    const tier = s.tier as 'local' | 'state' | 'national';
+    const level = tier === 'local' ? 1 : tier === 'state' ? 2 : 3;
+    const size = { local: { w: 12, h: 10 }, state: { w: 16, h: 12 }, national: { w: 20, h: 14 } }[tier];
+    const b = (id: string, kind: string, x: number, y: number, lv = 1) => ({ id, kind, x, y, rot: 0, level: lv });
+    const buildings = [
+      b('b-m1', 'writers', 1, 1, level), b('b-m2', 'stage', 4, 1, level), b('b-m3', 'post', 8, 1, level),
+      b('b-m4', 'tower', 10, 6), b('b-m5', 'sign', 4, 7), b('b-m6', 'tree', 1, 7), b('b-m7', 'tree', 2, 8),
+      ...(tier === 'national' ? [b('b-m8', 'stage', 1, 4, 2)] : []),
+    ];
+    return { ...s, lot: { ...size, buildings }, projects: (s.projects as Record<string, unknown>[]).map((p) => ({ ...p, buildingId: null })), version: 15 };
+  },
 };
 
 export interface LoadResult {

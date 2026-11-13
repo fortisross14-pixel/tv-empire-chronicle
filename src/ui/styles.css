@@ -804,3 +804,54 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
 /* Buttons never widen the page: long labels wrap. */
 .btn { max-width: 100%; white-space: normal; text-align: center; overflow-wrap: anywhere; }
 .req { overflow-wrap: anywhere; }
+
+
+/* ================= The studio lot (Home) ================= */
+.main.main-lot { max-width: none; padding: 0; gap: 0; }
+.lot-home { position: relative; }
+.lot-stage { position: relative; height: calc(100dvh - 64px - var(--tabbar) - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height: 320px; }
+.lot { position: absolute; inset: 0; overflow: hidden; background: radial-gradient(circle at 50% 40%, #3a2266, #1c0f33 75%); touch-action: none; }
+.lot-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+.lot-loading, .lot-fallback { display: grid; place-items: center; padding: 24px; text-align: center; }
+.lot-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.lot-label { position: absolute; left: 0; top: 0; translate: -50% -100%; display: flex; gap: 4px; align-items: center; padding: 3px 8px; border-radius: 999px;
+  background: rgba(28, 15, 51, .82); font-size: 12px; font-weight: 800; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+.lot-label.full b { color: #ffd23f; }
+.lot-label i { font-style: normal; color: #ff8fa3; }
+.lot-pop { position: absolute; translate: -50% -100%; padding: 4px 10px; border-radius: 999px; font-weight: 900; font-size: 14px; white-space: nowrap;
+  animation: lotPop 1.9s cubic-bezier(.2,.8,.2,1) both; box-shadow: 0 6px 16px rgba(0,0,0,.4); }
+.lot-pop.good { background: var(--good); color: #0b2b1d; }
+.lot-pop.bad { background: var(--bad); color: #fff; }
+.lot-pop.info { background: var(--focus); color: var(--bg); }
+@keyframes lotPop { 0% { opacity: 0; transform: translateY(8px) scale(.8); } 12% { opacity: 1; transform: translateY(0) scale(1.05); } 75% { opacity: 1; transform: translateY(-28px); } 100% { opacity: 0; transform: translateY(-40px); } }
+.lot-zoom { position: absolute; right: 12px; top: 12px; display: grid; gap: 6px; }
+.lot-zoom .btn { width: 40px; height: 40px; padding: 0; background: rgba(28,15,51,.7); }
+.lot-tools { position: absolute; left: 12px; top: 12px; display: grid; gap: 8px; justify-items: start; }
+.lot-status { display: flex; gap: 6px; flex-wrap: wrap; }
+.lot-status .chip { background: rgba(28,15,51,.82); }
+.lot-place { position: absolute; left: 12px; right: 12px; top: 12px; display: grid; gap: 6px; background: rgba(38,19,63,.95); z-index: 2; }
+.build-list { display: grid; gap: 8px; }
+.build-item { display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 16px; background: var(--tile); color: inherit; text-align: left; width: 100%; }
+.build-item:disabled { opacity: .5; }
+.bi-icon { font-size: 28px; }
+.bi-main { flex: 1; display: grid; gap: 2px; }
+.bi-cost { font-weight: 900; }
+
+/* The Home panel: pulls up from the bottom on phones... */
+.lot-drawer { position: fixed; left: 0; right: 0; bottom: calc(var(--tabbar) + env(safe-area-inset-bottom)); z-index: 25; max-height: 120px; overflow: hidden;
+  background: var(--bg); border-radius: 22px 22px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,.45); transition: max-height .3s cubic-bezier(.2,.8,.2,1); }
+.lot-home.open .lot-drawer { max-height: calc(100dvh - 140px); overflow-y: auto; }
+.lot-handle { display: grid; justify-items: center; gap: 6px; width: 100%; padding: 10px 16px 8px; color: var(--text-2); position: sticky; top: 0; background: var(--bg); z-index: 1; }
+.lot-handle .grip { width: 44px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.3); }
+.lot-drawer-body { display: grid; gap: 22px; padding: 0 16px 120px; }
+.lot-home:not(.open) .lot-drawer-body { pointer-events: none; }
+/* ...and sits at the side on landscape tablets and laptops. */
+@media (min-width: 900px) and (orientation: landscape) {
+  .lot-home { display: grid; grid-template-columns: minmax(0, 1fr) 400px; }
+  .lot-stage { height: calc(100dvh - 64px); }
+  .lot-drawer { position: relative; left: auto; right: auto; bottom: auto; max-height: calc(100dvh - 64px); overflow-y: auto; border-radius: 0; box-shadow: none; z-index: 1; }
+  .lot-home.open .lot-drawer { max-height: calc(100dvh - 64px); }
+  .lot-handle { display: none; }
+  .lot-drawer-body { padding: 16px 16px 120px; pointer-events: auto !important; }
+  .lot-drawer-body .home-cols { grid-template-columns: 1fr; }
+}

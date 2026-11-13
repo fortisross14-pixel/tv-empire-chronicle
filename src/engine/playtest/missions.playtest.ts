@@ -7,7 +7,7 @@
 import { test } from 'vitest';
 import {
   airWeek, answerEvent, bidOnRights, buyPack, createShow, dismissReveal, expandToNational, expandToState, licenseGaps, newMissionGame,
-  openPack, scheduleShow, signAffiliate, usePromo, useSponsor, cancelShow, ackMission, nextLicense,
+  openPack, scheduleShow, signAffiliate, usePromo, useSponsor, cancelShow, ackMission, nextLicense, upgradeBuilding, buildBuilding,
 } from '../game';
 import { formatById, AREAS } from '../data/formats';
 import { topicById } from '../data/topics';
@@ -20,6 +20,8 @@ import { ipDefById } from '../data/ips';
 import { ipBonus, usableIps } from '../ip';
 import { PRICES, MOVIE_PACK_PRICE } from '../packs';
 import { MISSIONS, missionById, type Goal } from '../data/missions';
+import { buildingDef } from '../data/buildings';
+import { buildCost, placementProblem, upgradeCost } from '../lot';
 import type { Area, GameState, Person, ProductionLevel, SlotId } from '../types';
 
 function scalePoints(ideal: Record<Area, number>, total: number, maxPer: number): Record<Area, number> {
@@ -214,7 +216,7 @@ export function playState(start0: GameState, goals: Goal[], weeks: number, onWee
         const value = lot.ip ? ipDefById(lot.defId)!.value : rightsById(lot.defId).value;
         const keen = lot.ip ? wantIp : (wantSports && (!sportsIds.length || sportsIds.includes(lot.defId)));
         const bid = Math.round(value * (keen ? 2.2 : 1.05));
-        if ((keen || !lot.ip) && spend() - committed - bid > (keen ? -buffer * 0.8 : 0)) { try { s = bidOnRights(s, lot.id, bid); committed += bid; } catch { /* */ } }
+        if ((keen || (!lot.ip && !wantTier)) && spend() - committed - bid > (keen ? -buffer * 0.8 : 0)) { try { s = bidOnRights(s, lot.id, bid); committed += bid; } catch { /* */ } }
       }
     }
     if (s.shopUnlocked) {
@@ -229,6 +231,19 @@ export function playState(start0: GameState, goals: Goal[], weeks: number, onWee
       if (spend() - committed - (wantTier ? 0 : 0) > PRICES[k] + 20) { s = buyPack(s, k); s = dismissReveal(s); }
     }
     if (s.tier === 'national' && s.affiliates < AFFILIATE_MAX && s.cash > affiliateCost(s.affiliates) + (wants(goals, 'affiliates') ? 300 : 800)) s = signAffiliate(s);
+    // Like a player: when productions queue for a full building, expand it (or build another).
+    for (const stage of ['script', 'production', 'post'] as const) {
+      const waiting = s.projects.filter((p) => p.stage === stage && !p.buildingId).length;
+      if (!waiting) continue;
+      const host = s.lot.buildings.filter((b) => buildingDef(b.kind).stage === stage).sort((a, b) => a.level - b.level)[0];
+      const cost = host ? upgradeCost(s, host) : null;
+      if (host && cost !== null && s.cash - cost > buffer) { try { s = upgradeBuilding(s, host.id); } catch { /* */ } }
+      else if (s.cash - buildCost(s, host?.kind ?? 'writers') > buffer * 2 && host) {
+        for (let y = 0; y < s.lot.h; y++) for (let x = 0; x < s.lot.w; x++) {
+          if (!placementProblem(s.lot, { kind: host.kind, x, y, rot: 0 })) { try { s = buildBuilding(s, host.kind, x, y, 0); } catch { /* */ } y = s.lot.h; break; }
+        }
+      }
+    }
     s = schedule(s, wants(goals, 'movies') || wants(goals, 'movieWin'));
     while (s.pendingEvent) s = answerEvent(s, s.pendingEvent.choices.length - 1);
     s = airWeek(s);

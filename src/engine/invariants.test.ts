@@ -9,6 +9,7 @@ import { topicsForFormat } from './data/topics';
 import { rightsById } from './data/rights';
 import { slotsOf } from './schedule';
 import { migrate } from './save';
+import { capacityOf, footprint, occupants } from './lot';
 import type { GameState } from './types';
 
 /** Tiny deterministic RNG for the player's choices (separate from the game's RNG). */
@@ -38,6 +39,15 @@ function check(s: GameState, where: string) {
   }
   for (const r of s.rights) if (!rightsById(r.defId)) fail(`unknown rights ${r.defId}`);
   if (s.mission && s.mission.met.length !== (s.mission.custom?.goals.length ?? s.mission.met.length)) fail('mission goals out of step');
+  // The lot: buildings inside it, never overlapping; no building over capacity.
+  const tiles = new Set<string>();
+  for (const b of s.lot.buildings) {
+    const f = footprint(b);
+    if (f.x < 0 || f.y < 0 || f.x + f.w > s.lot.w || f.y + f.h > s.lot.h) fail(`${b.kind} outside the lot`);
+    for (let x = f.x; x < f.x + f.w; x++) for (let y = f.y; y < f.y + f.h; y++) { if (tiles.has(`${x},${y}`)) fail('buildings overlap'); tiles.add(`${x},${y}`); }
+    if (occupants(s, b.id).length > capacityOf(b)) fail(`${b.kind} over capacity`);
+  }
+  for (const pr of s.projects) if (pr.buildingId && !s.lot.buildings.some((b) => b.id === pr.buildingId)) fail(`project ${pr.name} in a missing building`);
   // A save must survive the trip through JSON and load as the current version.
   const back = migrate(JSON.parse(JSON.stringify(s)));
   if (!back || back.version !== SAVE_VERSION) fail('save does not load back');

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  GameError, airWeek, buyBusinessCard, buyPack, cancelProject, archiveShow, createShow, ackMission, newMissionGame, recordMission,
+  GameError, airWeek, buildBuilding, moveBuilding, upgradeBuilding, sellBuilding, buildingDef, buyBusinessCard, buyPack, cancelProject, archiveShow, createShow, ackMission, newMissionGame, recordMission,
   dateLabel, dismissFinished, dismissReveal, openPack, saveGame, scheduleShow, useBusinessCard,
   setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
   reachOf, SANDBOX_GOALS, type GameState, type Goal, type ShowPlan,
@@ -23,6 +23,7 @@ import { CardsScreen } from './screens/CardsScreen';
 import { ShopScreen } from './screens/ShopScreen';
 import { MenuScreen } from './screens/MenuScreen';
 import { buildTodos } from './todos';
+import { LotHome } from './lot/LotHome';
 import { Ticker } from './components/Ticker';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { MissionResult } from './components/MissionCard';
@@ -168,8 +169,13 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
         </div>
       </header>
 
-      <main className="main tab-enter" key={tab}>
+      <main className={cx('main tab-enter', tab === 'week' && 'main-lot')} key={tab}>
         {tab === 'week' && (
+          <LotHome state={state}
+            onBuild={(kind, x, y, rot) => run((s) => buildBuilding(s, kind, x, y, rot), `${buildingDef(kind).name} built!`)}
+            onMove={(id, x, y, rot) => run((s) => moveBuilding(s, id, x, y, rot), 'Moved.')}
+            onUpgrade={(id) => run((s) => upgradeBuilding(s, id), 'Expanded! It holds one more now.')}
+            onSell={(id) => run((s) => sellBuilding(s, id), 'Sold.')}>
           <WeekScreen state={state} todos={todos} onMenu={onMenu}
             onExpand={() => {
               void ask({ title: 'Buy the license?', text: 'Running costs rise a lot, but so does the audience. Make sure you have shows ready for the bigger schedule.', confirm: 'Buy license' })
@@ -177,6 +183,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
             }}
             onAffiliate={() => run(signAffiliate, 'Affiliate signed! 📡')}
             onOpenShow={setOpenShow} onNewShow={() => setWizard({})} goTab={setTab} />
+          </LotHome>
         )}
         {tab === 'schedule' && (
           <ScheduleScreen state={state}

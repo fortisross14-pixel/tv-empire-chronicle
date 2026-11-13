@@ -93,6 +93,8 @@ export interface Project {
   scriptBonus: number;
   /** Week the project was waiting on someone busy (for UI). */
   waitingOn: string | null;
+  /** The lot building it's in for its current stage (null: waiting for a free one). */
+  buildingId: string | null;
   /** The IP this show is based on (licensed or one of ours), if any. */
   ipId: string | null;
 }
@@ -422,8 +424,28 @@ export interface MissionRun {
 
 export type SandboxDifficulty = 'easy' | 'normal' | 'hard';
 
+export type BuildingKind = 'writers' | 'stage' | 'post' | 'tower' | 'tree' | 'fountain' | 'sign';
+
+/** A building on the studio lot. x, y: the corner tile; rot: quarter turns. */
+export interface Building {
+  id: string;
+  kind: BuildingKind;
+  x: number;
+  y: number;
+  rot: number;
+  level: 1 | 2 | 3;
+}
+
+/** The studio lot: a grid of tiles with buildings on it. */
+export interface Lot {
+  w: number;
+  h: number;
+  buildings: Building[];
+}
+
 export interface GameState {
   version: number;
+  lot: Lot;
   mission: MissionRun | null;
   rng: number;
   stationName: string;

@@ -9,6 +9,7 @@ import { grantXp, newId, RARITY_POINTS } from './people';
 import { withFacilities } from './network';
 import { sportsWorkers } from './rights';
 import { ipBonus, usableIps } from './ip';
+import { claimBuilding, stageBuildingName } from './lot';
 
 import { GameError } from './errors';
 export { GameError };
@@ -363,8 +364,10 @@ export function startProject(state: GameState, plan: ShowPlan): void {
     scriptTime: plan.scriptTime ?? 'standard',
     script: null,
     waitingOn: null,
+    buildingId: null,
   };
   state.projects.push(project);
+  claimBuilding(state, project); // walks straight into a free Writers' Room, if there is one
   const basedOn = ipId && !renewal ? state.ips.find((x) => x.id === ipId) : undefined;
   if (basedOn) basedOn.shows += 1;
 }
@@ -386,6 +389,11 @@ export function advanceProjects(state: GameState): { finished: Show[]; scripts: 
   const finished: Show[] = [];
   const scripts: Project[] = [];
   for (const project of [...state.projects]) {
+    // A stage needs a free place in a building for it (a Writers' Room for scripts, ...).
+    if (!claimBuilding(state, project)) {
+      project.waitingOn = `a free ${stageBuildingName(project.stage)}`;
+      continue;
+    }
     const roles = stagePeople(project, project.stage);
     const busy = roles.find((id) => working.has(id));
     if (busy) {
@@ -409,6 +417,8 @@ export function advanceProjects(state: GameState): { finished: Show[]; scripts: 
     if (next) {
       project.stage = next;
       project.weeksLeft = project.durations[next];
+      project.buildingId = null;
+      claimBuilding(state, project);
     } else {
       finished.push(finishProject(state, project));
     }

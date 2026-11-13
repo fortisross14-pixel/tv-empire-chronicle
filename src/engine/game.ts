@@ -12,6 +12,8 @@ import { AFFILIATE_MAX, affiliateCost, emptySchedule, reachOf, slotsOf, tierSlot
 import { addNews, round1 } from './news';
 import { simulateWeek, CHAMPION_WEEKS, LOAN } from './sim';
 import { applyMission, applySandbox } from './mission';
+import { build, growLot, move, presetLot, sell, starterLot, upgrade } from './lot';
+import type { BuildingKind } from './types';
 import type { SandboxDifficulty } from './types';
 import { missionById } from './data/missions';
 
@@ -23,10 +25,11 @@ export function newMissionGame(
   const s = newGame(seed, stationName);
   if (missionId && missionId !== 'sandbox') applyMission(s, missionById(missionId));
   else if (sandbox) applySandbox(s, sandbox.difficulty, sandbox.goals);
+  presetLot(s);
   return s;
 }
 
-export const SAVE_VERSION = 14;
+export const SAVE_VERSION = 15;
 
 /** What it takes to become a State network. */
 export const STATE_LICENSE = { reputation: 35, cash: 250, fee: 200 };
@@ -39,6 +42,7 @@ export { CHAMPION_WEEKS, LOAN };
 export function newGame(seed: number, stationName: string): GameState {
   const state: GameState = {
     version: SAVE_VERSION,
+    lot: { w: 0, h: 0, buildings: [] },
     mission: null,
     rng: seed | 0,
     stationName: stationName.trim() || 'Channel 8',
@@ -89,6 +93,7 @@ export function newGame(seed: number, stationName: string): GameState {
     nextId: 0,
   };
   addHouseCards(state);
+  starterLot(state);
   state.rivals = makeRivals(state);
   state.unopened.push(makePack(state, 'starter'), makePack(state, 'starter-people'));
   addNews(state, `${state.stationName} goes on air in ${CITY}! Open your two free packs to plan a first show.`, 'good');
@@ -282,6 +287,7 @@ function moveUp(s: GameState) {
   refreshMarketLocks(s);
   s.sweeps = { shareSum: 0, samples: 0 };
   s.milestone = lic.tier;
+  growLot(s);
   // A welcome gift: movies of the new tier, so the bigger schedule isn't empty on day one.
   s.unopened.push(makePack(s, 'movies'));
   return lic.tier;
@@ -317,6 +323,20 @@ export const expandToState = (state: GameState) =>
 /** The player has seen the mission's result screen. */
 export const ackMission = (state: GameState) =>
   produce(state, (s) => { if (s.mission) s.mission.counters.resultSeen = 1; }, { duringEvent: true });
+
+// ---------- The studio lot ----------
+
+export const buildBuilding = (state: GameState, kind: BuildingKind, x: number, y: number, rot = 0) =>
+  produce(state, (s) => { const b = build(s, kind, x, y, rot); addNews(s, `🏗️ A new ${b.kind === 'stage' ? 'Sound Stage' : b.kind === 'writers' ? "Writers' Room" : b.kind === 'post' ? 'Post-production Suite' : b.kind} goes up on the lot.`, 'good'); });
+
+export const moveBuilding = (state: GameState, id: string, x: number, y: number, rot: number) =>
+  produce(state, (s) => move(s, id, x, y, rot));
+
+export const upgradeBuilding = (state: GameState, id: string) =>
+  produce(state, (s) => upgrade(s, id));
+
+export const sellBuilding = (state: GameState, id: string) =>
+  produce(state, (s) => { const refund = sell(s, id); addNews(s, `A building is cleared from the lot (+$${refund}K).`, 'neutral'); });
 
 export const dismissCeremony = (state: GameState) => produce(state, (s) => void (s.ceremony = null), { duringEvent: true });
 

@@ -13,8 +13,10 @@
     "playtest": "node ./node_modules/vitest/vitest.mjs run --config vitest.playtest.config.ts"
   },
   "dependencies": {
+    "@types/three": "^0.170.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "three": "^0.170.0"
   },
   "description": "Kairosoft-style card-based TV station management game in a parody world.",
   "devDependencies": {

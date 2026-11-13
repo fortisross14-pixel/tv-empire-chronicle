@@ -24,6 +24,8 @@ export * from './data/ips';
 export { IP_FIT, ipBonus, ipFit, usableIps, seasonScore, OWN_IP_MIN } from './ip';
 export { MOVIE_PACK_PRICE, MOVIE_PACK_SIZE } from './packs';
 export * from './data/missions';
+export * from './data/buildings';
+export { footprint, placementProblem, buildCost, upgradeCost, capacityOf, stageUse, occupants, priceOf } from './lot';
 export {
   campaignOpen, sandboxOpen, lockReason, goalsOf, primeShares, rankOf, sandboxLockReason, goalLabel, goalProgress, goalReached, missionWeeksLeft, emptyProfile,
   type Profile,
