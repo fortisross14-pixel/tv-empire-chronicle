@@ -297,8 +297,8 @@ function BuildingInfo({ state, id }: { state: GameState; id: string }) {
       {def.capacity && (
         <div className="panel stack-sm small">
           <div className="spread"><span>Level</span><b>{'★'.repeat(b.level)}{'☆'.repeat(3 - b.level)}</b></div>
-          <div className="spread"><span>Holds</span><b>{capacityOf(b)} at a time{next !== null ? ` (→ ${def.capacity[Math.min(2, b.level)]} when expanded)` : ' (fully expanded)'}</b></div>
-          <div className="spread"><span>In use</span><b>{inside.length}/{capacityOf(b)}</b></div>
+          <div className="spread"><span>{b.kind === 'truck' ? 'Covers' : 'Holds'}</span><b>{capacityOf(b)} {b.kind === 'truck' ? 'competitions' : 'at a time'}{next !== null ? ` (→ ${def.capacity[Math.min(2, b.level)]} when expanded)` : ' (fully expanded)'}</b></div>
+          <div className="spread"><span>In use</span><b>{b.kind === 'truck' ? state.rights.filter((r) => rightsById(r.defId).kind === 'sports').length : inside.length}/{capacityOf(b)}</b></div>
         </div>
       )}
       {def.stage && (

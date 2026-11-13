@@ -154,6 +154,7 @@ export function seasonText(def: RightsDef): string {
   if (!def.season) return '';
   const [a, b] = def.season;
   if (a === 1 && b === 52) return 'All year';
-  const month = (w: number) => MONTH_SHORT[Math.min(11, Math.floor(((w - 1) * 12) / 52))];
-  return `${month(a)}–${month(b)}`;
+  // A season that starts in a month's last days counts from the next month, and the other way round at its end.
+  const month = (w: number, lean: number) => MONTH_SHORT[Math.max(0, Math.min(11, Math.floor(((w - 1 + lean) * 12) / 52)))];
+  return `${month(a, 1.5)}–${month(b, -1.5)}`;
 }

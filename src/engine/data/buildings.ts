@@ -9,7 +9,7 @@ export interface BuildingDef {
   stage?: Stage;
   /** Tiles it covers (width × depth) before rotation. */
   size: [number, number];
-  /** Projects it holds at level 1, 2, 3. */
+  /** What it holds at level 1, 2, 3: productions for a stage building, competitions for the Sports Truck. */
   capacity?: [number, number, number];
   /** Price to build, then to upgrade to level 2 and 3 ($K, before the tier multiplier). */
   cost: number;
@@ -35,8 +35,8 @@ export const BUILDINGS: Record<BuildingKind, BuildingDef> = {
     blurb: 'Where finished shows go on air.' },
   office: { kind: 'office', name: 'Head Office', icon: '🏢', size: [2, 2], cost: 0, tier: 'local', fixed: true, color: '#b98cff',
     blurb: 'Where the deals are made: program, people and movie packs. Build annexes to open more of the Market.' },
-  truck: { kind: 'truck', name: 'Sports Truck', icon: '🚚', size: [2, 1], cost: 40, tier: 'local', unique: true, color: '#5be3a1',
-    blurb: 'An outside-broadcast truck. With it you can buy sports rights and air live games.' },
+  truck: { kind: 'truck', name: 'Sports Truck', icon: '🚚', size: [2, 1], capacity: [2, 3, 4], cost: 40, upgrades: [50, 120], tier: 'local', unique: true, color: '#5be3a1',
+    blurb: 'An outside-broadcast truck with its own small crew. It covers 2 competitions at a time; each expansion covers one more.' },
   licensing: { kind: 'licensing', name: 'Licensing Office', icon: '📜', size: [2, 2], cost: 60, tier: 'local', unique: true, color: '#ffc857',
     blurb: 'Lawyers and agents. With it you can license books, games, toys, films and events to make shows from.' },
   tree: { kind: 'tree', name: 'Tree', icon: '🌳', size: [1, 1], cost: 1, tier: 'local', color: '#4caf6a', blurb: 'A bit of green for the lot.' },

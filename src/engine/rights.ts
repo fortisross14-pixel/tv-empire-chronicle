@@ -3,6 +3,7 @@ import { clamp, pick, randInt } from './rng';
 import { RIGHTS, TIER_RANK, inSeason, rightsById, weeksToSeasonEnd, weeksToSeasonStart, type RightsDef } from './data/rights';
 import { GameError } from './errors';
 import { newId } from './people';
+import { capacityOf } from './lot';
 import { slotsOf, tierSlot } from './schedule';
 
 /** Pack movies: classics have little novelty; new releases premiere at full novelty. */
@@ -49,6 +50,8 @@ export function buySports(s: GameState, defId: string, slot?: SlotId): OwnedRigh
   if (!s.lot.buildings.some((b) => b.kind === 'truck')) throw new GameError('Build a Sports Truck on your lot first.');
   if (TIER_RANK[def.tier] > TIER_RANK[s.tier]) throw new GameError('Only bigger networks can buy these rights.');
   if (s.rights.some((r) => r.defId === defId)) throw new GameError('You already hold these rights.');
+  const room = sportsRoom(s);
+  if (room.used >= room.capacity) throw new GameError(`Your Sports Truck covers ${room.capacity} competitions at a time. Expand it for more.`);
   const options = sportsSlots(s, def);
   const chosen = slot ?? options.find((x) => !sportsClash(s, def, x));
   if (!chosen || !options.includes(chosen)) throw new GameError('Its games are not played at that time.');
@@ -60,6 +63,12 @@ export function buySports(s: GameState, defId: string, slot?: SlotId): OwnedRigh
   const r = { ...acquire(s, def), slot: def.anySlot ? chosen : baseSlot(s, def, chosen) };
   s.rights.push(r);
   return r;
+}
+
+/** How many competitions the Sports Truck covers, and how many it is covering. */
+export function sportsRoom(s: Pick<GameState, 'lot' | 'rights'>): { capacity: number; used: number } {
+  const truck = s.lot.buildings.find((b) => b.kind === 'truck');
+  return { capacity: truck ? capacityOf(truck) : 0, used: s.rights.filter((r) => rightsById(r.defId).kind === 'sports').length };
 }
 
 /** The slot as the competition lists it (so it follows the station to a bigger schedule). */
@@ -94,11 +103,11 @@ function expiryFor(s: GameState, def: RightsDef): number {
 }
 
 function acquire(s: GameState, def: RightsDef): OwnedRights {
-  const house = (k: string) => s.people.find((p) => p.house && p.kind === k)?.id ?? null;
   return {
     id: newId(s, 'r'), defId: def.id, airingsLeft: def.airings ?? 0, novelty: 100, expires: expiryFor(s, def),
-    crewId: def.kind === 'sports' ? house('crew') : null,
-    talentId: def.kind === 'sports' ? house('talent') : null,
+    // The truck's own crew calls the games; put your people on it (Guide) for a better broadcast.
+    crewId: null,
+    talentId: null,
     games: 0,
   };
 }
@@ -177,13 +186,16 @@ export function sportsWorkers(s: GameState): string[] {
   });
 }
 
+/** Skill of the truck's own crew and commentator, used when nobody from the studio is assigned. */
+export const TRUCK_CREW = 36;
+
 /** Broadcast quality from the crew's direction, image and sound and the commentator. */
 export function sportsQuality(s: GameState, r: OwnedRights): { quality: number; fame: number } {
   const def = rightsById(r.defId);
   const crew = s.people.find((p) => p.id === r.crewId);
   const talent = s.people.find((p) => p.id === r.talentId);
-  const crewScore = crew?.kind === 'crew' ? (crew.skills.direction + crew.skills.image + crew.skills.audio) / 3 : 20;
-  const call = talent?.kind === 'talent' ? talent.skills.hosting * 0.6 + talent.skills.voice * 0.4 : 20;
+  const crewScore = crew?.kind === 'crew' ? (crew.skills.direction + crew.skills.image + crew.skills.audio) / 3 : TRUCK_CREW;
+  const call = talent?.kind === 'talent' ? talent.skills.hosting * 0.6 + talent.skills.voice * 0.4 : TRUCK_CREW;
   const fame = (talent?.kind === 'talent' ? talent.skills.fame : 0) * 0.5 + def.fame;
   return { quality: clamp(Math.round(crewScore * 0.45 + call * 0.35 + def.quality * 0.2), 1, 99), fame };
 }

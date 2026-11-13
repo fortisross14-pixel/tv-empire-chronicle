@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { buildingDef, capacityOf, formatById, grade, isHeldScript, isHeldShot, occupants, placementProblem, type BuildingKind, type GameState } from '../../engine';
+import { buildingDef, capacityOf, formatById, grade, isHeldScript, isHeldShot, occupants, placementProblem, rightsById, type BuildingKind, type GameState } from '../../engine';
 import type { LotCard, LotLabel, LotModel, LotScene } from './LotScene';
 import { cx } from '../util';
 import { money } from '../util';
@@ -153,7 +153,7 @@ export function LotView({
           const b = state.lot.buildings.find((x) => x.id === l.id);
           if (!b || placing) return null;
           const def = buildingDef(b.kind);
-          const inside = occupants(state, b.id).length;
+          const inside = b.kind === 'truck' ? state.rights.filter((r) => rightsById(r.defId).kind === 'sports').length : occupants(state, b.id).length;
           const cap = capacityOf(b);
           const queued = def.stage ? state.projects.filter((p) => p.stage === def.stage && !p.buildingId && !p.hold).length : 0;
           // A nudge when the building has something for the player to do.

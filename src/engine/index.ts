@@ -20,7 +20,7 @@ export { NETWORK_PACK_SIZE, HYPE_POWER } from './network';
 export { AWARD_LEVELS, AWARD_WEEKS, eligibleShows } from './awards';
 export { startEvent } from './events';
 export * from './data/rights';
-export { absWeek, sportsInSlot, sportsQuality, sportsRightsForSlot, sportsOffers, sportsSlots, sportsPrice, sportsClash, rightsSlot } from './rights';
+export { absWeek, sportsInSlot, sportsQuality, sportsRightsForSlot, sportsOffers, sportsSlots, sportsPrice, sportsClash, rightsSlot, sportsRoom } from './rights';
 export { hasBuilding } from './lot';
 export { ipPool, IP_PACK_PRICE, IP_PACK_SIZE, MOVIE_PACK_KEEP } from './packs';
 export * from './data/ips';

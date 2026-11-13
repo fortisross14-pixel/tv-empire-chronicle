@@ -104,8 +104,7 @@ export function applyMission(s: GameState, def: MissionDef): void {
     }
   }
   for (const id of x.rights ?? []) {
-    const house = (k: string) => s.people.find((p) => p.house && p.kind === k)?.id ?? null;
-    s.rights.push({ id: newId(s, 'r'), defId: id, airingsLeft: 0, novelty: 100, expires: absWeek(s) + 60, crewId: house('crew'), talentId: house('talent'), games: 0 });
+    s.rights.push({ id: newId(s, 'r'), defId: id, airingsLeft: 0, novelty: 100, expires: absWeek(s) + 60, crewId: null, talentId: null, games: 0 });
   }
   for (const id of x.ips ?? []) { const d = ipDefById(id); if (d) licenseIp(s, d); }
   if (x.rivalStrength) {
@@ -244,7 +243,7 @@ export function goalLabel(goal: Goal): string {
     case 'ownIp': return goal.rating <= 1 ? 'Turn a show into your own IP' : `Grow your own IP to rating ${goal.rating}`;
     case 'ips': return `Hold ${goal.n} IP${goal.n > 1 ? 's' : ''} rated ${goal.rating}+`;
     case 'affiliates': return `Sign ${goal.n} affiliates`;
-    case 'rights': return goal.ids.length === 1 ? `Win the ${rightsById(goal.ids[0]).name} rights` : `Win the rights to ${goal.ids.map((id) => rightsById(id).short ?? rightsById(id).name).join(', ')}`;
+    case 'rights': return goal.ids.length === 1 ? `Buy the ${rightsById(goal.ids[0]).name} rights` : `Hold the rights to ${goal.ids.map((id) => rightsById(id).short ?? rightsById(id).name).join(', ')}`;
     case 'loanFree': return 'Pay off the bank loan';
     case 'primeSweep': return 'Win every prime-time slot in one week';
     case 'freshLineup': return `Scheduled shows average ${goal.novelty}+ novelty`;

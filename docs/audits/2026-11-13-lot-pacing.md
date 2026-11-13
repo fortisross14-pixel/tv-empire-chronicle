@@ -29,3 +29,19 @@ New skills, parts and a crew card per slider at every level. Bot still plans sho
 - Missions (6 seeds): Beginner all 6/6. Most others 5–6/6. To revisit in the balance pass:
   Glimmy Night 3/6 (lost the award), National Ambition 4/6, Bleeding Money 5/6 (one bankruptcy).
 - Not measured: a player who waits between steps (the bot never does), and marketing spend.
+
+## After the Market rebuild (save v17)
+
+Sports bought any time (truck with its own crew, 2 competitions at a time), movie and license
+packs with a choice, IP ad premium up to +35%.
+
+- Economy (6 seeds): State median week 47, National 5/6 (median week 130), #1 crown 3/6.
+  **One run (seed 1) went bankrupt at Local in year 5**: weak starting cards, reputation fell
+  to 0 and never recovered. Not caused by the new market (that run bought none of it), but a
+  casual game should not allow it: first item for the balance pass.
+- Late game cash is higher than before (about $37K a year at National, was $25K).
+- Missions (6 seeds): all Beginner and Local 6/6 except State Bound 5/6; State: Bleeding
+  Money 5/6, House Rules 3/6 (needs a Show for the Ages), Franchise Builder 5/6; National all
+  6/6 in the previous run.
+- Play Ball and Sports Town are now won in the first week by buying rights: their goals need
+  rethinking now that sports are always on sale.

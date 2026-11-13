@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   BUSINESS_CARD_USES, IP_PACK_SIZE, MOVIE_PACK_KEEP, MOVIE_PACK_SIZE, PRICES, absWeek, buildCost, buildingDef, hasBuilding, inSeason, ipDefById, ipPool,
-  ipRarity, packPrice, rightsById, rightsSlot, seasonText, slotLabel, sportsClash, sportsOffers, sportsPrice, sportsSlots, usableIps, weeksToSeasonStart,
+  ipRarity, packPrice, rightsById, rightsSlot, seasonText, slotLabel, sportsClash, sportsOffers, sportsPrice, sportsRoom, sportsSlots, usableIps, weeksToSeasonStart,
   type GameState, type OwnedRights, type Rarity, type RightsDef, type SlotId,
 } from '../../engine';
 import { RightsCard } from '../components/RightsCard';
@@ -162,7 +162,7 @@ export function ShopScreen({
         ? <NeedsAnnex state={state} kind="truck" goHome={goHome}>Live games need an outside-broadcast truck. With one you can buy rights all year round; games air only while the season is on.</NeedsAnnex>
         : (
           <div className="stack">
-            <p className="small muted">On sale all year, at your level. Games happen only in season, and take over their slot those weeks; the rest of the year your own show airs there.</p>
+            <p className="small muted">On sale all year, at your level. Games happen only in season, and take over their slot those weeks; the rest of the year your own show airs there. Your truck covers <b>{sportsRoom(state).used}/{sportsRoom(state).capacity}</b> competitions: expand it on the lot for more.</p>
             <div className="grid-wide">
               {[...offers].sort((a, b) => Number(!!mine(b.id)) - Number(!!mine(a.id)) || weeksToSeasonStart(a, state.week) - weeksToSeasonStart(b, state.week)).map((def) => (
                 <SportsRow key={def.id} state={state} def={def} owned={mine(def.id)}

@@ -91,8 +91,8 @@ test('winning an IP lot licenses it; a show based on it gets fame and hype', () 
   s = keepPackCards(buyPack(s, 'ip'), [1]);
   expect(s.ips).toHaveLength(1);
   // A known name earns more from ads, most of all in a format made for it.
-  expect(ipPremium({ rating: 80, fits: { series: 3 } }, 'series')).toBeCloseTo(0.4);
-  expect(ipPremium({ rating: 80, fits: {} }, 'series')).toBeCloseTo(0.2);
+  expect(ipPremium({ rating: 84, fits: { series: 3 } }, 'series')).toBeCloseTo(0.3);
+  expect(ipPremium({ rating: 84, fits: {} }, 'series')).toBeCloseTo(0.15);
   const ip = s.ips[0];
   ip.fits[s.formats[0]] = 3;
   s = createShow(s, plan(s, { ipId: ip.id }));

@@ -519,6 +519,34 @@ A show moves across the lot as a card, and the player starts every step:
 - **Next (not built):** more building types (graphics and sound studios with their own leads,
   offices), how buildings unlock, and paying for staff on the way to AAA shows.
 
+## 19. The Market: packs, movies, sports, IP (built; replaces the timed Rights Market)
+
+The Market tab has four sections. Nothing is auctioned any more: you buy when you want.
+
+- **Packs.** Program, people and network packs, and Business Cards (as before).
+- **Movies.** A movie pack shows 3 movie cards; you keep 2. A card is a library with a size
+  and a rarity (20 westerns, common; 12 rom-coms, rare; 8 superhero films, epic) or a new
+  release. Movies can air straight away, one per airing.
+- **Sports** (needs a **Sports Truck**). Every competition at your level or below is on sale
+  all year. Each has a season (months) and the slots its games can air in (Friday nights,
+  weekend afternoons…; the World Tennis Tour plays all year in any slot). You pick the slot
+  when you buy and can move it later. In season the games take over that slot; the rest of
+  the year your own programme airs there. The price is one season (less if it has started).
+  The truck has its own crew and covers 2 competitions (3, then 4 when expanded); assign your
+  own people in the Guide for a better broadcast.
+- **IP** (needs a **Licensing Office**). A license pack shows 3 licenses; you keep 1: books,
+  video games, board games, toys, films, chefs, comics and events, each with a rarity and the
+  formats it suits. Choose it when you write a script. Shows based on an IP start with fame
+  and hype and earn up to +35% from ads. A great show still becomes an IP of your own.
+- **Office and annexes.** Every lot has a Head Office (packs and movies). The Sports Truck
+  and the Licensing Office are annexes you build, one of each. Lots are a little bigger
+  (14×11, 18×13, 22×15). State and National stations, and missions that need them, start
+  with the annexes. More kinds of office are planned.
+- Engine: `buySportsRights`, `moveSportsRights`, `buyPack('movies' | 'ip')` then
+  `keepPackCards` (`Pack.choose`), `ipPremium`, `sportsRoom`. Saves are v17.
+- **Saving.** Saves go to localStorage and, as a backup, IndexedDB (`src/engine/storage.ts`):
+  when localStorage is full or blocked the backup keeps the game.
+
 ## 13. Build waves
 
 0. **Foundation** — remove the old code, TS + engine/UI split, card components,
@@ -560,6 +588,7 @@ Next (planned):
 16. **Balancing** ✅ — casual target; see docs/audits/2026-11-11-balance.md.
 17. **The studio lot** ✅ — 3D Home, buildings with capacity, build mode (section 17).
 18. **Step-by-step production** ✅ — script, studio, post and release as cards you drag; parts and new skills (section 18).
+19. **Market and annexes** ✅ — Movies, Sports and IP sections, Sports Truck and Licensing Office (section 19).
 
 The last three waves are always:
 

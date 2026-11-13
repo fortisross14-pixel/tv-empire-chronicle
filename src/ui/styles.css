@@ -918,7 +918,8 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
 
 /* Packs with a choice: the cards you keep stand out, the rest fade. */
 .flip.keep { outline: 4px solid var(--good); outline-offset: 3px; border-radius: 18px; }
-.flip.drop { opacity: .45; filter: grayscale(.6); }
+/* Fade the face, not the flipping box: a filter on it would flatten the 3D flip. */
+.flip.drop > .back { opacity: .45; filter: grayscale(.6); }
 .new-note.keep-note { background: var(--good); color: #0b2b1d; }
 .market-tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
 .market-tabs button { padding-left: 4px; padding-right: 4px; white-space: nowrap; font-size: 13px; }

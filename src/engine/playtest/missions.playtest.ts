@@ -11,7 +11,7 @@ import {
 } from '../game';
 import { formatById, AREAS, AREA_SKILL } from '../data/formats';
 import { leadRole, roleScore, rolesFor } from '../data/roles';
-import { sportsOffers, sportsPrice } from '../rights';
+import { sportsOffers, sportsPrice, sportsRoom } from '../rights';
 import { inSeason, weeksToSeasonStart } from '../data/rights';
 import { IP_PACK_PRICE, ipPool } from '../packs';
 import { topicById } from '../data/topics';
@@ -240,9 +240,18 @@ export function playState(start0: GameState, goals: Goal[], weeks: number, onWee
         const soon = inSeason(def, s.week) || weeksToSeasonStart(def, s.week) <= 4;
         if (!keen && (wantTier || !soon)) continue;
         const price = sportsPrice(s, def);
-        if (spend() - price <= (keen ? -buffer * 0.8 : price)) continue;
-        annex('truck', keen ? 0 : buffer);
+        // Not for a goal: only with cash to spare, so sports never starve the studio.
+        if (spend() - price <= (keen ? -buffer * 0.8 : Math.max(price * 4, 150))) continue;
+        annex('truck', keen ? 0 : buffer * 3);
         if (!have('truck')) continue;
+        // The truck is full: for a goal, expand it.
+        const truck = s.lot.buildings.find((b) => b.kind === 'truck')!;
+        const room = sportsRoom(s);
+        if (room.used >= room.capacity) {
+          const up = upgradeCost(s, truck);
+          if (!keen || up === null || s.cash < up + price) continue;
+          try { s = upgradeBuilding(s, truck.id); } catch { continue; }
+        }
         try { s = buySportsRights(s, def.id); } catch { /* clash or no room */ }
       }
       // IP: a license pack when the mission asks for IP, or when the station is rich enough to play with one.
