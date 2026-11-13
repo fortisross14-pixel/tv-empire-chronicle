@@ -1,4 +1,5 @@
 // The weekly simulation, as named steps. `airWeek` in game.ts runs them in order on a draft state.
+import { makePack } from './packs';
 import type { AwardLevel, GameState, Show, SlotId, SlotResult, WeekResult } from './types';
 import { clamp } from './rng';
 import { dateLabel, isFallPremiere, isSweeps, periodOf, type Period } from './calendar';
@@ -358,9 +359,28 @@ export function checkBankruptcy(s: GameState): void {
     s.loan = { balance: LOAN.total, payment: LOAN.payment };
     s.cash = round1(s.cash + LOAN.amount);
     addNews(s, `Cash ran out. The bank lends $${LOAN.amount}K, to be repaid at $${LOAN.payment}K a week. There will be no second loan.`, 'bad');
+  } else if (!s.bailedOut) {
+    // One more lifeline: investors cover the hole and a little more, and take the credit for it.
+    s.bailedOut = true;
+    s.cash = round1(overheadOf(s) * 6);
+    s.reputation = round1(Math.max(0, s.reputation - 8));
+    addNews(s, 'Out of money again. Investors step in and keep the station on the air, but word gets around: reputation drops. This was the last rescue.', 'bad');
   } else {
     s.gameOver = `${s.stationName} ran out of money on ${dateLabel(s.week, s.year)}.`;
   }
+}
+
+/** A grant when a small station is stuck: little cash, no reputation. At most once a year. */
+export const GRANT = { cash: 60, belowCash: 35, belowReputation: 8, everyWeeks: 52, minShows: 2 };
+export function maybeGrant(s: GameState): void {
+  const now = s.year * 52 + s.week;
+  if (s.tier !== 'local' || s.cash >= GRANT.belowCash || s.reputation >= GRANT.belowReputation) return;
+  // Only for a station that has really tried: it has made shows and still sits at the bottom.
+  if (s.shows.length < GRANT.minShows || now - (s.aidAt ?? -999) < GRANT.everyWeeks) return;
+  s.aidAt = now;
+  s.cash = round1(s.cash + GRANT.cash);
+  s.unopened.push(makePack(s, 'program'), makePack(s, 'people'));
+  addNews(s, `The Port Ellison Arts Council backs local TV: a $${GRANT.cash}K grant and two free packs (open them on the lot).`, 'good');
 }
 
 /** One full week, in order. */
@@ -376,6 +396,7 @@ export function simulateWeek(s: GameState): void {
   studioWeek(s);
   awardSeason(s);
   nextWeek(s, ctx);
+  maybeGrant(s);
   checkBankruptcy(s);
   trackMission(s);
 }

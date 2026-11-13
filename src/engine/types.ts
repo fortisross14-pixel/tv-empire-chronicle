@@ -500,6 +500,10 @@ export interface GameState {
   rateCard: number;
   loan: Loan | null;
   loanUsed: boolean;
+  /** Absolute week of the last Arts Council grant (a helping hand for a struggling Local station). */
+  aidAt?: number;
+  /** Investors stepped in once after the bank loan ran out. */
+  bailedOut?: boolean;
   people: Person[];
   formats: string[];
   topics: string[];

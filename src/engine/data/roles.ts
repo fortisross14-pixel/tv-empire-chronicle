@@ -65,5 +65,5 @@ export function roleScore(formatId: string, role: Role, person: TalentCard, topi
   return Math.min(100, base + (ages.includes(person.age) ? 4 : 0));
 }
 
-/** Screen power bonus from an optional part: nothing for a poor fit, up to about +8 for a great one. */
-export const supportBonus = (score: number): number => Math.max(0, (score - 35) * 0.13);
+/** Screen power bonus from an optional part: nothing for a poor fit, up to about +6 for a great one. */
+export const supportBonus = (score: number): number => Math.max(0, (score - 35) * 0.1);

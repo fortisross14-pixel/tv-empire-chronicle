@@ -287,7 +287,7 @@ describe('rights', () => {
     expect(() => buySportsRights(s, 'friday-football')).toThrow(/Sports Truck/);
     addAnnex(s, 'truck');
     s = buySportsRights(s, 'friday-football');
-    expect(s.cash).toBe(475); // a full season, bought before it starts
+    expect(s.cash).toBe(470); // a full season, bought before it starts
     expect(() => buySportsRights(s, 'friday-football')).toThrow(/already/);
     s = advanceTo(s, 33);
     expect(s.rights.some((r) => r.defId === 'friday-football')).toBe(true);

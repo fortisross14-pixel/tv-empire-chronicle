@@ -189,7 +189,9 @@ export function playState(start0: GameState, goals: Goal[], weeks: number, onWee
       if (s.projects.length >= projects()) break;
       const plan = bestPlan(s, show.id);
       if (!plan) continue;
-      if (!plan.twist && Math.min(Math.max(40, 100 - 12 * show.season), show.novelty + 25) < 50 && !wants(goals, 'season')) continue;
+      // A tired show isn't worth a new season, unless there is nothing else to make.
+      const idle = s.projects.length === 0 && freshIdeas(s) === 0;
+      if (!plan.twist && Math.min(Math.max(40, 100 - 12 * show.season), show.novelty + 25) < 50 && !wants(goals, 'season') && !idle) continue;
       const cost = previewPlan(s, plan).cost;
       if (s.cash - cost < 15) continue;
       try { s = createShow(s, plan); } catch { /* */ }
@@ -276,7 +278,9 @@ export function playState(start0: GameState, goals: Goal[], weeks: number, onWee
       // Out of show ideas: new formats and topics first; otherwise people and network cards.
       const kinds = ['people', 'program', 'network'] as const;
       const k = freshIdeas(s) < 2 ? 'program' : kinds[(s.week + s.year) % 3];
-      if (spend() - committed - (wantTier ? 0 : 0) > PRICES[k] + 20) { s = buyPack(s, k); s = dismissReveal(s); }
+      // Out of ideas or out of people: a pack comes before a cash cushion.
+      const urgent = freshIdeas(s) === 0 || !s.people.some((p) => !p.house && p.uses > 0);
+      if (spend() - committed > PRICES[k] + (urgent ? -15 : 20)) { s = buyPack(s, k); s = dismissReveal(s); }
     }
     if (s.tier === 'national' && s.affiliates < AFFILIATE_MAX && s.cash > affiliateCost(s.affiliates) + (wants(goals, 'affiliates') ? 300 : 800)) s = signAffiliate(s);
     // Like a player: when productions queue for a full building, expand it (or build another).

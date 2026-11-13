@@ -42,7 +42,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'kpel', name: 'KPEL Pelican 5', short: 'KPEL 5', color: '#e04f4f',
     blurb: 'The old local giant. News at six, sports, and it hates losing a slot.',
-    quality: [30, 52], aggression: 0.6, appetite: 1, sportsLove: 1.15, launchWeek: 0, tier: 'local',
+    quality: [34, 56], aggression: 0.6, appetite: 1, sportsLove: 1.15, launchWeek: 0, tier: 'local',
     formats: {
       morning: ['news', 'talk', 'magazine'],
       afternoon: ['talk', 'magazine', 'contest'],
@@ -54,7 +54,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'wave', name: 'WAVE 12 Harbor', short: 'WAVE 12', color: '#2fa3c4',
     blurb: 'A cheeky new channel for young viewers. Reality, contests and comedy, on a budget.',
-    quality: [26, 48], aggression: 0.35, appetite: 0.6, sportsLove: 0.8, launchWeek: 36, tier: 'local',
+    quality: [30, 52], aggression: 0.35, appetite: 0.6, sportsLove: 0.8, launchWeek: 36, tier: 'local',
     formats: {
       morning: ['talk', 'magazine'],
       afternoon: ['contest', 'reality'],
@@ -66,7 +66,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'capital', name: 'Capital 7 Network', short: 'Capital 7', color: '#c9302c',
     blurb: 'The state capital\'s flagship network. Polished news, big dramas, deep pockets.',
-    quality: [44, 66], aggression: 0.55, appetite: 1.2, sportsLove: 1.2, launchWeek: 0, tier: 'state',
+    quality: [49, 71], aggression: 0.55, appetite: 1.2, sportsLove: 1.2, launchWeek: 0, tier: 'state',
     formats: {
       morning: ['news', 'talk', 'magazine'],
       afternoon: ['talk', 'magazine', 'contest'],
@@ -78,7 +78,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'statenet', name: 'StateNet', short: 'StateNet', color: '#7b4fd6',
     blurb: 'A scrappy statewide upstart. Reality, sitcoms and anything cheap that rates.',
-    quality: [40, 62], aggression: 0.45, appetite: 0.9, sportsLove: 0.9, launchWeek: 0, tier: 'state',
+    quality: [45, 67], aggression: 0.45, appetite: 0.9, sportsLove: 0.9, launchWeek: 0, tier: 'state',
     formats: {
       morning: ['talk', 'magazine'],
       afternoon: ['contest', 'reality', 'talk'],
@@ -90,7 +90,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'atlas', name: 'Atlas One Network', short: 'Atlas One', color: '#d4362c',
     blurb: 'The biggest network in the country. Owns prime time and wants to keep it.',
-    quality: [52, 75], aggression: 0.65, appetite: 1.3, sportsLove: 1.3, launchWeek: 0, tier: 'national',
+    quality: [56, 79], aggression: 0.65, appetite: 1.3, sportsLove: 1.3, launchWeek: 0, tier: 'national',
     formats: {
       morning: ['news', 'talk'], afternoon: ['talk', 'contest', 'magazine'], evening: ['news', 'contest', 'sitcom'],
       prime: ['series', 'reality', 'movie', 'contest'], late: ['late-show', 'talk'],
@@ -99,7 +99,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'nova', name: 'Nova Broadcasting', short: 'Nova', color: '#5b3fd1',
     blurb: 'Prestige television. Award-winning dramas and documentaries.',
-    quality: [50, 72], aggression: 0.4, appetite: 1.1, sportsLove: 0.8, launchWeek: 0, tier: 'national',
+    quality: [54, 76], aggression: 0.4, appetite: 1.1, sportsLove: 0.8, launchWeek: 0, tier: 'national',
     formats: {
       morning: ['news', 'magazine'], afternoon: ['documentary', 'magazine'], evening: ['news', 'documentary', 'sitcom'],
       prime: ['series', 'documentary', 'movie'], late: ['late-show', 'movie'],
@@ -108,7 +108,7 @@ export const LOCAL_RIVALS: RivalDef[] = [
   {
     id: 'fizz', name: 'Fizz TV', short: 'Fizz', color: '#ff7a1a',
     blurb: 'Loud, young and everywhere. Reality, animation and contests around the clock.',
-    quality: [46, 68], aggression: 0.5, appetite: 0.9, sportsLove: 0.9, launchWeek: 0, tier: 'national',
+    quality: [50, 72], aggression: 0.5, appetite: 0.9, sportsLove: 0.9, launchWeek: 0, tier: 'national',
     formats: {
       morning: ['animation', 'talk'], afternoon: ['animation', 'contest', 'reality'], evening: ['contest', 'sitcom', 'reality'],
       prime: ['reality', 'contest', 'sitcom', 'animation'], late: ['sitcom', 'late-show'],

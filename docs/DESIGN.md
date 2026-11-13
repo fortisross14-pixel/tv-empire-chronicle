@@ -269,7 +269,7 @@ lineup, shares, trend, rights owned and slots won against you.
   (repaid at $2.5K/week). The second time, the game is over.
 - **Scaling (balance pass):** running costs Local $7K, State $38K, National $160K × reach;
   production ×1.8 at State, ×2.5 at National; affiliates $500K + $250K each; licenses
-  State $250K/rep 30 (fee $200K), National $4M/rep 60 (fee $2.5M), each with a free movie
+  State $350K/rep 40 (fee $250K), National $4M/rep 60 (fee $2.5M), each with a free movie
   pack. Reputation from airing is scaled per slot. The #1 crown: 26 weeks in a row at #1
   in prime time. Numbers and measurements: docs/audits/2026-11-11-balance.md.
 
@@ -296,7 +296,7 @@ Unlocks:
 
 ## 10b. State network (built)
 
-- **License:** reputation 30 and $250K cash, then a $200K fee (Week tab goal card).
+- **License:** reputation 40 and $350K cash, then a $250K fee (Week tab goal card).
 - **Schedule:** Mon–Wed (3 airings), Thu–Fri (2) and Weekend (2) ×
   Morning, Afternoon, Evening, Prime, Late Night = 15 slots. Existing shows move
   over (weekday prime → Thu–Fri prime, other weekday slots → Mon–Wed).

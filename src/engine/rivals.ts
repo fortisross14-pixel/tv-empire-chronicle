@@ -20,7 +20,7 @@ export function makeRivalShow(state: GameState, slot: SlotId, rival: Pick<Rival,
   const { part } = slotParts(slot);
   const fid = formatId ?? pick(state, def.formats[part]);
   const topic = pick(state, topicsForFormat(fid));
-  const yearBoost = Math.min(8, (state.year - 1) * 2);
+  const yearBoost = Math.min(10, (state.year - 1) * 2);
   const name = pick(state, TITLE_TEMPLATES[fid])
     .replace('{w}', pick(state, topic.words)).replace('{c}', CITY).replace('{h}', pick(state, HOSTS));
   return {
