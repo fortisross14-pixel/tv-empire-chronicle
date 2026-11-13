@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  GameError, airWeek, buildBuilding, moveBuilding, upgradeBuilding, sellBuilding, buildingDef, buyBusinessCard, buyPack, cancelProject, archiveShow, writeScript, shootScript, ackMission, newMissionGame, recordMission,
+  GameError, airWeek, buildBuilding, moveBuilding, upgradeBuilding, sellBuilding, buildingDef, buyBusinessCard, buyPack, cancelProject, archiveShow, writeScript, shootScript, postShow, releaseShow, ackMission, newMissionGame, recordMission,
   dateLabel, dismissFinished, dismissReveal, openPack, saveGame, scheduleShow, useBusinessCard,
   setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
   reachOf, SANDBOX_GOALS, type GameState, type Goal,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
+import { ProductionWizard } from './components/ProductionWizard';
+import { ReleaseSheet } from './components/ReleaseSheet';
 import { PackReveal } from './components/PackReveal';
 import { WeekResults } from './components/WeekResults';
 import { FinishedReveal } from './components/FinishedReveal';
@@ -79,7 +81,9 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
   state: GameState; setState: (s: GameState) => void; slot: number; onMenu: () => void; onRetry: () => void;
 }) {
   const [tab, setTab] = useState<Tab>('week');
-  const [wizard, setWizard] = useState<{ renew?: string; spinoff?: string; shoot?: string } | null>(null);
+  const [wizard, setWizard] = useState<{ renew?: string; spinoff?: string } | null>(null);
+  const [prod, setProd] = useState<{ id: string; mode: 'shoot' | 'post' } | null>(null);
+  const [release, setRelease] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [usingCard, setUsingCard] = useState<string | null>(null);
   const [openShow, setOpenShow] = useState<string | null>(null);
@@ -147,7 +151,8 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
     openPack: (id) => run((s) => openPack(s, id)),
     goTab: setTab,
     newShow: () => setWizard({}),
-    shoot: (id) => setWizard({ shoot: id }),
+    shoot: (id) => setProd({ id, mode: 'shoot' }),
+    post: (id) => setProd({ id, mode: 'post' }),
   });
   const scheduled = new Set(Object.values(state.schedule));
 
@@ -177,7 +182,9 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
             onMove={(id, x, y, rot) => run((s) => moveBuilding(s, id, x, y, rot), 'Moved.')}
             onUpgrade={(id) => run((s) => upgradeBuilding(s, id), 'Expanded! It holds one more now.')}
             onSell={(id) => run((s) => sellBuilding(s, id), 'Sold.')}
-            onWrite={() => setWizard({})} onShoot={(id) => setWizard({ shoot: id })} goTab={setTab} onOpenShow={setOpenShow}>
+            onWrite={() => setWizard({})} onShoot={(id) => setProd({ id, mode: 'shoot' })} onPost={(id) => setProd({ id, mode: 'post' })}
+            onRelease={(id) => { if (state.shows.find((s) => s.id === id)?.released) setTab('schedule'); else setRelease(id); }}
+            onOpenPack={(id) => run((s) => openPack(s, id))} goTab={setTab} onOpenShow={setOpenShow}>
           <WeekScreen state={state} todos={todos} onMenu={onMenu}
             onExpand={() => {
               void ask({ title: 'Buy the license?', text: 'Running costs rise a lot, but so does the audience. Make sure you have shows ready for the bigger schedule.', confirm: 'Buy license' })
@@ -194,7 +201,8 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
             onAssignTeam={(rid, c, t) => run((s) => assignSportsTeam(s, rid, c, t), 'Broadcast team set.')} />
         )}
         {tab === 'studio' && (
-          <StudioScreen state={state} onNewShow={() => setWizard({})} onOpenShow={setOpenShow} onShoot={(id) => setWizard({ shoot: id })}
+          <StudioScreen state={state} onNewShow={() => setWizard({})} onOpenShow={setOpenShow}
+            onShoot={(id) => setProd({ id, mode: 'shoot' })} onPost={(id) => setProd({ id, mode: 'post' })}
             onCancelProject={(id) => run((s) => cancelProject(s, id), 'Production scrapped.')} />
         )}
         {tab === 'cards' && (
@@ -228,11 +236,19 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
       </nav>
 
       {wizard && (
-        <NewShowWizard state={state} renewShowId={wizard.renew} spinoffOf={wizard.spinoff} shootProjectId={wizard.shoot} onClose={() => setWizard(null)}
-          onWrite={(plan) => run((s) => writeScript(s, plan), `The writers are on “${plan.name || 'the new season'}”. ✍️`)}
-          onShoot={(id, plan) => run((s) => shootScript(s, id, plan), 'Cameras rolling! 🎬')} />
+        <NewShowWizard state={state} renewShowId={wizard.renew} spinoffOf={wizard.spinoff} onClose={() => setWizard(null)}
+          onWrite={(plan) => run((s) => writeScript(s, plan), `The writers are on “${plan.name || 'the new season'}”. ✍️`)} />
       )}
-      {showMissionResult && (
+      {prod && state.projects.some((p) => p.id === prod.id) && (
+        <ProductionWizard key={prod.id + prod.mode} state={state} projectId={prod.id} mode={prod.mode} onClose={() => setProd(null)}
+          onShoot={(id, plan) => run((s) => shootScript(s, id, plan), 'Cameras rolling! 🎬')}
+          onPost={(id, plan) => run((s) => postShow(s, id, plan), 'Into the edit! 🎞️')} />
+      )}
+      {release && !posterFor && state.shows.some((s) => s.id === release) && (
+        <ReleaseSheet state={state} showId={release} onClose={() => setRelease(null)} onEditPoster={() => setPosterFor(release)}
+          onRelease={(m) => { if (run((s) => releaseShow(s, release, m), 'Released! Now give it a time slot. 📺')) { setRelease(null); setTab('schedule'); } }} />
+      )}
+      {showMissionResult && !showResults && (
         <MissionResult state={state} onMenu={onMenu} onRetry={onRetry}
           onContinue={() => run(ackMission)} />
       )}
@@ -256,7 +272,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
           }} />
       )}
       {!state.reveal && !showResults && !state.ceremony && !state.pendingEvent && finishedShows.length > 0 && (
-        <FinishedReveal shows={finishedShows} state={state} onClose={() => { run(dismissFinished); setTab('schedule'); }} />
+        <FinishedReveal shows={finishedShows} state={state} onClose={() => { run(dismissFinished); setTab('week'); }} />
       )}
       {state.milestone === 'state' && !state.reveal && !showResults && (
         <Sheet title="Welcome to the State! 🎉" onClose={() => run(dismissMilestone)}

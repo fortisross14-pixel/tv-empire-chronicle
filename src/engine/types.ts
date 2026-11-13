@@ -3,11 +3,19 @@
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legend';
 
-/** Production focus areas. 10 focus points are split across these per show. */
-export type Area = 'direction' | 'sound' | 'image' | 'fx' | 'music' | 'art';
-export type CrewSkill = Area | 'production';
+/**
+ * Focus areas (the sliders). Four are set when shooting in the studio (direction, wardrobe,
+ * image, set) and three in post-production (sound, music, fx).
+ */
+export type Area = 'direction' | 'wardrobe' | 'image' | 'set' | 'sound' | 'music' | 'fx';
+/** Off-screen skills. Audio covers both the sound and the music sliders. */
+export type CrewSkill = 'direction' | 'wardrobe' | 'image' | 'set' | 'audio' | 'fx' | 'production';
 export type Genre = 'factual' | 'entertainment' | 'drama' | 'comedy';
-export type TalentSkill = 'hosting' | 'acting' | 'charisma' | 'fame';
+/** On-screen skills. Fame is not a skill a part asks for: it brings viewers. */
+export type ScreenSkill = 'hosting' | 'acting' | 'physical' | 'voice' | 'looks' | 'brain';
+export type TalentSkill = ScreenSkill | 'fame';
+export type Gender = 'woman' | 'man';
+export type AgeGroup = 'child' | 'teen' | 'young' | 'adult' | 'senior';
 
 export type Daypart = 'morning' | 'afternoon' | 'evening' | 'prime' | 'late';
 /** Local: weekday + weekend. State: Mon–Wed, Thu–Fri + weekend. */
@@ -46,6 +54,8 @@ export interface WriterCard extends PersonBase {
 export interface TalentCard extends PersonBase {
   kind: 'talent';
   skills: Record<TalentSkill, number>;
+  gender: Gender;
+  age: AgeGroup;
 }
 
 export type Person = CrewCard | WriterCard | TalentCard;
@@ -74,12 +84,21 @@ export interface Project {
   /** Crew lead and on-screen talent: null until the finished script is sent to a Sound Stage. */
   crewId: string | null;
   talentId: string | null;
+  /** Everyone on screen: part id (see data/roles) → person. The lead is also `talentId`. */
+  cast: Record<string, string>;
+  /**
+   * Waiting for the player as a card on the lot: 'script' = written, not shot yet;
+   * 'shot' = filmed, not sent to post-production yet. Null while someone is working on it.
+   */
+  hold: 'script' | 'shot' | null;
+  /** Planned in one go (crew, cast and every slider up front): never waits for the player. */
+  auto: boolean;
   level: ProductionLevel;
   writer2Id: string | null;
   writer3Id: string | null;
   /** Spin-off of this show, if any. */
   spinoffOf: string | null;
-  /** Advanced: a specialist crew card per area. Areas without one are covered by the lead. */
+  /** A crew card per slider. Sliders without one are covered by the crew lead. */
   specialists: Partial<Record<Area, string>>;
   topic2Id: string | null;
   points: Record<Area, number>;
@@ -151,6 +170,10 @@ export interface Show {
   poster: PosterSpec | null;
   /** The IP it is based on, or its own IP once it has a hit season. */
   ipId: string | null;
+  /** The season's poster and marketing were chosen at the tower (the last step before airing). */
+  released?: boolean;
+  /** Marketing bought for this season: 0 none, 1 local buzz, 2 big campaign. */
+  marketing?: 0 | 1 | 2;
   /** Archived: off the air for good (kept in the show library; can be restored). */
   archived?: boolean;
 }
@@ -202,6 +225,7 @@ export interface LastPlan {
   writer3Id: string | null;
   crewId: string;
   talentId: string;
+  cast?: Record<string, string>;
   specialists: Partial<Record<Area, string>>;
   points: Record<Area, number>;
   scriptTime: ScriptTime;

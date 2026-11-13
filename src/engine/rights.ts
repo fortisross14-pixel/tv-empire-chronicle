@@ -222,8 +222,8 @@ export function sportsQuality(s: GameState, r: OwnedRights): { quality: number; 
   const def = rightsById(r.defId);
   const crew = s.people.find((p) => p.id === r.crewId);
   const talent = s.people.find((p) => p.id === r.talentId);
-  const crewScore = crew?.kind === 'crew' ? (crew.skills.direction + crew.skills.image + crew.skills.sound) / 3 : 20;
-  const call = talent?.kind === 'talent' ? talent.skills.hosting * 0.6 + talent.skills.charisma * 0.4 : 20;
+  const crewScore = crew?.kind === 'crew' ? (crew.skills.direction + crew.skills.image + crew.skills.audio) / 3 : 20;
+  const call = talent?.kind === 'talent' ? talent.skills.hosting * 0.6 + talent.skills.voice * 0.4 : 20;
   const fame = (talent?.kind === 'talent' ? talent.skills.fame : 0) * 0.5 + def.fame;
   return { quality: clamp(Math.round(crewScore * 0.45 + call * 0.35 + def.quality * 0.2), 1, 99), fame };
 }

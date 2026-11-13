@@ -1,48 +1,25 @@
 import { useMemo, useState } from 'react';
 import {
-  AREAS, AREA_LABEL, FOCUS_POINTS, LEVELS, SCRIPT_TIME, levelsFor, formatById, topicById, topicsForFormat, previewScript, previewShoot, projectPeople,
-  suggestTitle, grade, keyAreas, scriptStars, ipBonus, ipWorth, usableIps, type Area, type Format, type GameState, type Person, type PersonKind,
-  type ProductionLevel, type ScriptPlan, type ScriptTime, type ShootPlan,
+  LEVELS, SCRIPT_TIME, levelsFor, formatById, topicById, topicsForFormat, previewScript, projectPeople, rolesFor, roleProfile, SCREEN_SKILL_LABEL,
+  suggestTitle, scriptStars, ipBonus, ipWorth, usableIps, type GameState, type Person, type ProductionLevel, type ScriptPlan, type ScriptTime,
 } from '../../engine';
 import { FormatCard, PersonCard, ScriptStars, Stars, TopicCard } from './Cards';
 import { Sheet } from './Sheet';
-import { cx, gradeClass, money } from '../util';
+import { cx, money } from '../util';
 
-type Step = 'level' | 'format' | 'topic' | 'team' | 'focus' | 'confirm';
+type Step = 'level' | 'format' | 'topic' | 'team' | 'confirm';
 const STEP_TITLE: Record<Step, string> = {
-  level: 'Production level', format: 'Pick a format', topic: 'Pick a topic', team: 'Pick the writers', focus: 'Split the focus', confirm: 'Order the script',
+  level: 'Production level', format: 'Pick a format', topic: 'Pick a topic', team: 'Pick the writers', confirm: 'Order the script',
 };
 
-const zeroPoints = (): Record<Area, number> => ({ direction: 0, sound: 0, image: 0, fx: 0, music: 0, art: 0 });
-
-/** The format's ideal split scaled to a points budget, rounded so it adds up exactly. */
-function scaledIdeal(format: Format, total: number): Record<Area, number> {
-  const raw = AREAS.map((a) => ({ a, v: (format.ideal[a] * total) / FOCUS_POINTS }));
-  const out = Object.fromEntries(raw.map(({ a, v }) => [a, Math.floor(v)])) as Record<Area, number>;
-  let left = total - AREAS.reduce((s, a) => s + out[a], 0);
-  for (const { a } of [...raw].sort((x, y) => (y.v % 1) - (x.v % 1))) {
-    if (left <= 0) break;
-    out[a] += 1;
-    left -= 1;
-  }
-  return out;
-}
-
-/**
- * Two short wizards in one. Writing (at the Writers' Room): the idea and the writers.
- * Shooting (at a Sound Stage, with `shootProjectId`): crew, cast and focus for a finished script.
- */
+/** The first step of a show, at the Writers' Room: the idea (format, topic, IP) and who writes it. */
 export function NewShowWizard({
-  state, renewShowId, spinoffOf, shootProjectId, onWrite, onShoot, onClose,
-}: {
-  state: GameState; renewShowId?: string; spinoffOf?: string; shootProjectId?: string;
-  onWrite: (plan: ScriptPlan) => boolean; onShoot: (projectId: string, plan: ShootPlan) => boolean; onClose: () => void;
-}) {
-  const shooting = shootProjectId ? state.projects.find((p) => p.id === shootProjectId) : undefined;
-  const renewing = shooting ? state.shows.find((s) => s.id === shooting.showId) : renewShowId ? state.shows.find((s) => s.id === renewShowId) : undefined;
-  const original = !shooting && spinoffOf ? state.shows.find((s) => s.id === spinoffOf) : undefined;
+  state, renewShowId, spinoffOf, onWrite, onClose,
+}: { state: GameState; renewShowId?: string; spinoffOf?: string; onWrite: (plan: ScriptPlan) => boolean; onClose: () => void }) {
+  const renewing = renewShowId ? state.shows.find((s) => s.id === renewShowId) : undefined;
+  const original = spinoffOf ? state.shows.find((s) => s.id === spinoffOf) : undefined;
   const canAdvanced = state.tier !== 'local';
-  const steps: Step[] = shooting ? ['team', 'focus', 'confirm'] : [
+  const steps: Step[] = [
     ...(canAdvanced ? ['level' as Step] : []),
     ...(renewing ? [] : original ? ['topic'] as Step[] : ['format', 'topic'] as Step[]),
     'team', 'confirm',
@@ -50,122 +27,83 @@ export function NewShowWizard({
   const [stepIdx, setStepIdx] = useState(0);
   const step = steps[stepIdx];
 
-  const [formatId, setFormatId] = useState<string | null>(shooting?.formatId ?? renewing?.formatId ?? original?.formatId ?? null);
-  const [topicId, setTopicId] = useState<string | null>(shooting?.topicId ?? renewing?.topicId ?? original?.topicId ?? null);
+  const [formatId, setFormatId] = useState<string | null>(renewing?.formatId ?? original?.formatId ?? null);
+  const [topicId, setTopicId] = useState<string | null>(renewing?.topicId ?? original?.topicId ?? null);
   const [ipId, setIpId] = useState<string | null>(original?.ipId ?? null);
   // A new season starts from last season's team and settings when those people are still around.
   const last = renewing?.lastPlan ?? null;
   const has = (id: string | null | undefined) => !!id && state.people.some((p) => p.id === id && (p.house || p.uses > 0));
-  const [team, setTeam] = useState<Record<PersonKind, string | null>>({
-    writer: has(last?.writerId) ? last!.writerId : null,
-    crew: has(last?.crewId) ? last!.crewId : null,
-    talent: has(last?.talentId) ? last!.talentId : null,
-  });
-  const [points, setPoints] = useState<Record<Area, number>>(() => (last && (!shooting || last.level === shooting.level) ? { ...last.points } : zeroPoints()));
+  // Starts on last season's writer, or the staff writer: one tap less for a first script.
+  const [writerId, setWriterId] = useState<string | null>(has(last?.writerId) ? last!.writerId : state.people.find((p) => p.kind === 'writer' && p.house)?.id ?? null);
   const [name, setName] = useState('');
   const [twist, setTwist] = useState(false);
   const [scriptTime, setScriptTime] = useState<ScriptTime>(last?.scriptTime ?? 'standard');
-  const [level, setLevel] = useState<ProductionLevel>(shooting?.level ?? (last && levelsFor(state.tier).includes(last.level) ? last.level : 'basic'));
+  const [level, setLevel] = useState<ProductionLevel>(last && levelsFor(state.tier).includes(last.level) ? last.level : 'basic');
   const [topic2Id, setTopic2Id] = useState<string | null>(renewing?.topic2Id ?? null);
   const [writer2Id, setWriter2Id] = useState<string | null>(has(last?.writer2Id) ? last!.writer2Id : null);
   const [writer3Id, setWriter3Id] = useState<string | null>(has(last?.writer3Id) ? last!.writer3Id : null);
-  const [specialists, setSpecialists] = useState<Partial<Record<Area, string>>>(() =>
-    Object.fromEntries(Object.entries(last?.specialists ?? {}).filter(([, id]) => has(id))));
   const L = LEVELS[level];
   const advanced = level !== 'basic';
   const aaa = level === 'aaa';
 
   const format = formatId ? formatById(formatId) : null;
-  const known = !!formatId && state.knownFormats.includes(formatId);
-  const used = AREAS.reduce((s, a) => s + points[a], 0);
-  const left = L.points - used;
-  const crew = state.people.find((p) => p.id === team.crew);
-  const crewFor = (a: Area) => state.people.find((p) => p.id === (specialists[a] ?? team.crew));
 
-  const scriptPlan: ScriptPlan | null = !shooting && formatId && topicId && team.writer
+  const plan: ScriptPlan | null = formatId && topicId && writerId
     ? {
-      name, formatId, topicId, writerId: team.writer, showId: renewShowId ?? null, twist, scriptTime,
+      name, formatId, topicId, writerId, showId: renewShowId ?? null, twist, scriptTime,
       level, topic2Id: advanced ? topic2Id : null, writer2Id: advanced ? writer2Id : null, writer3Id: aaa ? writer3Id : null,
       spinoffOf: spinoffOf ?? null, ipId: renewing ? null : ipId,
     }
     : null;
-  const shootPlan: ShootPlan | null = shooting && team.crew && team.talent
-    ? { crewId: team.crew, talentId: team.talent, points, specialists: advanced ? specialists : {} }
-    : null;
-
-  const planKey = JSON.stringify(scriptPlan ?? shootPlan);
-  const { script, shoot, previewError } = useMemo(() => {
-    const none = { script: null, shoot: null, previewError: null as string | null };
-    try {
-      if (scriptPlan) return { ...none, script: previewScript(state, scriptPlan) };
-      if (shooting && shootPlan && left === 0) return { ...none, shoot: previewShoot(state, shooting.id, shootPlan) };
-    } catch (e) {
-      return { ...none, previewError: e instanceof Error ? e.message : 'This plan can’t start.' };
+  const planKey = JSON.stringify(plan);
+  const { script, previewError } = useMemo(() => {
+    if (!plan) return { script: null, previewError: null as string | null };
+    try { return { script: previewScript(state, plan), previewError: null }; } catch (e) {
+      return { script: null, previewError: e instanceof Error ? e.message : 'This plan can’t start.' };
     }
-    return none;
-    // planKey stands in for the plans, which are new objects each render.
+    // planKey stands in for the plan, which is a new object each render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, planKey, left]);
-  const cost = script?.cost ?? shoot?.cost ?? null;
+  }, [state, planKey]);
 
+  const writers = state.people.filter((p) => p.kind === 'writer').sort((a, b) => Number(!!a.house) - Number(!!b.house));
   const booked = (p: Person) => state.projects.find((pr) => projectPeople(pr).includes(p.id));
 
-  const canNext =
-    step === 'level' ||
-    (step === 'format' && !!formatId) ||
-    (step === 'topic' && !!topicId) ||
-    (step === 'team' && (shooting ? !!team.crew && !!team.talent : !!team.writer)) ||
-    (step === 'focus' && left === 0) ||
-    step === 'confirm';
-
+  const canNext = step === 'level' || (step === 'format' && !!formatId) || (step === 'topic' && !!topicId) || (step === 'team' && !!writerId) || step === 'confirm';
+  const titleHost = () => state.people.find((p) => p.kind === 'talent')?.name ?? 'Host';
   const next = () => {
-    if (!shooting && steps[stepIdx + 1] === 'confirm' && !name && formatId && topicId) {
-      const host = state.people.find((p) => p.kind === 'talent')?.name ?? 'Host';
+    if (steps[stepIdx + 1] === 'confirm' && !name && formatId && topicId) {
       const suffixes = ['The Next Generation', 'Legacy', 'Reloaded', 'After Dark', 'New Blood'];
-      setName(renewing?.name ?? (original ? `${original.name}: ${suffixes[Math.floor(Math.random() * suffixes.length)]}` : suggestTitle({ rng: (Math.random() * 2 ** 31) | 0 }, formatId, topicId, host)));
+      setName(renewing?.name ?? (original ? `${original.name}: ${suffixes[Math.floor(Math.random() * suffixes.length)]}` : suggestTitle({ rng: (Math.random() * 2 ** 31) | 0 }, formatId, topicId, titleHost())));
     }
     if (step === 'confirm') {
-      if (shooting ? shootPlan && onShoot(shooting.id, shootPlan) : scriptPlan && onWrite(scriptPlan)) onClose();
+      if (plan && onWrite(plan)) onClose();
       return;
     }
     setStepIdx(stepIdx + 1);
-  };
-
-  const highlightFor = (kind: PersonKind): string[] => {
-    if (!format) return [];
-    if (kind === 'writer') return [format.genre];
-    if (kind === 'talent') return [format.screenSkill, 'charisma'];
-    return [...keyAreas(format), 'production'];
   };
 
   const twistCount = topicId ? state.twists[topicId] ?? 0 : 0;
 
   return (
     <Sheet
-      title={shooting ? `🎬 Shoot “${shooting.name}”` : renewing ? `${renewing.name} · Season ${renewing.season + 1}` : original ? `Spin-off of ${original.name}` : STEP_TITLE[step]}
+      title={renewing ? `${renewing.name} · Season ${renewing.season + 1}` : original ? `Spin-off of ${original.name}` : STEP_TITLE[step]}
       onClose={onClose}
       wide
       footer={<>
         {stepIdx > 0 && <button className="btn ghost" onClick={() => setStepIdx(stepIdx - 1)}>Back</button>}
-        <button className="btn primary" disabled={!canNext || (step === 'confirm' && (cost === null || state.cash < cost))} onClick={next}>
-          {step === 'confirm' ? `${shooting ? 'Start shooting' : 'Write the script'} · ${cost !== null ? money(cost) : ''}` : 'Next'}
+        <button className="btn primary" disabled={!canNext || (step === 'confirm' && (!script || state.cash < script.cost))} onClick={next}>
+          {step === 'confirm' ? `Write the script · ${script ? money(script.cost) : ''}` : 'Next'}
         </button>
       </>}
     >
       <div className="steps">{steps.map((s, i) => <i key={s} className={i <= stepIdx ? 'on' : ''} />)}</div>
-      {(renewing || shooting) && <p className="small muted" style={{ marginBottom: 12 }}>{shooting && step === 'team' ? 'Crew and cast' : shooting && step === 'confirm' ? 'Roll cameras' : STEP_TITLE[step]}</p>}
-      {shooting && step === 'team' && format && (
-        <div className="panel spread small" style={{ marginBottom: 12 }}>
-          <span>{format.icon} {format.name} · {topicById(shooting.topicId).icon} {topicById(shooting.topicId).name}</span>
-          <span>Script <ScriptStars n={shooting.script?.stars ?? 0} /></span>
-        </div>
-      )}
+      {renewing && <p className="small muted" style={{ marginBottom: 12 }}>{STEP_TITLE[step]}</p>}
 
       {step === 'level' && (
         <div className="stack">
           {levelsFor(state.tier).map((lv: ProductionLevel) => (
             <button key={lv} className={cx('todo', level === lv && 'selected')} style={level === lv ? { boxShadow: '0 0 0 3px var(--focus)' } : undefined}
-              onClick={() => { if (lv !== level) setPoints(zeroPoints()); setLevel(lv); }}>
+              onClick={() => setLevel(lv)}>
               <span>
                 <b>{LEVELS[lv].label}</b> {level === lv && <span className="chip good">Selected</span>}
                 <div className="small muted">{LEVELS[lv].blurb}</div>
@@ -186,7 +124,7 @@ export function NewShowWizard({
                 return (
                   <div key={id} style={{ opacity: usable ? 1 : 0.5 }}>
                     <FormatCard format={formatById(id)} known={state.knownFormats.includes(id)} selected={formatId === id}
-                      onClick={() => { if (!usable) return; setFormatId(id); setTopicId(null); setPoints(zeroPoints()); }} />
+                      onClick={() => { if (!usable) return; setFormatId(id); setTopicId(null); }} />
                     {!usable && <p className="tiny muted" style={{ marginTop: 4 }}>No matching topic yet</p>}
                   </div>
                 );
@@ -238,136 +176,58 @@ export function NewShowWizard({
 
       {step === 'team' && format && (
         <div className="stack">
-          {((shooting ? ['crew', 'talent'] : ['writer']) as PersonKind[]).map((kind) => {
-            // Pack cards first (best first), house staff last.
-            const people = state.people.filter((p) => p.kind === kind)
-              .sort((a, b) => Number(!!a.house) - Number(!!b.house) || (b.uses > 0 ? 1 : 0) - (a.uses > 0 ? 1 : 0));
-            return (
-              <div key={kind}>
-                <div className="section-title">
-                  <h3 style={{ fontSize: 16 }}>{kind === 'writer' ? '✍️ Lead writer' : kind === 'crew' ? '🎥 Director & crew' : '🌟 On-screen'}</h3>
-                  <span className="sub">
-                    {kind === 'writer' && `Script uses ${format.genre}`}
-                    {kind === 'crew' && 'Covers every area on a basic show'}
-                    {kind === 'talent' && `Needs ${format.screenSkill} + charisma`}
-                  </span>
-                </div>
-                <div className="hscroll">
-                  {people.map((p) => {
-                    const b = booked(p);
-                    return (
-                      <div key={p.id} style={{ width: 190 }}>
-                        <PersonCard person={p} selected={team[kind] === p.id} disabled={!p.house && p.uses <= 0}
-                          highlight={highlightFor(kind)} note={b ? `Booked on “${b.name}” — will queue` : undefined}
-                          onClick={() => {
-                            setTeam({ ...team, [kind]: p.id });
-                            if (kind === 'writer' && writer2Id === p.id) setWriter2Id(null);
-                            if (kind === 'writer' && writer3Id === p.id) setWriter3Id(null);
-                            if (kind === 'crew') setSpecialists(Object.fromEntries(Object.entries(specialists).filter(([, id]) => id !== p.id)));
-                          }} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-          {advanced && !shooting && (
-            <div>
-              <div className="section-title"><h3 style={{ fontSize: 16 }}>✍️ Second writer (optional)</h3><span className="sub">Adds a quarter of their skill</span></div>
-              <div className="hscroll">
-                <button className={cx('card person', !writer2Id && 'selected')} style={{ width: 120, display: 'grid', placeItems: 'center' }} onClick={() => setWriter2Id(null)}>None</button>
-                {state.people.filter((p) => p.kind === 'writer' && p.id !== team.writer && p.id !== writer3Id).map((p) => (
+          <div>
+            <div className="section-title"><h3 style={{ fontSize: 16 }}>✍️ Lead writer</h3><span className="sub">Script uses {format.genre}</span></div>
+            <div className="hscroll">
+              {writers.map((p) => {
+                const b = booked(p);
+                return (
                   <div key={p.id} style={{ width: 190 }}>
-                    <PersonCard person={p} selected={writer2Id === p.id} disabled={!p.house && p.uses <= 0}
-                      highlight={[format.genre]} onClick={() => setWriter2Id(p.id)} />
+                    <PersonCard person={p} selected={writerId === p.id} disabled={!p.house && p.uses <= 0} highlight={[format.genre]}
+                      note={b ? `Busy on “${b.name}” — will queue` : undefined}
+                      onClick={() => { setWriterId(p.id); if (writer2Id === p.id) setWriter2Id(null); if (writer3Id === p.id) setWriter3Id(null); }} />
                   </div>
-                ))}
-              </div>
-              {aaa && <>
-                <div className="section-title"><h3 style={{ fontSize: 16 }}>✍️ Third writer (optional)</h3><span className="sub">AAA writers' room</span></div>
-                <div className="hscroll">
-                  <button className={cx('card person', !writer3Id && 'selected')} style={{ width: 120, display: 'grid', placeItems: 'center' }} onClick={() => setWriter3Id(null)}>None</button>
-                  {state.people.filter((p) => p.kind === 'writer' && p.id !== team.writer && p.id !== writer2Id).map((p) => (
-                    <div key={p.id} style={{ width: 190 }}>
-                      <PersonCard person={p} selected={writer3Id === p.id} disabled={!p.house && p.uses <= 0}
-                        highlight={[format.genre]} onClick={() => setWriter3Id(p.id)} />
-                    </div>
-                  ))}
-                </div>
-              </>}
-            </div>
-          )}
-          {advanced && shooting && (
-            <div>
-              <div className="section-title" style={{ marginTop: 12 }}><h3 style={{ fontSize: 16 }}>🎛️ Specialists (optional)</h3><span className="sub">Each area uses its specialist's skill</span></div>
-              <div className="stack-sm">
-                {AREAS.map((a) => (
-                  <div key={a} className="focus-row" style={{ gridTemplateColumns: '90px 1fr' }}>
-                    <div className="lbl">{AREA_LABEL[a]}{format.ideal[a] > 0 && <small>key area</small>}</div>
-                    <select className="input" style={{ padding: '8px 10px', fontSize: 14 }} value={specialists[a] ?? ''}
-                      onChange={(e) => {
-                        const next = { ...specialists };
-                        if (e.target.value) next[a] = e.target.value; else delete next[a];
-                        setSpecialists(next);
-                      }}>
-                      <option value="">Director covers it ({crew?.kind === 'crew' ? crew.skills[a] : '—'})</option>
-                      {state.people.filter((p) => p.kind === 'crew' && p.id !== team.crew && (p.house || p.uses > 0)
-                        && !Object.entries(specialists).some(([area, id]) => id === p.id && area !== a)).map((p) => (
-                        <option key={p.id} value={p.id}>{p.name} · {AREA_LABEL[a]} {p.kind === 'crew' ? p.skills[a] : ''}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {step === 'focus' && format && (
-        <div className="stack">
-          <div className="spread panel">
-            <div>
-              <div className="small muted">Points left</div>
-              <div className="points-left">{left}</div>
-            </div>
-            <div className="small" style={{ textAlign: 'right', maxWidth: 260 }}>
-              {known
-                ? <>Dashed boxes show the ideal split for {format.name}. <button className="btn small ghost" style={{ marginTop: 6 }} onClick={() => setPoints(scaledIdeal(format, L.points))}>Use ideal</button></>
-                : <>{format.name} key areas: <b>{keyAreas(format).map((a) => AREA_LABEL[a]).join(' & ')}</b>. Make one to learn the exact split.</>}
+                );
+              })}
             </div>
           </div>
-          {AREAS.map((a) => (
-            <div key={a} className="focus-row">
-              <div className="lbl">{AREA_LABEL[a]}<small>{specialists[a] ? 'specialist' : 'crew'} skill {(() => { const c = crewFor(a); return c?.kind === 'crew' ? c.skills[a] : '—'; })()}</small></div>
-              <div className="dots">
-                {Array.from({ length: L.maxPerArea }, (_, i) => (
-                  <i key={i} className={cx(i < points[a] && 'on', known && i < scaledIdeal(format, L.points)[a] && 'ideal')} />
+          {advanced && ([['Second writer', writer2Id, setWriter2Id, writer3Id], ...(aaa ? [['Third writer', writer3Id, setWriter3Id, writer2Id]] : [])] as [string, string | null, (id: string | null) => void, string | null][]).map(([label, value, set, other]) => (
+            <div key={label}>
+              <div className="section-title"><h3 style={{ fontSize: 16 }}>✍️ {label} (optional)</h3><span className="sub">Adds a quarter of their skill</span></div>
+              <div className="hscroll">
+                <button className={cx('card person', !value && 'selected')} style={{ width: 120, display: 'grid', placeItems: 'center' }} onClick={() => set(null)}>None</button>
+                {writers.filter((p) => p.id !== writerId && p.id !== other).map((p) => (
+                  <div key={p.id} style={{ width: 190 }}>
+                    <PersonCard person={p} selected={value === p.id} disabled={!p.house && p.uses <= 0} highlight={[format.genre]} onClick={() => set(p.id)} />
+                  </div>
                 ))}
-              </div>
-              <div className="stepper">
-                <button aria-label={`Less ${AREA_LABEL[a]}`} disabled={points[a] <= 0} onClick={() => setPoints({ ...points, [a]: points[a] - 1 })}>−</button>
-                <button aria-label={`More ${AREA_LABEL[a]}`} disabled={left <= 0 || points[a] >= L.maxPerArea} onClick={() => setPoints({ ...points, [a]: points[a] + 1 })}>+</button>
               </div>
             </div>
           ))}
+          <div className="panel flat small">
+            <b>🌟 On screen, this {format.name} will need:</b>
+            {rolesFor(format.id).map((r) => (
+              <div key={r.id} className="spread"><span>{r.name}{r.optional && <span className="muted"> (optional)</span>}</span>
+                <span className="muted">{roleProfile(format.id, r, topicId).skills.map((k) => SCREEN_SKILL_LABEL[k]).join(' + ')}</span></div>
+            ))}
+            <p className="tiny muted" style={{ marginTop: 4 }}>You pick the cast and crew when the script is done.</p>
+          </div>
         </div>
       )}
 
       {step === 'confirm' && format && topicId && (
         <div className="stack">
-          {!renewing && !shooting && (
+          {!renewing && (
             <div className="field">
               <label htmlFor="show-name">Show title</label>
               <div className="row">
                 <input id="show-name" className="input" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
                 <button className="btn ghost" aria-label="Suggest another title"
-                  onClick={() => setName(suggestTitle({ rng: (Math.random() * 2 ** 31) | 0 }, format.id, topicId, state.people.find((p) => p.kind === 'talent')?.name ?? 'Host'))}>🎲</button>
+                  onClick={() => setName(suggestTitle({ rng: (Math.random() * 2 ** 31) | 0 }, format.id, topicId, titleHost()))}>🎲</button>
               </div>
             </div>
           )}
-          {!shooting && (
+          {(
             <div className="field">
               <label>Writing time</label>
               <div className="segmented">
@@ -381,7 +241,7 @@ export function NewShowWizard({
           <div className="panel stack-sm">
             {original && <div className="spread small"><span>Spin-off</span><b className="pos">+30 hype, +10 fame from “{original.name}”</b></div>}
             {(() => {
-              const x = state.ips.find((i) => i.id === (shooting ? shooting.ipId : renewing ? renewing.ipId : ipId));
+              const x = state.ips.find((i) => i.id === (renewing ? renewing.ipId : ipId));
               if (!x) return null;
               const b = ipBonus(x, format.id);
               return <div className="spread small"><span>{x.icon} Based on {x.name} <span className="tiny muted">(worth ${ipWorth(x.rating)}K)</span></span>
@@ -396,22 +256,9 @@ export function NewShowWizard({
               <div className="spread small"><span>Expected script</span><span><ScriptStars n={scriptStars(script.expected)} /> <span className="tiny muted">± luck</span></span></div>
               <div className="spread small"><span>Uses</span><b>1 season from each writer card · house staff free</b></div>
             </>}
-            {shoot && <>
-              <div className="spread small"><span>Script</span><span><ScriptStars n={shooting?.script?.stars ?? 0} /></span></div>
-              <div className="spread small"><span>Schedule</span><b>Production {shoot.durations.production}w → Post {shoot.durations.post}w</b></div>
-              <div className="spread small"><span>{format.episodes > 1 ? `${format.episodes} episodes` : 'One film'}</span><b>{money(shoot.cost)}</b></div>
-              <div className="spread small"><span>Cash after</span><b className={state.cash - shoot.cost < 0 ? 'neg' : ''}>{money(state.cash - shoot.cost)}</b></div>
-              {shoot.breakdown.teamBonus > 0 && <div className="spread small"><span>Dream team</span><b className="pos">+{shoot.breakdown.teamBonus} quality</b></div>}
-              <div className="spread small"><span>Uses</span><b>1 season from each pack card · house staff free</b></div>
-              {known && (
-                <div className="spread small"><span>Expected quality</span>
-                  <span className={cx('grade', gradeClass(grade(shoot.breakdown.quality)))} style={{ minWidth: 36, height: 36, fontSize: 17 }}>{grade(shoot.breakdown.quality)}</span>
-                </div>
-              )}
-            </>}
           </div>
-          {script && <p className="small muted">📄 When the script is written it appears as a card on your lot. Tap it, or a Sound Stage, to pick the crew and cast and start shooting. The rest of the show’s cost is paid then.</p>}
-          {renewing && !shooting && (
+          {script && <p className="small muted">📄 When the script is written it appears as a card on your lot. Drag it to a Sound Stage to pick the cast and crew and start shooting. The rest of the show’s cost is paid as you go.</p>}
+          {renewing && (
             <button className={cx('panel', 'flat')} style={{ textAlign: 'left', opacity: twistCount > 0 ? 1 : 0.5 }} disabled={twistCount <= 0} onClick={() => setTwist(!twist)}>
               <div className="spread">
                 <div>
@@ -422,7 +269,7 @@ export function NewShowWizard({
               </div>
             </button>
           )}
-          {cost !== null && state.cash < cost && <p className="neg small">Not enough cash for this {shooting ? 'production' : 'script'}.</p>}
+          {script && state.cash < script.cost && <p className="neg small">Not enough cash for this script.</p>}
           {previewError && <p className="neg small">⚠️ {previewError}</p>}
         </div>
       )}

@@ -1,4 +1,4 @@
-import type { CrewCard, GameState, NetworkCard, Rarity, TalentCard, WriterCard } from './types';
+import type { Area, CrewCard, GameState, NetworkCard, Rarity, TalentCard, WriterCard } from './types';
 import { pick, weighted } from './rng';
 import { NETWORK_CARDS, networkById } from './data/network';
 import { newId } from './people';
@@ -22,6 +22,16 @@ export function rollNetworkCards(state: GameState): NetworkCard[] {
 }
 
 /** Copies of the team with studio upgrades applied. */
+/** Studio upgrades that guarantee a minimum skill on a slider. */
+export function facilityFloors(state: Pick<GameState, 'facilities'>): Partial<Record<Area, number>> {
+  const out: Partial<Record<Area, number>> = {};
+  for (const id of state.facilities) {
+    const f = networkById(id)?.facility?.floor;
+    if (f) out[f.skill] = Math.max(out[f.skill] ?? 0, f.value);
+  }
+  return out;
+}
+
 export function withFacilities(state: GameState, writer: WriterCard, crew: CrewCard, talent: TalentCard) {
   const w = structuredClone(writer);
   const c = structuredClone(crew);
@@ -29,11 +39,9 @@ export function withFacilities(state: GameState, writer: WriterCard, crew: CrewC
   for (const id of state.facilities) {
     const f = networkById(id)?.facility;
     if (!f) continue;
-    if (f.floor) c.skills[f.floor.skill] = Math.max(c.skills[f.floor.skill], f.floor.value);
     if (f.script) for (const k of Object.keys(w.skills) as (keyof WriterCard['skills'])[]) w.skills[k] += f.script;
     if (f.screen) {
-      t.skills.hosting += f.screen;
-      t.skills.acting += f.screen;
+      for (const k of ['hosting', 'acting', 'physical', 'voice', 'looks', 'brain'] as const) t.skills[k] += f.screen;
     }
   }
   return { writer: w, crew: c, talent: t };

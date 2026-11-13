@@ -1,11 +1,11 @@
 // Fuzz-style safety net: a light random player runs several games and, every week, the
 // state must still make sense. Catches broken references, NaN money and bad saves early.
 import {
-  airWeek, answerEvent, buyPack, cancelShow, createShow, dismissFinished, dismissReveal, newMissionGame, openPack, scheduleShow, SAVE_VERSION,
+  airWeek, answerEvent, buyPack, cancelShow, createShow, postShow, releaseShow, shootScript, writeScript, dismissFinished, dismissReveal, newMissionGame, openPack, scheduleShow, SAVE_VERSION,
 } from './game';
 import { GameError } from './errors';
 import { projectPeople } from './production';
-import { FORMATS } from './data/formats';
+import { FORMATS, POST_AREAS, PROD_AREAS } from './data/formats';
 import { topicsForFormat } from './data/topics';
 import { rightsById } from './data/rights';
 import { slotsOf } from './schedule';
@@ -49,6 +49,7 @@ function check(s: GameState, where: string) {
     if (occupants(s, b.id).length > capacityOf(b)) fail(`${b.kind} over capacity`);
   }
   for (const pr of s.projects) if (pr.buildingId && !s.lot.buildings.some((b) => b.id === pr.buildingId)) fail(`project ${pr.name} in a missing building`);
+  for (const pr of s.projects) if (pr.hold && pr.buildingId) fail(`${pr.name} is waiting as a card but still holds a room`);
   // A save must survive the trip through JSON and load as the current version.
   const back = migrate(JSON.parse(JSON.stringify(s)));
   if (!back || back.version !== SAVE_VERSION) fail('save does not load back');
@@ -78,6 +79,21 @@ function playRandomly(start: GameState, seed: number, weeks: number): GameState 
         tryDo(() => createShow(s, { name: `S${w}`, formatId, topicId, writerId: pick('writer')!, crewId: pick('crew')!, talentId: pick('talent')!, points: { ...format.ideal } }));
       }
     }
+    // Sometimes make a show step by step instead: script, then studio, then post.
+    if (r() < 0.3 && s.projects.length < 3 && s.formats.length) {
+      const formatId = s.formats[Math.floor(r() * s.formats.length)];
+      const topicId = s.topics.find((t) => topicsForFormat(formatId).some((x) => x.id === t));
+      const writer = s.people.find((p) => p.kind === 'writer' && (p.house || p.uses > 0));
+      if (topicId && writer) tryDo(() => writeScript(s, { name: `M${w}`, formatId, topicId, writerId: writer.id }));
+    }
+    for (const p of s.projects.filter((x) => x.hold)) {
+      const ideal = FORMATS.find((f) => f.id === p.formatId)!.ideal;
+      const crew = s.people.find((x) => x.kind === 'crew' && (x.house || x.uses > 0));
+      const talent = s.people.find((x) => x.kind === 'talent' && (x.house || x.uses > 0));
+      if (p.hold === 'script' && crew && talent) tryDo(() => shootScript(s, p.id, { crewId: crew.id, talentId: talent.id, points: Object.fromEntries(PROD_AREAS.map((a) => [a, ideal[a]])) }));
+      else if (p.hold === 'shot') tryDo(() => postShow(s, p.id, { points: Object.fromEntries(POST_AREAS.map((a) => [a, ideal[a]])) }));
+    }
+    for (const show of s.shows.filter((x) => !x.released && r() < 0.5)) tryDo(() => releaseShow(s, show.id, Math.floor(r() * 3) as 0 | 1 | 2));
     if (r() < 0.15 && s.shopUnlocked) tryDo(() => dismissReveal(buyPack(s, (['program', 'people', 'movies', 'network'] as const)[Math.floor(r() * 4)])));
     // Shuffle the schedule a bit: shows, movies, or nothing.
     const slots = slotsOf(s);

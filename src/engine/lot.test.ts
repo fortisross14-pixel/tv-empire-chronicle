@@ -1,7 +1,9 @@
 // The studio lot: buildings, capacity per stage, building rules, saves.
-import { airWeek, buildBuilding, createShow, shootScript, writeScript, expandToState, moveBuilding, newMissionGame, openPack, sellBuilding, upgradeBuilding, SAVE_VERSION } from './game';
+import { airWeek, buildBuilding, createShow, postShow, releaseShow, shootScript, writeScript, expandToState, moveBuilding, newMissionGame, openPack, sellBuilding, upgradeBuilding, SAVE_VERSION } from './game';
 import { capacityOf, footprint, stageUse } from './lot';
-import { isHeldScript, previewPlan } from './production';
+import { isHeldScript, isHeldShot, previewPlan } from './production';
+import { POST_AREAS, PROD_AREAS } from './data/formats';
+import { rolesFor } from './data/roles';
 import { LOT_SIZE } from './data/buildings';
 import { FORMATS } from './data/formats';
 import { topicsForFormat } from './data/topics';
@@ -111,13 +113,15 @@ test('version 14 saves get a lot sized for their tier', () => {
   expect(stageUse(up, 'script').capacity).toBe(2);
 });
 
-test('a script is written first, waits as a card, then is shot with a crew and cast', () => {
+test('a show is made step by step: script card, studio, shot card, post, ready to air', () => {
   let s = ready(7);
   const full = plan(s, 0);
   const fullCost = previewPlan(s, full).cost;
   const { crewId, talentId, points, ...idea } = full;
+  const prod = Object.fromEntries(PROD_AREAS.map((a) => [a, points[a]]));
+  const post = Object.fromEntries(POST_AREAS.map((a) => [a, points[a]]));
   s = writeScript(s, idea);
-  expect(s.projects[0]).toMatchObject({ stage: 'script', crewId: null, talentId: null });
+  expect(s.projects[0]).toMatchObject({ stage: 'script', crewId: null, talentId: null, auto: false, hold: null });
   expect(s.projects[0].buildingId).toBeTruthy();
   for (let i = 0; i < 10 && !s.projects[0].script; i++) s = week(s);
   const held = s.projects[0];
@@ -126,11 +130,62 @@ test('a script is written first, waits as a card, then is shot with a crew and c
   expect(stageUse(s, 'script').used).toBe(0);
   s = week(s);
   expect(isHeldScript(s.projects[0])).toBe(true); // it waits for the player
-  expect(() => shootScript(s, held.id, { crewId, talentId, points: { ...points, direction: 99 } })).toThrow(/focus points/);
-  s = shootScript(s, held.id, { crewId, talentId, points });
-  expect(s.projects[0]).toMatchObject({ stage: 'production', crewId, talentId });
+  expect(() => shootScript(s, held.id, { crewId, talentId, points: { ...prod, direction: 99 } })).toThrow(/focus points/);
+  s = shootScript(s, held.id, { crewId, talentId, points: prod });
+  expect(s.projects[0]).toMatchObject({ stage: 'production', crewId, talentId, hold: null });
+  for (let i = 0; i < 10 && s.projects[0].stage === 'production'; i++) s = week(s);
+  expect(isHeldShot(s.projects[0])).toBe(true); // filmed: waits to go to post
+  expect(stageUse(s, 'production').used).toBe(0);
+  s = week(s);
+  expect(isHeldShot(s.projects[0])).toBe(true);
+  expect(() => postShow(s, held.id, { points: { sound: 0, music: 0, fx: 0 } })).toThrow(/focus points/);
+  s = postShow(s, held.id, { points: post });
+  expect(s.projects[0]).toMatchObject({ stage: 'post', hold: null, points });
   expect(s.projects[0].cost).toBe(fullCost); // same price as the one-step plan
-  for (let i = 0; i < 20 && s.projects.length; i++) s = week(s);
+  for (let i = 0; i < 10 && s.projects.length; i++) s = week(s);
   expect(s.shows).toHaveLength(1);
-  expect(s.shows[0].scriptStars).toBe(held.script!.stars);
+  expect(s.shows[0]).toMatchObject({ scriptStars: held.script!.stars, released: false });
+  // The last step at the tower: marketing costs cash and builds hype, once.
+  const cash = s.cash;
+  s = releaseShow(s, s.shows[0].id, 1);
+  expect(s.cash).toBeLessThan(cash);
+  expect(s.shows[0]).toMatchObject({ released: true, marketing: 1 });
+  expect(s.shows[0].hype).toBeGreaterThan(0);
+  expect(() => releaseShow(s, s.shows[0].id, 2)).toThrow(/already/);
+});
+
+test('optional parts add screen power; nobody plays two parts', () => {
+  const s = ready(8);
+  const base = plan(s, 0);
+  const second = s.people.filter((p) => p.kind === 'talent').find((p) => p.id !== base.talentId)!;
+  const role = rolesFor(base.formatId)[1];
+  Object.assign(second.skills, { hosting: 90, acting: 90, physical: 90, voice: 90, looks: 90, brain: 90 });
+  const alone = previewPlan(s, base).breakdown.scores.screen;
+  const withExtra = previewPlan(s, { ...base, cast: { [role.id]: second.id } }).breakdown.scores.screen;
+  expect(withExtra).toBeGreaterThan(alone);
+  expect(() => previewPlan(s, { ...base, cast: { [role.id]: base.talentId } })).not.toThrow(); // the lead in a second part is ignored
+  const third = rolesFor(base.formatId)[2];
+  if (third) expect(() => previewPlan(s, { ...base, cast: { [role.id]: second.id, [third.id]: second.id } })).toThrow(/one part/);
+});
+
+test('version 15 saves get the new skills, sliders and casts', () => {
+  const now = ready(9);
+  const old = structuredClone(createShow(now, plan(now, 0))) as unknown as Record<string, any>;
+  old.version = 15;
+  for (const p of old.people) {
+    if (p.kind === 'crew') p.skills = { direction: 40, production: 38, sound: 30, image: 38, fx: 20, music: 50, art: 32 };
+    if (p.kind === 'talent') { p.skills = { hosting: 40, acting: 28, charisma: 36, fame: 3 }; delete p.gender; delete p.age; }
+  }
+  for (const p of old.projects) { p.points = { direction: 3, sound: 3, image: 2, fx: 0, music: 1, art: 1 }; p.specialists = { art: p.crewId }; delete p.cast; delete p.hold; delete p.auto; }
+  const up = migrate(old as never)!;
+  expect(up.version).toBe(SAVE_VERSION);
+  const crew = up.people.find((p) => p.kind === 'crew')!;
+  expect(crew.skills).toMatchObject({ audio: 40, wardrobe: 32, set: 32 });
+  const talent = up.people.find((p) => p.kind === 'talent')!;
+  expect(talent.kind === 'talent' && talent.skills.looks).toBe(36);
+  expect(talent.kind === 'talent' && talent.age).toBeTruthy();
+  const pr = up.projects[0];
+  expect(pr.points).toEqual({ direction: 3, wardrobe: 0, image: 2, set: 1, sound: 3, music: 1, fx: 0 });
+  expect(pr.specialists).toEqual({ set: pr.crewId });
+  expect(pr).toMatchObject({ auto: true, hold: null, cast: { [rolesFor(pr.formatId)[0].id]: pr.talentId } });
 });

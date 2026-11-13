@@ -2,7 +2,7 @@
 import { newMissionGame, openPack } from '../engine';
 import { buildTodos } from './todos';
 
-const act = { openPack: () => {}, goTab: () => {}, newShow: () => {}, shoot: () => {} };
+const act = { openPack: () => {}, goTab: () => {}, newShow: () => {}, shoot: () => {}, post: () => {} };
 
 test('a new game asks you to open the free packs, then to make a first show', () => {
   let s = newMissionGame(1, 'T', null);

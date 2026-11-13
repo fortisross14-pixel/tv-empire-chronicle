@@ -211,7 +211,7 @@ function TeamPicker({
     <Sheet title={`${def.icon} Broadcast team`} onClose={onClose}
       footer={<button className="btn primary" disabled={!crew || !talent} onClick={() => onSave(crew!, talent!)}>Save team</button>}>
       <p className="small muted" style={{ marginBottom: 12 }}>
-        On game weeks they call the game and can't work in the studio. Crew uses direction, image and sound; the commentator uses hosting and charisma. Pack cards spend 1 use for the season.
+        On game weeks they call the game and can't work in the studio. Crew uses directing, visual and audio; the commentator uses hosting and voice. Pack cards spend 1 use for the season.
       </p>
       {(['crew', 'talent'] as const).map((kind) => (
         <div key={kind}>
@@ -220,7 +220,7 @@ function TeamPicker({
             {state.people.filter((p) => p.kind === kind).map((p) => (
               <div key={p.id} style={{ width: 190 }}>
                 <PersonCard person={p} disabled={!p.house && p.uses <= 0 && p.id !== crew && p.id !== talent}
-                  highlight={kind === 'crew' ? ['direction', 'image', 'sound'] : ['hosting', 'charisma']}
+                  highlight={kind === 'crew' ? ['direction', 'image', 'audio'] : ['hosting', 'voice']}
                   selected={(kind === 'crew' ? crew : talent) === p.id}
                   onClick={() => (kind === 'crew' ? setCrew(p.id) : setTalent(p.id))} />
               </div>

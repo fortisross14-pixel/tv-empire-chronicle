@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  CREW_SKILL_LABEL, GENRE_LABEL, KIND_LABEL, TALENT_SKILL_LABEL, AREA_LABEL, STAGE_LABEL,
+  AGE_LABEL, CREW_SKILL_LABEL, GENRE_LABEL, KIND_LABEL, TALENT_SKILL_LABEL, AREA_LABEL, STAGE_LABEL,
   formatById, topicById, keyAreas, grade, overall, projectPeople,
   type Format, type Person, type Project, type Show, type Topic, type GameState, type Stage,
 } from '../../engine';
@@ -67,7 +67,7 @@ export function PersonCard({
         <Avatar person={person} />
         <div style={{ minWidth: 0 }}>
           <div className="person-name">{person.name}</div>
-          <div className="person-role">{KIND_LABEL[person.kind]}</div>
+          <div className="person-role">{KIND_LABEL[person.kind]}{person.kind === 'talent' && ` · ${person.gender === 'woman' ? '♀' : '♂'} ${AGE_LABEL[person.age]}`}</div>
         </div>
         <div className="ovr">{overall(person)}<small>OVR</small></div>
       </div>
@@ -226,8 +226,8 @@ export function ProjectCard({ project, state, onCancel }: { project: Project; st
             <div className="show-meta">{format.name} · {topic.icon} {topic.name}{project.topic2Id && ` + ${topicById(project.topic2Id).icon}`}{project.level === 'advanced' && ' · Advanced'}{project.twist && ' · 🌀 Twist'}</div>
           </div>
         </div>
-        {project.stage === 'script' && project.script && !project.crewId
-          ? <span className="chip good">Script ready {'★'.repeat(project.script.stars)}</span>
+        {project.hold
+          ? <span className="chip good">{project.hold === 'script' ? `Script ready ${'★'.repeat(project.script?.stars ?? 0)}` : 'Filmed · ready for post'}</span>
           : <span className="chip dark">{weeksLeft} wk{weeksLeft !== 1 && 's'}</span>}
       </div>
       <div className="stages">

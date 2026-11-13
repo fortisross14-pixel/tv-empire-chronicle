@@ -58,7 +58,7 @@ test('ideal focus scores better than a bad split', () => {
   s = openPack(s, s.unopened[0].id);
   const plan = firstPlan(s);
   const good = previewPlan(s, plan).breakdown.quality;
-  const bad = previewPlan(s, { ...plan, points: { direction: 0, sound: 0, image: 0, fx: 5, music: 5, art: 0 } }).breakdown.quality;
+  const bad = previewPlan(s, { ...plan, points: { direction: 0, wardrobe: 0, image: 0, set: 0, sound: 0, music: 5, fx: 5 } }).breakdown.quality;
   expect(good).toBeGreaterThan(bad);
 });
 
@@ -202,7 +202,7 @@ test('every event can be answered', () => {
     s.pendingEvent = null;
     s.cash = 500;
     s.shows[0].history.push({ ...s.shows[0].history[0], share: 0.3 });
-    s.people.push({ ...s.people[2], id: 'star', house: false, rarity: 'rare', uses: 3, skills: { hosting: 60, acting: 30, charisma: 50, fame: 30 } } as never);
+    s.people.push({ ...s.people[2], id: 'star', house: false, rarity: 'rare', uses: 3, skills: { hosting: 60, acting: 30, physical: 40, voice: 50, looks: 50, brain: 40, fame: 30 } } as never);
     s.projects.push({ ...structuredClone(s.projects[0] ?? { ...firstPlanProject(s) }), id: 'pj', stage: 'script', weeksLeft: 2 });
     for (const choice of [0, 1]) {
       const t = structuredClone(s);
@@ -385,7 +385,7 @@ describe('State network', () => {
     s.pendingEvent = null;
     // Give the studio a sound specialist and a second writer.
     const crew = s.people.find((p) => p.kind === 'crew')!;
-    const sound = { ...structuredClone(crew), id: 'snd', house: false, uses: 3, skills: { ...crew.skills, sound: 95 } } as typeof crew;
+    const sound = { ...structuredClone(crew), id: 'snd', house: false, uses: 3, skills: { ...crew.skills, audio: 95 } } as typeof crew;
     const writer = s.people.find((p) => p.kind === 'writer')!;
     s.people.push(sound, { ...structuredClone(writer), id: 'w2', house: false, uses: 3 });
     const base = firstPlan(s);
@@ -448,7 +448,7 @@ describe('National network', () => {
     const w = s.people.find((p) => p.kind === 'writer')!;
     s.people.push({ ...structuredClone(w), id: 'w2', house: false, uses: 3 }, { ...structuredClone(w), id: 'w3', house: false, uses: 3 });
     const base = firstPlan(s);
-    const points = { direction: 4, sound: 4, image: 4, fx: 0, music: 4, art: 4 };
+    const points = { direction: 4, wardrobe: 2, image: 4, set: 2, sound: 4, music: 4, fx: 0 };
     const plan = { ...base, level: 'aaa' as const, points, writer2Id: 'w2', writer3Id: 'w3' };
     const one = previewPlan(s, { ...plan, writer2Id: null, writer3Id: null }).breakdown.scores.script;
     const three = previewPlan(s, plan).breakdown.scores.script;

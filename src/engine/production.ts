@@ -1,12 +1,13 @@
 import type {
   Area, CrewCard, GameState, Person, ProductionLevel, Project, Scores, ScriptTime, Show, Stage, TalentCard, Tier, WriterCard,
 } from './types';
-import { ART_AREAS, AREAS, FOCUS_POINTS, TECH_AREAS, formatById, type Format } from './data/formats';
+import { ART_AREAS, AREAS, AREA_SKILL, FOCUS_POINTS, POST_AREAS, PROD_AREAS, TECH_AREAS, formatById, stagePoints, type Format } from './data/formats';
+import { leadRole, roleScore, rolesFor, supportBonus, type Role } from './data/roles';
 import { FIT_MULT, topicById } from './data/topics';
 import { CITY, TITLE_TEMPLATES } from './data/names';
 import { clamp, pick, randInt } from './rng';
 import { grantXp, newId, RARITY_POINTS } from './people';
-import { withFacilities } from './network';
+import { facilityFloors, withFacilities } from './network';
 import { networkById } from './data/network';
 import { sportsWorkers } from './rights';
 import { ipBonus, usableIps } from './ip';
@@ -66,7 +67,10 @@ export interface ShowPlan {
   topicId: string;
   writerId: string;
   crewId: string;
+  /** The lead on screen. */
   talentId: string;
+  /** Optional parts: part id → person (see data/roles). */
+  cast?: Record<string, string>;
   points: Record<Area, number>;
   /** Renewal of this show, if set. */
   showId?: string | null;
@@ -83,19 +87,29 @@ export interface ShowPlan {
 }
 
 /** The first half of a show: the idea and who writes it. Made at a Writers' Room. */
-export type ScriptPlan = Omit<ShowPlan, 'crewId' | 'talentId' | 'points' | 'specialists'>;
+export type ScriptPlan = Omit<ShowPlan, 'crewId' | 'talentId' | 'cast' | 'points' | 'specialists'>;
 /** The second half: who shoots a finished script and where the effort goes. Made at a Sound Stage. */
 export interface ShootPlan {
   crewId: string;
   talentId: string;
-  points: Record<Area, number>;
+  cast?: Record<string, string>;
+  /** Studio sliders only (direction, wardrobe, image, set). */
+  points: Partial<Record<Area, number>>;
+  specialists?: Partial<Record<Area, string>>;
+}
+/** The third step: the post-production sliders (sound, music, fx) and who works them. */
+export interface PostPlan {
+  points: Partial<Record<Area, number>>;
   specialists?: Partial<Record<Area, string>>;
 }
 
-/** A finished script with no crew yet: it waits for the player to shoot it. */
-export const isHeldScript = (p: Pick<Project, 'stage' | 'script' | 'crewId'>): boolean => p.stage === 'script' && !!p.script && !p.crewId;
-/** Share of a show's cost paid when the script is ordered; the rest is paid when shooting starts. */
+/** A finished script: it waits as a card for the player to shoot it. */
+export const isHeldScript = (p: Pick<Project, 'hold'>): boolean => p.hold === 'script';
+/** A filmed show: it waits as a card for the player to send it to post-production. */
+export const isHeldShot = (p: Pick<Project, 'hold'>): boolean => p.hold === 'shot';
+/** Share of a show's cost paid when the script is ordered, and by the end of the shoot; the rest is paid for post. */
 export const SCRIPT_SHARE = 0.15;
+export const SHOOT_SHARE = 0.75;
 
 export interface Team {
   writer: WriterCard;
@@ -103,15 +117,20 @@ export interface Team {
   writer3?: WriterCard | null;
   crew: CrewCard;
   specialists: Partial<Record<Area, CrewCard>>;
+  /** The lead on screen. */
   talent: TalentCard;
+  /** Optional parts that are filled. */
+  extras?: { role: Role; person: TalentCard }[];
+  /** Minimum skill per slider from studio upgrades. */
+  floors?: Partial<Record<Area, number>>;
 }
 
 export const teamPeople = (t: Team): Person[] =>
-  [t.writer, t.writer2, t.writer3, t.crew, ...Object.values(t.specialists), t.talent].filter((p): p is Person => !!p);
+  [...new Set([t.writer, t.writer2, t.writer3, t.crew, ...Object.values(t.specialists), t.talent, ...(t.extras ?? []).map((e) => e.person)].filter((p): p is Person => !!p))];
 
 /** Every person id booked on a project. */
-export const projectPeople = (p: Pick<Project, 'writerId' | 'crewId' | 'talentId' | 'writer2Id' | 'specialists'> & { writer3Id?: string | null }): string[] =>
-  [p.writerId, p.writer2Id, p.writer3Id, p.crewId, ...Object.values(p.specialists ?? {}), p.talentId].filter((x): x is string => !!x);
+export const projectPeople = (p: Pick<Project, 'writerId' | 'crewId' | 'talentId' | 'writer2Id' | 'specialists'> & { writer3Id?: string | null; cast?: Record<string, string> }): string[] =>
+  [...new Set([p.writerId, p.writer2Id, p.writer3Id, p.crewId, ...Object.values(p.specialists ?? {}), p.talentId, ...Object.values(p.cast ?? {})].filter((x): x is string => !!x))];
 
 /** Writing time: weeks added to the script stage and the effect on the script. */
 export const SCRIPT_TIME: Record<ScriptTime, { label: string; weeks: number; mult: number; blurb: string }> = {
@@ -167,17 +186,17 @@ export interface ScoreBreakdown {
 const idealAt = (format: Format, a: Area, total: number) => (format.ideal[a] * total) / FOCUS_POINTS;
 
 function pillarFromAreas(format: Format, team: Team, points: Record<Area, number>, areas: Area[], total: number): number {
-  const who = (a: Area) => team.specialists[a] ?? team.crew;
+  const skill = (a: Area) => Math.max((team.specialists[a] ?? team.crew).skills[AREA_SKILL[a]], team.floors?.[a] ?? 0);
   const idealTotal = areas.reduce((s, a) => s + format.ideal[a], 0);
   if (idealTotal === 0) {
-    return (areas.reduce((s, a) => s + who(a).skills[a], 0) / areas.length) * 0.6;
+    return (areas.reduce((s, a) => s + skill(a), 0) / areas.length) * 0.6;
   }
   let sum = 0;
   for (const a of areas) {
     const ideal = format.ideal[a];
     if (ideal === 0) continue;
     const effort = 0.35 + 0.65 * Math.min(1, points[a] / idealAt(format, a, total));
-    sum += ideal * who(a).skills[a] * effort;
+    sum += ideal * skill(a) * effort;
   }
   return sum / idealTotal;
 }
@@ -193,6 +212,12 @@ export function focusBonus(match: number): number {
   if (match >= 0.7) return 2;
   if (match < 0.4) return -3;
   return 0;
+}
+
+/** Screen power: how well the lead plays the part, plus a little for every optional part filled well. */
+export function screenPower(formatId: string, topicId: string | null, team: Pick<Team, 'talent' | 'extras'>): number {
+  const lead = roleScore(formatId, leadRole(formatId), team.talent, topicId);
+  return lead + (team.extras ?? []).reduce((s, e) => s + supportBonus(roleScore(formatId, e.role, e.person, topicId)), 0);
 }
 
 /** Old-style call: one writer, one crew, one host. Kept for tests and simple callers. */
@@ -214,7 +239,7 @@ export function computeTeamScores(
     script: clamp(script ?? scriptBase(formatId, topicIds, team.writer, time, team.writer2, team.writer3 ?? null), 0, 100),
     technical: pillarFromAreas(format, team, points, TECH_AREAS, total),
     art: pillarFromAreas(format, team, points, ART_AREAS, total),
-    screen: team.talent.skills[format.screenSkill] * 0.65 + team.talent.skills.charisma * 0.35,
+    screen: screenPower(formatId, topicIds[0] ?? null, team),
   };
   (Object.keys(scores) as (keyof Scores)[]).forEach((k) => (scores[k] = Math.round(clamp(scores[k], 0, 100))));
   const base = (Object.keys(scores) as (keyof Scores)[]).reduce((s, k) => s + scores[k] * format.weights[k], 0);
@@ -278,12 +303,14 @@ function boosted(state: GameState, team: Team): Team {
   }
   return {
     writer: main.writer, crew: main.crew, talent: main.talent, specialists,
+    extras: (team.extras ?? []).map((e) => ({ role: e.role, person: withFacilities(state, team.writer, team.crew, e.person).talent })),
+    floors: facilityFloors(state),
     writer2: team.writer2 ? withFacilities(state, team.writer2, team.crew, team.talent).writer : null,
     writer3: team.writer3 ? withFacilities(state, team.writer3, team.crew, team.talent).writer : null,
   };
 }
 
-export function teamOf(state: GameState, t: { writerId: string; crewId: string | null; talentId: string | null } & { writer2Id?: string | null; writer3Id?: string | null; specialists?: Partial<Record<Area, string>> }): Team {
+export function teamOf(state: GameState, t: { writerId: string; crewId: string | null; talentId: string | null; formatId?: string; cast?: Record<string, string> } & { writer2Id?: string | null; writer3Id?: string | null; specialists?: Partial<Record<Area, string>> }): Team {
   const specialists: Partial<Record<Area, CrewCard>> = {};
   for (const [a, id] of Object.entries(t.specialists ?? {}) as [Area, string][]) if (id) specialists[a] = findPerson(state, id, 'crew');
   return {
@@ -293,10 +320,17 @@ export function teamOf(state: GameState, t: { writerId: string; crewId: string |
     crew: findPerson(state, t.crewId ?? '', 'crew'),
     specialists,
     talent: findPerson(state, t.talentId ?? '', 'talent'),
+    extras: t.formatId ? rolesFor(t.formatId).slice(1).filter((r) => t.cast?.[r.id] && t.cast[r.id] !== t.talentId).map((role) => ({ role, person: findPerson(state, t.cast![role.id], 'talent') })) : [],
   };
 }
 
 /** Validate a plan and return everything needed to start it. */
+/** Nobody plays two parts. */
+function checkCast(team: Team): void {
+  const ids = [team.talent.id, ...(team.extras ?? []).map((e) => e.person.id)];
+  if (new Set(ids).size !== ids.length) throw new GameError('One person can only play one part.');
+}
+
 /** Checks shared by full plans and script orders: the format, topics, IP, renewal and twist rules. */
 function checkIdea(state: GameState, plan: ScriptPlan) {
   const format = formatById(plan.formatId);
@@ -344,8 +378,9 @@ export function previewPlan(state: GameState, plan: ShowPlan) {
     ...plan,
     writer2Id: big ? plan.writer2Id ?? null : null,
     writer3Id: level === 'aaa' ? plan.writer3Id ?? null : null,
-    specialists: big ? plan.specialists ?? {} : {},
+    specialists: plan.specialists ?? {},
   });
+  checkCast(team);
   const writerIds = [team.writer, team.writer2, team.writer3].filter(Boolean).map((w) => w!.id);
   if (new Set(writerIds).size !== writerIds.length) throw new GameError('Pick different writers.');
   const crewIds = [team.crew.id, ...Object.values(team.specialists).map((c) => c.id)];
@@ -385,6 +420,9 @@ export function startProject(state: GameState, plan: ShowPlan): void {
     writerId: team.writer.id,
     crewId: team.crew.id,
     talentId: team.talent.id,
+    cast: castOf(plan.formatId, team),
+    hold: null,
+    auto: true,
     level,
     writer2Id: team.writer2?.id ?? null,
     writer3Id: team.writer3?.id ?? null,
@@ -408,6 +446,11 @@ export function startProject(state: GameState, plan: ShowPlan): void {
   if (basedOn) basedOn.shows += 1;
 }
 
+/** Part id → person for a team (lead first). */
+function castOf(formatId: string, team: Team): Record<string, string> {
+  return Object.fromEntries([[leadRole(formatId).id, team.talent.id], ...(team.extras ?? []).map((e) => [e.role.id, e.person.id])]);
+}
+
 /** A project's writers with studio upgrades applied (lead first). */
 function projectWriters(state: GameState, p: { writerId: string; writer2Id?: string | null; writer3Id?: string | null }): [WriterCard, WriterCard | null, WriterCard | null] {
   const up = (id: string | null | undefined): WriterCard | null => {
@@ -421,6 +464,8 @@ function projectWriters(state: GameState, p: { writerId: string; writer2Id?: str
   };
   return [up(p.writerId)!, up(p.writer2Id), up(p.writer3Id)];
 }
+
+const zeroPoints = (): Record<Area, number> => ({ direction: 0, wardrobe: 0, image: 0, set: 0, sound: 0, music: 0, fx: 0 });
 
 /** Validate a script order: the idea, the writers and the price. */
 export function previewScript(state: GameState, plan: ScriptPlan) {
@@ -454,10 +499,10 @@ export function startScript(state: GameState, plan: ScriptPlan): Project {
     name: show ? show.name : plan.name.trim() || 'Untitled Show',
     formatId: plan.formatId, topicId: plan.topicId, showId: show?.id ?? null, season: show ? show.season + 1 : 1,
     stage: 'script', weeksLeft: weeks, durations: { script: weeks, production: 0, post: format.weeks.post },
-    writerId: writers[0].id, crewId: null, talentId: null, level,
+    writerId: writers[0].id, crewId: null, talentId: null, cast: {}, hold: null, auto: false, level,
     writer2Id: writers[1]?.id ?? null, writer3Id: writers[2]?.id ?? null,
     spinoffOf: plan.spinoffOf ?? null, ipId, specialists: {}, topic2Id,
-    points: { direction: 0, sound: 0, image: 0, fx: 0, music: 0, art: 0 },
+    points: zeroPoints(),
     cost, twist: !!plan.twist, hype: 0, scriptBonus: 0, scriptTime: time, script: null, waitingOn: null, buildingId: null,
   };
   state.projects.push(project);
@@ -467,49 +512,94 @@ export function startScript(state: GameState, plan: ScriptPlan): Project {
   return project;
 }
 
-/** Validate shooting a finished script: crew, cast, focus points and the rest of the price. */
+/** Points for one stage's sliders, checked against that stage's budget. */
+function stageSplit(points: Partial<Record<Area, number>>, areas: Area[], level: ProductionLevel, stage: 'production' | 'post'): Partial<Record<Area, number>> {
+  const L = LEVELS[level];
+  const budget = stagePoints(L.points, stage);
+  const out = Object.fromEntries(areas.map((a) => [a, points[a] ?? 0])) as Partial<Record<Area, number>>;
+  const total = areas.reduce((s, a) => s + out[a]!, 0);
+  if (total !== budget) throw new GameError(`Spend exactly ${budget} focus points.`);
+  if (areas.some((a) => out[a]! < 0 || out[a]! > L.maxPerArea)) throw new GameError(`Max ${L.maxPerArea} points per slider.`);
+  return out;
+}
+const only = (m: Partial<Record<Area, string>> | undefined, areas: Area[]): Partial<Record<Area, string>> =>
+  Object.fromEntries(Object.entries(m ?? {}).filter(([a, id]) => !!id && areas.includes(a as Area)));
+/** The format's ideal points for a set of sliders at this level (for previews of sliders not set yet). */
+const idealSplit = (format: Format, areas: Area[], level: ProductionLevel): Partial<Record<Area, number>> =>
+  Object.fromEntries(areas.map((a) => [a, idealAt(format, a, LEVELS[level].points)]));
+
+/** Validate shooting a finished script: the cast, the crew on each studio slider and the price. */
 export function previewShoot(state: GameState, projectId: string, plan: ShootPlan) {
   const project = state.projects.find((p) => p.id === projectId);
   if (!project || !isHeldScript(project)) throw new GameError('Pick a finished script.');
   const format = formatById(project.formatId);
-  const L = LEVELS[project.level];
-  const big = project.level !== 'basic';
-  const team = teamOf(state, { ...project, crewId: plan.crewId, talentId: plan.talentId, specialists: big ? plan.specialists ?? {} : {} });
-  const crewIds = [team.crew.id, ...Object.values(team.specialists).map((c) => c.id)];
-  if (new Set(crewIds).size !== crewIds.length) throw new GameError('Each crew card can only fill one role.');
-  const people: Person[] = [team.crew, ...Object.values(team.specialists), team.talent];
+  const specialists = only(plan.specialists, PROD_AREAS);
+  const team = teamOf(state, { ...project, crewId: plan.crewId, talentId: plan.talentId, cast: plan.cast ?? {}, specialists });
+  checkCast(team);
+  const people: Person[] = [...new Set<Person>([team.crew, ...Object.values(team.specialists), team.talent, ...(team.extras ?? []).map((e) => e.person)])];
   for (const p of people) if (!p.house && p.uses <= 0) throw new GameError(`${p.name} has no uses left.`);
-  const total = AREAS.reduce((s, a) => s + (plan.points[a] ?? 0), 0);
-  if (total !== L.points) throw new GameError(`Spend exactly ${L.points} focus points.`);
-  if (AREAS.some((a) => plan.points[a] < 0 || plan.points[a] > L.maxPerArea)) throw new GameError(`Max ${L.maxPerArea} points per area.`);
+  const points = stageSplit(plan.points, PROD_AREAS, project.level, 'production');
   const renewal = !!project.showId;
-  const cost = Math.max(0, Math.round((productionCost(format, team.crew, renewal, project.level, state.tier) - project.cost) * 10) / 10);
+  const total = productionCost(format, team.crew, renewal, project.level, state.tier);
+  const cost = Math.max(0, Math.round((total * SHOOT_SHARE - project.cost) * 10) / 10);
   const durations = { ...project.durations, production: shootWeeks(format, team.crew, renewal, project.level) };
-  const breakdown = computeTeamScores(project.formatId, [project.topicId, project.topic2Id], boosted(state, team), plan.points, project.level, project.script!.score, project.scriptTime);
+  // Post isn't planned yet: assume it will be done to the format's ideal.
+  const breakdown = computeTeamScores(project.formatId, [project.topicId, project.topic2Id], boosted(state, team),
+    { ...zeroPoints(), ...idealSplit(format, POST_AREAS, project.level), ...points }, project.level, project.script!.score, project.scriptTime);
   breakdown.teamBonus = teamBonus(teamPeople(team));
-  return { project, format, team, people, cost, durations, breakdown };
+  return { project, format, team, people, points, specialists, cost, durations, breakdown };
 }
 
 /** Send a finished script to a Sound Stage. */
 export function startShoot(state: GameState, projectId: string, plan: ShootPlan): void {
-  const { project, team, people, cost, durations } = previewShoot(state, projectId, plan);
+  const { project, team, people, points, specialists, cost, durations } = previewShoot(state, projectId, plan);
   if (state.cash < cost) throw new GameError('Not enough cash for this production.');
   state.cash = Math.round((state.cash - cost) * 10) / 10;
   for (const p of people) if (!p.house) p.uses -= 1;
   Object.assign(project, {
-    crewId: team.crew.id, talentId: team.talent.id,
-    specialists: Object.fromEntries(Object.entries(team.specialists).map(([a, c]) => [a, c.id])),
-    points: { ...plan.points }, cost: Math.round((project.cost + cost) * 10) / 10,
-    stage: 'production', weeksLeft: durations.production, durations, buildingId: null, waitingOn: null,
+    crewId: team.crew.id, talentId: team.talent.id, cast: castOf(project.formatId, team), specialists,
+    points: { ...zeroPoints(), ...points }, cost: Math.round((project.cost + cost) * 10) / 10,
+    stage: 'production', weeksLeft: durations.production, durations, buildingId: null, waitingOn: null, hold: null,
   });
+  claimBuilding(state, project);
+}
+
+/** Validate post-production for a filmed show: the three post sliders, who works them, and the rest of the price. */
+export function previewPost(state: GameState, projectId: string, plan: PostPlan) {
+  const project = state.projects.find((p) => p.id === projectId);
+  if (!project || !isHeldShot(project)) throw new GameError('Pick a show that has been shot.');
+  const format = formatById(project.formatId);
+  const specialists = { ...only(project.specialists, PROD_AREAS), ...only(plan.specialists, POST_AREAS) };
+  const team = teamOf(state, { ...project, specialists });
+  const already = new Set(projectPeople(project));
+  const people = Object.values(only(plan.specialists, POST_AREAS)).map((id) => findPerson(state, id, 'crew')).filter((p) => !already.has(p.id));
+  for (const p of people) if (!p.house && p.uses <= 0) throw new GameError(`${p.name} has no uses left.`);
+  const points = { ...project.points, ...stageSplit(plan.points, POST_AREAS, project.level, 'post') } as Record<Area, number>;
+  const total = productionCost(format, team.crew, !!project.showId, project.level, state.tier);
+  const cost = Math.max(0, Math.round((total - project.cost) * 10) / 10);
+  const breakdown = computeTeamScores(project.formatId, [project.topicId, project.topic2Id], boosted(state, team), points, project.level, project.script!.score, project.scriptTime);
+  breakdown.teamBonus = teamBonus(teamPeople(team));
+  return { project, format, team, people: [...new Set(people)], points, specialists, cost, breakdown };
+}
+
+/** Send a filmed show to a Post-production Suite. */
+export function startPost(state: GameState, projectId: string, plan: PostPlan): void {
+  const { project, people, points, specialists, cost } = previewPost(state, projectId, plan);
+  if (state.cash < cost) throw new GameError('Not enough cash for post-production.');
+  state.cash = Math.round((state.cash - cost) * 10) / 10;
+  for (const p of people) if (!p.house) p.uses -= 1;
+  Object.assign(project, { points, specialists, cost: Math.round((project.cost + cost) * 10) / 10, hold: null, buildingId: null, waitingOn: null });
   claimBuilding(state, project);
 }
 
 /** Who works each stage. */
 export function stagePeople(p: Project, stage: Stage): string[] {
   if (stage === 'script') return [p.writerId, p.writer2Id, p.writer3Id].filter((x): x is string => !!x);
-  if (stage === 'production') return [p.crewId, ...Object.values(p.specialists ?? {}), p.talentId].filter((x): x is string => !!x);
-  return [p.crewId].filter((x): x is string => !!x);
+  const on = (areas: Area[]) => areas.map((a) => p.specialists?.[a]).filter((x): x is string => !!x);
+  if (stage === 'production') return [...new Set([p.crewId, ...on(PROD_AREAS), p.talentId, ...Object.values(p.cast ?? {})].filter((x): x is string => !!x))];
+  // Post: the people on the post sliders; the crew lead covers any slider without one.
+  const lead = POST_AREAS.some((a) => !p.specialists?.[a]) ? [p.crewId] : [];
+  return [...new Set([...lead, ...on(POST_AREAS)].filter((x): x is string => !!x))];
 }
 
 export const STAGE_LABEL: Record<Stage, string> = { script: 'Script', production: 'Production', post: 'Post-production' };
@@ -522,7 +612,7 @@ export function advanceProjects(state: GameState): { finished: Show[]; scripts: 
   const finished: Show[] = [];
   const scripts: Project[] = [];
   for (const project of [...state.projects]) {
-    if (isHeldScript(project)) { project.waitingOn = null; continue; }
+    if (project.hold) { project.waitingOn = null; continue; }
     // A stage needs a free place in a building for it (a Writers' Room for scripts, ...).
     if (!claimBuilding(state, project)) {
       project.waitingOn = `a free ${stageBuildingName(project.stage)}`;
@@ -546,14 +636,16 @@ export function advanceProjects(state: GameState): { finished: Show[]; scripts: 
       const score = clamp(Math.round(base + randInt(state, -8, 8)), 1, 100);
       project.script = { score, stars: scriptStars(score) };
       scripts.push(project);
-      // No crew yet: the script leaves the Writers' Room and waits to be shot.
-      if (!project.crewId) { project.buildingId = null; project.weeksLeft = 0; continue; }
+      // Made step by step: the script leaves the Writers' Room and waits as a card to be shot.
+      if (!project.auto) { project.buildingId = null; project.weeksLeft = 0; project.hold = 'script'; continue; }
     }
     const next = NEXT_STAGE[project.stage];
     if (next) {
       project.stage = next;
       project.weeksLeft = project.durations[next];
       project.buildingId = null;
+      // Made step by step: the filmed show waits as a card to be sent to post-production.
+      if (!project.auto && next === 'post') { project.hold = 'shot'; continue; }
       claimBuilding(state, project);
     } else {
       finished.push(finishProject(state, project));
@@ -630,11 +722,13 @@ function finishProject(state: GameState, project: Project): Show {
     episodesTotal: format.episodes,
     episodesLeft: format.episodes,
     premiered: false,
+    released: false,
+    marketing: 0,
     level: project.level ?? 'basic',
     hype: Math.min(100, show.hype + project.hype + (project.spinoffOf ? SPINOFF.hype : 0) + (ipB?.hype ?? 0)),
     lastPlan: {
       level: project.level ?? 'basic', writerId: project.writerId, writer2Id: project.writer2Id ?? null, writer3Id: project.writer3Id ?? null,
-      crewId: project.crewId!, talentId: project.talentId!, specialists: { ...(project.specialists ?? {}) }, points: { ...project.points },
+      crewId: project.crewId!, talentId: project.talentId!, cast: { ...(project.cast ?? {}) }, specialists: { ...(project.specialists ?? {}) }, points: { ...project.points },
       scriptTime: project.scriptTime,
     },
   });

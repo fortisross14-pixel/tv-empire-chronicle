@@ -24,8 +24,8 @@ function statusOf(s: GameState, show: Show): { id: Exclude<Filter, 'all'>; label
 }
 
 export function StudioScreen({
-  state, onNewShow, onCancelProject, onOpenShow, onShoot,
-}: { state: GameState; onNewShow: () => void; onCancelProject: (id: string) => void; onOpenShow: (id: string) => void; onShoot: (projectId: string) => void }) {
+  state, onNewShow, onCancelProject, onOpenShow, onShoot, onPost,
+}: { state: GameState; onNewShow: () => void; onCancelProject: (id: string) => void; onOpenShow: (id: string) => void; onShoot: (projectId: string) => void; onPost: (projectId: string) => void }) {
   const ask = useConfirm();
   const [filter, setFilter] = useState<Filter>('all');
   const [open, setOpen] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function StudioScreen({
         <div className="spread">
           <div>
             <h2 style={{ fontSize: 22 }}>🎬 Studio</h2>
-            <p className="small" style={{ opacity: 0.75 }}>Write a script, then shoot it: Script → Production → Post. Pack cards spend 1 use per season; house staff are free.</p>
+            <p className="small" style={{ opacity: 0.75 }}>Write a script, shoot it, then finish it in post. Each step is yours to start. Pack cards spend 1 use per season; house staff are free.</p>
           </div>
           <button className="btn primary" onClick={onNewShow} disabled={state.formats.length === 0}>✍️ New script</button>
         </div>
@@ -65,6 +65,7 @@ export function StudioScreen({
                     .then((ok) => ok && onCancelProject(p.id))} />
               </div>
               {isHeldScript(p) && <button className="btn primary" onClick={() => onShoot(p.id)}>🎬 Shoot this script</button>}
+              {p.hold === 'shot' && <button className="btn primary" onClick={() => onPost(p.id)}>🎞️ Send to post-production</button>}
               {open === p.id && <ProjectDetails project={p} state={state} />}
             </div>
           ))}</div>}

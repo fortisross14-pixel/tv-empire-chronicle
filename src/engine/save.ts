@@ -1,3 +1,5 @@
+import { genderOf } from './people';
+import { rolesFor } from './data/roles';
 import type { GameState } from './types';
 import { emptyProfile, type Profile } from './mission';
 import { SAVE_VERSION } from './game';
@@ -59,6 +61,63 @@ const MIGRATIONS: Record<number, (s: RawSave) => RawSave> = {
       ...(tier === 'national' ? [b('b-m8', 'stage', 1, 4, 2)] : []),
     ];
     return { ...s, lot: { ...size, buildings }, projects: (s.projects as Record<string, unknown>[]).map((p) => ({ ...p, buildingId: null })), version: 15 };
+  },
+  // v16: seven sliders (art became wardrobe + set), new crew and on-screen skills, casts,
+  // and shows made step by step (script → studio → post).
+  15: (s) => {
+    type Raw = Record<string, unknown>;
+    const num = (v: unknown, d = 0) => (typeof v === 'number' ? v : d);
+    const person = (p: Raw): Raw => {
+      const k = p.skills as Record<string, number>;
+      if (p.kind === 'crew' && !('audio' in k)) {
+        return { ...p, skills: { direction: num(k.direction), production: num(k.production), wardrobe: num(k.art), image: num(k.image), set: num(k.art), audio: Math.round((num(k.sound) + num(k.music)) / 2), fx: num(k.fx) } };
+      }
+      if (p.kind === 'talent' && !('looks' in k)) {
+        // Spread the old charisma into the new skills, a little different for each person.
+        const seed = [...String(p.id)].reduce((a, c) => a + c.charCodeAt(0), 0);
+        const c = num(k.charisma);
+        const near = (i: number) => Math.max(5, Math.min(99, c - 8 + ((seed * (i + 3)) % 17)));
+        const ages = ['young', 'adult', 'adult', 'senior', 'teen'];
+        return {
+          ...p, skills: { hosting: num(k.hosting), acting: num(k.acting), physical: near(0), voice: near(1), looks: c, brain: near(2), fame: num(k.fame) },
+          gender: genderOf(null, String(p.name)), age: p.house ? 'adult' : ages[seed % ages.length],
+        };
+      }
+      return p;
+    };
+    const points = (pt: Record<string, number> | undefined): Raw | undefined => {
+      if (!pt || 'wardrobe' in pt) return pt;
+      const art = num(pt.art);
+      return { direction: num(pt.direction), wardrobe: Math.floor(art / 2), image: num(pt.image), set: Math.ceil(art / 2), sound: num(pt.sound), music: num(pt.music), fx: num(pt.fx) };
+    };
+    const spec = (m: Record<string, string> | undefined): Raw => {
+      const { art, ...rest } = m ?? {};
+      return art ? { ...rest, set: art } : rest;
+    };
+    const leadOf = (formatId: unknown) => rolesFor(String(formatId))[0].id;
+    const cards = (list: unknown): unknown => (Array.isArray(list) ? list.map((c: Raw) => (c && c.type === 'person' ? { ...c, person: person(c.person as Raw) } : c)) : list);
+    const pack = (pk: Raw | null | undefined): Raw | null | undefined => (pk && Array.isArray(pk.cards) ? { ...pk, cards: cards(pk.cards) } : pk);
+    return {
+      ...s,
+      people: (s.people as Raw[]).map(person),
+      unopened: (s.unopened as Raw[] | undefined ?? []).map((pk) => pack(pk)),
+      reveal: pack(s.reveal as Raw | null),
+      projects: (s.projects as Raw[]).map((p) => {
+        const held = p.stage === 'script' && !!p.script && !p.crewId;
+        return {
+          ...p, points: points(p.points as Record<string, number>), specialists: spec(p.specialists as Record<string, string>),
+          cast: p.talentId ? { [leadOf(p.formatId)]: p.talentId } : {}, hold: held ? 'script' : null, auto: !!p.crewId,
+        };
+      }),
+      shows: (s.shows as Raw[]).map((sh) => {
+        const lp = sh.lastPlan as Raw | null;
+        return {
+          ...sh, released: true, marketing: 0,
+          lastPlan: lp ? { ...lp, points: points(lp.points as Record<string, number>), specialists: spec(lp.specialists as Record<string, string>), cast: lp.talentId ? { [leadOf(sh.formatId)]: lp.talentId } : {} } : null,
+        };
+      }),
+      version: 16,
+    };
   },
 };
 

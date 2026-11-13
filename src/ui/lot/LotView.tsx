@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { buildingDef, capacityOf, formatById, grade, isHeldScript, occupants, placementProblem, type BuildingKind, type GameState } from '../../engine';
+import { buildingDef, capacityOf, formatById, grade, isHeldScript, isHeldShot, occupants, placementProblem, type BuildingKind, type GameState } from '../../engine';
 import type { LotCard, LotLabel, LotModel, LotScene } from './LotScene';
 import { cx } from '../util';
 import { money } from '../util';
@@ -14,7 +14,7 @@ interface Pop { id: number; text: string; x: number; y: number; tone: 'good' | '
  * ghost there. Little pop-ups over the buildings tell what happened this week.
  */
 export function LotView({
-  state, placing, setPlacing, selectedId, onSelect, onCard,
+  state, placing, setPlacing, selectedId, onSelect, onCard, onCardDrop,
 }: {
   state: GameState;
   placing: Placing | null;
@@ -23,34 +23,38 @@ export function LotView({
   onSelect: (id: string | null) => void;
   /** A card on the lot was tapped: a script to shoot or a programme to schedule. */
   onCard: (kind: LotCard['kind'], id: string) => void;
+  /** A card was dropped on a building that takes it to its next step. */
+  onCardDrop: (kind: LotCard['kind'], id: string, buildingId: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<LotScene | null>(null);
   const [labels, setLabels] = useState<LotLabel[]>([]);
   const [pops, setPops] = useState<Pop[]>([]);
   const [failed, setFailed] = useState(false);
-  const handlers = useRef({ placing, setPlacing, onSelect, onCard });
-  handlers.current = { placing, setPlacing, onSelect, onCard };
+  const handlers = useRef({ placing, setPlacing, onSelect, onCard, onCardDrop });
+  handlers.current = { placing, setPlacing, onSelect, onCard, onCardDrop };
 
   const model: LotModel = useMemo(() => {
     const booked = new Set(state.projects.flatMap((p) => [p.writerId, p.crewId, p.talentId, p.writer2Id, p.writer3Id, ...Object.values(p.specialists)]));
     const hostOf = (stage: string) => state.lot.buildings.find((b) => buildingDef(b.kind).stage === stage)?.id ?? null;
-    // Finished scripts stand by the Writers' Room; programmes without a slot stand by the tower.
+    // Cards wait in front of the building they came out of, and can be dragged to the next one:
+    // script → Sound Stage, filmed show → Post-production Suite, finished show → tower.
     const scheduled = new Set(Object.values(state.schedule));
+    const ofKind = (kind: BuildingKind) => state.lot.buildings.filter((b) => b.kind === kind).map((b) => b.id);
+    const cardOf = (kind: LotCard['kind'], x: { id: string; name: string; formatId: string }, host: BuildingKind, to: BuildingKind, note: string): LotCard => ({
+      id: x.id, kind, hostId: ofKind(host)[0] ?? null, targets: ofKind(to), title: x.name, icon: formatById(x.formatId).icon, color: formatById(x.formatId).color, note,
+    });
     const cards: LotCard[] = [
-      ...state.projects.filter(isHeldScript).slice(0, 4).map((p): LotCard => ({
-        id: p.id, kind: 'script', hostId: hostOf('script'), title: p.name, icon: formatById(p.formatId).icon, color: formatById(p.formatId).color, note: '★'.repeat(p.script!.stars),
-      })),
-      ...state.shows.filter((x) => !x.archived && x.episodesLeft > 0 && !scheduled.has(x.id)).slice(0, 4).map((x): LotCard => ({
-        id: x.id, kind: 'show', hostId: state.lot.buildings.find((b) => b.kind === 'tower')?.id ?? null, title: x.name, icon: formatById(x.formatId).icon, color: formatById(x.formatId).color, note: grade(x.quality),
-      })),
+      ...state.projects.filter(isHeldScript).slice(0, 4).map((p) => cardOf('script', p, 'writers', 'stage', '★'.repeat(p.script!.stars))),
+      ...state.projects.filter(isHeldShot).slice(0, 4).map((p) => cardOf('shot', p, 'stage', 'post', '★'.repeat(p.script!.stars))),
+      ...state.shows.filter((x) => !x.archived && x.episodesLeft > 0 && !scheduled.has(x.id)).slice(0, 4).map((x) => cardOf('show', x, 'post', 'tower', grade(x.quality))),
     ];
     const ghost = placing ? { ...placing, ok: !placementProblem(state.lot, placing, placing.moving ?? undefined) } : null;
     return {
       w: state.lot.w, h: state.lot.h, stationName: state.stationName,
       buildings: state.lot.buildings.filter((b) => b.id !== placing?.moving),
       cards,
-      projects: state.projects.filter((p) => !isHeldScript(p)).map((p) => ({ id: p.id, buildingId: p.buildingId, waitingAt: p.buildingId ? null : hostOf(p.stage), color: formatById(p.formatId).color })),
+      projects: state.projects.filter((p) => !p.hold).map((p) => ({ id: p.id, buildingId: p.buildingId, waitingAt: p.buildingId ? null : hostOf(p.stage), color: formatById(p.formatId).color })),
       walkers: state.people.filter((p) => (p.house || p.uses > 0) && !booked.has(p.id)).map((p) => ({ id: p.id, color: `hsl(${p.hue} 70% 60%)` })),
       ghost, selectedId,
     };
@@ -73,6 +77,7 @@ export function LotView({
           },
           onBuilding: (id) => handlers.current.onSelect(id),
           onCard: (kind, id) => handlers.current.onCard(kind, id),
+          onCardDrop: (kind, id, buildingId) => handlers.current.onCardDrop(kind, id, buildingId),
           onLabels: setLabels,
         });
       } catch { setFailed(true); return; }
@@ -103,6 +108,10 @@ export function LotView({
       if (was && !was.script && p.script) at(was.buildingId, `Script ${'★'.repeat(p.script.stars)}`, 'good');
       if (was && was.waitingOn !== p.waitingOn && p.waitingOn?.startsWith('a free')) at(p.buildingId ?? model.projects.find((m) => m.id === p.id)?.waitingAt, '⏳ Waiting for room', 'bad');
     }
+    for (const p of state.projects) {
+      const was = before.projects.find((x) => x.id === p.id);
+      if (was && !was.hold && p.hold === 'shot') at(was.buildingId, '🎬 It’s a wrap!', 'good');
+    }
     for (const id of state.newlyFinished) {
       if (before.newlyFinished.includes(id)) continue;
       const post = state.lot.buildings.find((b) => b.kind === 'post');
@@ -120,6 +129,9 @@ export function LotView({
   }, [state, model.projects]);
 
   const heldScripts = state.projects.filter(isHeldScript).length;
+  const heldShots = state.projects.filter(isHeldShot).length;
+  const onAir = new Set(Object.values(state.schedule));
+  const freshShows = state.shows.filter((x) => !x.archived && x.episodesLeft > 0 && !onAir.has(x.id)).length;
 
   if (failed) return <div className="lot lot-fallback"><p className="small muted">The 3D lot needs WebGL, which this device doesn't offer. Everything else works as usual below.</p></div>;
 
@@ -130,8 +142,11 @@ export function LotView({
         {labels.filter((l) => l.visible).map((l) => {
           if (l.card) {
             return (
-              <button key={l.id} className={cx('lot-cta', l.card)} style={{ transform: `translate(${l.x}px, ${l.y}px)` }} onClick={() => onCard(l.card!, l.id)}>
-                <span>{l.card === 'script' ? '🎬 Shoot' : '📺 Schedule'}</span>
+              <button key={l.id} className={cx('lot-cta', `is-${l.card}`)} style={{ transform: `translate(${l.x}px, ${l.y}px)` }}
+                // Pressing the label picks the card up, like pressing the card itself; a tap opens its details.
+                onPointerDown={(e) => { e.preventDefault(); sceneRef.current?.grabCard(l.id, l.card!, e); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCard(l.card!, l.id); } }}>
+                <span>{l.card === 'script' ? 'Drag to 🎬' : l.card === 'shot' ? 'Drag to 🎞️' : 'Drag to 📡'}</span>
               </button>
             );
           }
@@ -140,9 +155,10 @@ export function LotView({
           const def = buildingDef(b.kind);
           const inside = occupants(state, b.id).length;
           const cap = capacityOf(b);
-          const queued = def.stage ? state.projects.filter((p) => p.stage === def.stage && !p.buildingId && !isHeldScript(p)).length : 0;
+          const queued = def.stage ? state.projects.filter((p) => p.stage === def.stage && !p.buildingId && !p.hold).length : 0;
           // A nudge when the building has something for the player to do.
-          const nudge = cap > inside && ((b.kind === 'writers' && state.formats.length > 0) || (b.kind === 'stage' && heldScripts > 0));
+          const nudge = (cap > inside && ((b.kind === 'writers' && state.formats.length > 0) || (b.kind === 'stage' && heldScripts > 0) || (b.kind === 'post' && heldShots > 0)))
+            || (b.kind === 'tower' && freshShows > 0);
           return (
             <button key={l.id} className={cx('lot-badge', cap > 0 && inside >= cap && 'full', nudge && 'nudge')} style={{ transform: `translate(${l.x}px, ${l.y}px)`, ['--c' as string]: def.color }}
               aria-label={`${def.name}${cap ? `, ${inside} of ${cap} in use` : ''}`} onClick={() => onSelect(b.id)}>

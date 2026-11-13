@@ -1,21 +1,22 @@
 import type {
-  CrewCard, CrewSkill, GameState, Genre, Person, PersonKind, Rarity, TalentCard, TalentSkill, WriterCard,
+  AgeGroup, CrewCard, CrewSkill, GameState, Gender, Genre, Person, PersonKind, Rarity, ScreenSkill, TalentCard, TalentSkill, WriterCard,
 } from './types';
 import { clamp, pick, randInt, weighted } from './rng';
 import { FIRST_NAMES, LAST_NAMES } from './data/names';
 
-export const CREW_SKILLS: CrewSkill[] = ['direction', 'production', 'sound', 'image', 'fx', 'music', 'art'];
+export const CREW_SKILLS: CrewSkill[] = ['direction', 'production', 'wardrobe', 'image', 'set', 'audio', 'fx'];
 export const GENRES: Genre[] = ['factual', 'entertainment', 'drama', 'comedy'];
-export const TALENT_SKILLS: TalentSkill[] = ['hosting', 'acting', 'charisma', 'fame'];
+export const SCREEN_SKILLS: ScreenSkill[] = ['hosting', 'acting', 'physical', 'voice', 'looks', 'brain'];
+export const TALENT_SKILLS: TalentSkill[] = [...SCREEN_SKILLS, 'fame'];
 
 export const CREW_SKILL_LABEL: Record<CrewSkill, string> = {
-  direction: 'Direction', production: 'Producing', sound: 'Sound', image: 'Image', fx: 'FX', music: 'Music', art: 'Visual art',
+  direction: 'Directing', production: 'Producing', wardrobe: 'Dressing', image: 'Visual', set: 'Sets', audio: 'Audio', fx: 'Effects',
 };
 export const GENRE_LABEL: Record<Genre, string> = {
   factual: 'Factual', entertainment: 'Entertainment', drama: 'Drama', comedy: 'Comedy',
 };
 export const TALENT_SKILL_LABEL: Record<TalentSkill, string> = {
-  hosting: 'Hosting', acting: 'Acting', charisma: 'Charisma', fame: 'Fame',
+  hosting: 'Hosting', acting: 'Acting', physical: 'Physical', voice: 'Voice', looks: 'Looks', brain: 'Brain', fame: 'Fame',
 };
 export const KIND_LABEL: Record<PersonKind, string> = {
   crew: 'Crew', writer: 'Writer', talent: 'On-screen',
@@ -56,6 +57,16 @@ function rollSkills<K extends string>(state: GameState, keys: readonly K[], rari
   return out;
 }
 
+const FEMININE = new Set(['Ava', 'Carla', 'Elena', 'Gina', 'Iris', 'Kara', 'Maya', 'Olive', 'Rosa', 'Tess', 'Vera', 'Xena', 'Zoe', 'Bev', 'Dolores', 'Rhonda', 'Priya', 'Mei', 'Greta', 'Nadia', 'Opal', 'Lulu', 'Lena']);
+const EITHER = new Set(['Jules', 'Quinn', 'Sam', 'Sunny', 'Dex', 'Marty']);
+/** Gender that goes with a first name (a coin flip for names that go either way). */
+export function genderOf(state: Pick<GameState, 'rng'> | null, name: string): Gender {
+  const first = name.split(' ')[0];
+  if (EITHER.has(first)) return state ? pick(state, ['woman', 'man'] as const) : (name.length % 2 ? 'woman' : 'man');
+  return FEMININE.has(first) ? 'woman' : 'man';
+}
+const rollAge = (state: GameState): AgeGroup => weighted<AgeGroup>(state, { child: 5, teen: 10, young: 30, adult: 40, senior: 15 });
+
 export function makePerson(state: GameState, kind: PersonKind, rarity: Rarity): Person {
   const base = {
     id: newId(state, 'p'),
@@ -75,9 +86,12 @@ export function makePerson(state: GameState, kind: PersonKind, rarity: Rarity): 
     const skills = rollSkills(state, GENRES, rarity, randInt(state, 1, 2));
     return { ...base, kind, skills, speed: randInt(state, 25, 85) } satisfies WriterCard;
   }
-  const skills = rollSkills(state, ['hosting', 'acting', 'charisma'] as const, rarity, randInt(state, 1, 2));
+  // Stars are either presenters or actors at heart, with one or two more strong suits.
+  const skills = rollSkills(state, SCREEN_SKILLS, rarity, randInt(state, 1, 2));
+  const core = pick(state, ['hosting', 'acting'] as const);
+  skills[core] = Math.max(skills[core], randInt(state, ...RARITY[rarity].primary));
   const fame = randInt(state, ...RARITY[rarity].fame);
-  return { ...base, kind, skills: { ...skills, fame } } satisfies TalentCard;
+  return { ...base, kind, skills: { ...skills, fame }, gender: genderOf(state, base.name), age: rollAge(state) } satisfies TalentCard;
 }
 
 /** Uses value for house cards. They never spend it. */
@@ -96,11 +110,11 @@ export function addHouseCards(state: GameState): void {
     },
     {
       ...base, id: newId(state, 'p'), name: 'Studio Crew', hue: 30, kind: 'crew',
-      skills: { direction: 40, production: 38, sound: 36, image: 38, fx: 20, music: 28, art: 32 },
+      skills: { direction: 40, production: 38, wardrobe: 30, image: 38, set: 32, audio: 34, fx: 20 },
     },
     {
       ...base, id: newId(state, 'p'), name: 'Station Host', hue: 330, kind: 'talent',
-      skills: { hosting: 40, acting: 28, charisma: 36, fame: 0 },
+      skills: { hosting: 40, acting: 28, physical: 30, voice: 36, looks: 36, brain: 32, fame: 0 }, gender: 'woman', age: 'adult',
     },
   );
 }

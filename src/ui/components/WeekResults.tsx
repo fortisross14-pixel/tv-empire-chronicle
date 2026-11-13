@@ -1,12 +1,26 @@
-import { slotLabel, type GameState, type WeekResult } from '../../engine';
+import { useEffect, useState } from 'react';
+import { grade, slotLabel, type GameState, type WeekResult } from '../../engine';
 import { Sheet } from './Sheet';
 import { Ticker } from './Ticker';
-import { money, pct, signedMoney, viewers } from '../util';
+import { cx, gradeClass, money, pct, signedMoney, viewers } from '../util';
 
 export function WeekResults({ result, state, onClose }: { result: WeekResult; state: GameState; onClose: () => void }) {
   const ordered = [...result.slots].sort((a, b) => Number(!!b.showId) - Number(!!a.showId));
   // A quick ripple; long lists must not keep rows invisible for seconds.
   const delay = (i: number) => ({ animationDelay: `${Math.min(i, 8) * 0.06}s` });
+  // New shows first hear from the public and the critics; then come the week's numbers.
+  const premieres = result.slots.filter((r) => r.premiere && r.reviews);
+  const [reviewsSeen, setReviewsSeen] = useState(premieres.length === 0);
+  if (!reviewsSeen) {
+    return (
+      <Sheet title="The reviews are back! 📝" onClose={() => setReviewsSeen(true)} footer={<button className="btn primary" onClick={() => setReviewsSeen(true)}>See the ratings</button>}>
+        <div className="stack">
+          {premieres.map((r, i) => <ReviewReveal key={r.slot} name={r.showName} audience={r.reviews!.audience} critics={r.reviews!.critics}
+            audienceQuote={r.reviews!.audienceQuote} criticQuote={r.reviews!.criticQuote} outlet={r.reviews!.outlet} start={i * 2600} />)}
+        </div>
+      </Sheet>
+    );
+  }
   return (
     <Sheet title="Ratings are in! 📊" onClose={onClose} footer={<button className="btn primary" onClick={onClose}>Continue</button>}>
       <div className="stack">
@@ -55,5 +69,47 @@ export function WeekResults({ result, state, onClose }: { result: WeekResult; st
         </div>
       </div>
     </Sheet>
+  );
+}
+
+/** Counts up to a score out of 10 once its turn comes. */
+function CountUp({ to, delay, duration = 1100 }: { to: number; delay: number; duration?: number }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) { setV(to); return; }
+    let raf = 0;
+    const t0 = performance.now() + delay;
+    const tick = (now: number) => {
+      const k = Math.min(1, Math.max(0, (now - t0) / duration));
+      setV(to * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [to, delay, duration]);
+  return <>{(v / 10).toFixed(1)}</>;
+}
+
+/** One new show's verdict: the public, then the critics, then the overall grade. */
+function ReviewReveal({
+  name, audience, critics, audienceQuote, criticQuote, outlet, start,
+}: { name: string; audience: number; critics: number; audienceQuote: string; criticQuote: string; outlet: string; start: number }) {
+  const total = grade(Math.round((audience + critics) / 2));
+  const row = (label: string, icon: string, value: number, quote: React.ReactNode, at: number, tone: string) => (
+    <div className="rv-row" style={{ animationDelay: `${at}ms` }}>
+      <div className="spread"><b>{icon} {label}</b><span className="rv-num"><CountUp to={value} delay={at + 150} /></span></div>
+      <div className="rv-bar"><i className={tone} style={{ width: `${value}%`, animationDelay: `${at + 150}ms` }} /></div>
+      <p className="tiny muted rv-quote" style={{ animationDelay: `${at + 1100}ms` }}>{quote}</p>
+    </div>
+  );
+  return (
+    <div className="panel stack rv">
+      <h3 style={{ fontSize: 20 }}>✨ {name}</h3>
+      {row('Public', '👥', audience, audienceQuote, start + 200, 'aud')}
+      {row('Critics', '🖋️', critics, <>{criticQuote} <i>— {outlet}</i></>, start + 1000, 'crit')}
+      <div className="rv-total" style={{ animationDelay: `${start + 2000}ms` }}>
+        <span>Total</span><span className={cx('grade', gradeClass(total))}>{total}</span>
+      </div>
+    </div>
   );
 }

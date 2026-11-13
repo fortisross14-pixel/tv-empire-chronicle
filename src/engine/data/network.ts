@@ -10,7 +10,8 @@ export interface NetworkDef {
   /** Promo: hype added. */
   hype?: number;
   /** Facility: effect. */
-  facility?: { floor?: { skill: 'sound' | 'image' | 'fx' | 'music' | 'art'; value: number }; script?: number; screen?: number };
+  /** `floor`: that slider is done at this skill or better, whoever works it. */
+  facility?: { floor?: { skill: 'sound' | 'image' | 'fx' | 'music' | 'set' | 'wardrobe'; value: number }; script?: number; screen?: number };
   /** Sponsor: deal terms. */
   sponsor?: { perWeek: number; weeks: number; minShare: number };
 }
@@ -27,11 +28,11 @@ export const NETWORK_CARDS: NetworkDef[] = [
   d({ id: 'viral-teaser', kind: 'promo', name: 'Viral Teaser', icon: '🔥', rarity: 'epic', hype: 45, text: 'A teaser that everyone shares. +45 hype.' }),
 
   // Facility cards: permanent studio upgrades.
-  d({ id: 'hd-cameras', kind: 'facility', name: 'HD Camera Kit', icon: '🎥', rarity: 'rare', facility: { floor: { skill: 'image', value: 55 } }, text: 'Image is done at skill 55 or better on every show.' }),
+  d({ id: 'hd-cameras', kind: 'facility', name: 'HD Camera Kit', icon: '🎥', rarity: 'rare', facility: { floor: { skill: 'image', value: 55 } }, text: 'Visual art is done at skill 55 or better on every show.' }),
   d({ id: 'sound-booth', kind: 'facility', name: 'Sound Booth', icon: '🎚️', rarity: 'rare', facility: { floor: { skill: 'sound', value: 55 } }, text: 'Sound is done at skill 55 or better on every show.' }),
-  d({ id: 'fx-workstation', kind: 'facility', name: 'FX Workstation', icon: '🖥️', rarity: 'rare', facility: { floor: { skill: 'fx', value: 50 } }, text: 'FX is done at skill 50 or better on every show.' }),
+  d({ id: 'fx-workstation', kind: 'facility', name: 'FX Workstation', icon: '🖥️', rarity: 'rare', facility: { floor: { skill: 'fx', value: 50 } }, text: 'Visual effects are done at skill 50 or better on every show.' }),
   d({ id: 'music-library', kind: 'facility', name: 'Music Library', icon: '🎼', rarity: 'common', facility: { floor: { skill: 'music', value: 50 } }, text: 'Music is done at skill 50 or better on every show.' }),
-  d({ id: 'set-workshop', kind: 'facility', name: 'Set Workshop', icon: '🪚', rarity: 'common', facility: { floor: { skill: 'art', value: 50 } }, text: 'Visual art is done at skill 50 or better on every show.' }),
+  d({ id: 'set-workshop', kind: 'facility', name: 'Set Workshop', icon: '🪚', rarity: 'common', facility: { floor: { skill: 'set', value: 50 } }, text: 'Sets are built at skill 50 or better on every show.' }),
   d({ id: 'writers-room', kind: 'facility', name: "Writers' Room", icon: '☕', rarity: 'epic', facility: { script: 5 }, text: 'Every writer scores +5 on scripts.' }),
   d({ id: 'makeup-room', kind: 'facility', name: 'Makeup & Green Room', icon: '💄', rarity: 'epic', facility: { screen: 5 }, text: 'Every on-screen person scores +5 screen power.' }),
 

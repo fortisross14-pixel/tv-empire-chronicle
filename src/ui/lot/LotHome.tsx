@@ -1,12 +1,13 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react';
 import {
-  BUILDINGS, STAGE_LABEL, buildCost, buildingDef, capacityOf, formatById, grade, isHeldScript, occupants, placementProblem, stageUse, upgradeCost,
+  BUILDINGS, STAGE_LABEL, buildCost, buildingDef, capacityOf, formatById, grade, isHeldScript, isHeldShot, occupants, placementProblem, stageUse, upgradeCost,
   type Building, type BuildingKind, type GameState, type Tier,
 } from '../../engine';
 import { Sheet } from '../components/Sheet';
 import { useConfirm } from '../components/Confirm';
 import { cx, money } from '../util';
 import type { Placing } from './LotView';
+import { CardSheet } from './CardSheet';
 
 const LotView = lazy(() => import('./LotView').then((m) => ({ default: m.LotView })));
 const TIER_ORDER: Tier[] = ['local', 'state', 'national'];
@@ -16,7 +17,7 @@ const TIER_ORDER: Tier[] = ['local', 'state', 'national'];
  * pulls up from the bottom on phones and sits at the side on tablets and laptops.
  */
 export function LotHome({
-  state, children, onBuild, onMove, onUpgrade, onSell, onWrite, onShoot, goTab, onOpenShow,
+  state, children, onBuild, onMove, onUpgrade, onSell, onWrite, onShoot, onPost, onRelease, onOpenPack, goTab, onOpenShow,
 }: {
   state: GameState;
   children: ReactNode;
@@ -26,8 +27,13 @@ export function LotHome({
   onSell: (id: string) => boolean;
   /** Open the script wizard (Writers' Room). */
   onWrite: () => void;
-  /** Open the shooting wizard for a finished script (Sound Stage). */
+  /** Open the studio wizard for a finished script (Sound Stage). */
   onShoot: (projectId: string) => void;
+  /** Open the post-production wizard for a filmed show (Post-production Suite). */
+  onPost: (projectId: string) => void;
+  /** The last step for a finished show (tower): poster and marketing, then the Guide. */
+  onRelease: (showId: string) => void;
+  onOpenPack: (packId: string) => void;
   goTab: (tab: 'schedule' | 'studio' | 'cards' | 'shop') => void;
   onOpenShow: (id: string) => void;
 }) {
@@ -38,13 +44,21 @@ export function LotHome({
   const ask = useConfirm();
   const problem = placing ? placementProblem(state.lot, placing, placing.moving ?? undefined) : null;
   const building = selected ? state.lot.buildings.find((b) => b.id === selected) : undefined;
-  const held = state.projects.filter(isHeldScript);
-  const act = (fn: () => void) => { setSelected(null); fn(); };
+  const [card, setCard] = useState<{ kind: 'script' | 'shot' | 'show'; id: string } | null>(null);
+  const act = (fn: () => void) => { setSelected(null); setCard(null); fn(); };
+  /** A card's next step: studio for a script, post for a filmed show, release for a finished one. */
+  const advance = (kind: 'script' | 'shot' | 'show', id: string) => act(() => (kind === 'script' ? onShoot(id) : kind === 'shot' ? onPost(id) : onRelease(id)));
+  const onAir = new Set(Object.values(state.schedule));
+  const fresh = state.shows.filter((x) => !x.archived && x.episodesLeft > 0 && !onAir.has(x.id));
   // One line that says what to do next on the lot.
-  const hint = placing || state.formats.length === 0 ? null
-    : held.length > 0 ? '📄 A script is ready: tap its card to shoot it'
-      : state.projects.length === 0 ? 'Tap the ✍️ Writers’ Room to write a script'
-        : null;
+  const hint = placing ? null
+    : state.unopened.length > 0 ? '🎁 Open your pack: it has the formats, topics and people you start with'
+      : state.formats.length === 0 ? null
+        : state.projects.some(isHeldScript) ? '📄 Script ready: hold its card and drag it onto the 🎬 Sound Stage'
+          : state.projects.some(isHeldShot) ? '🎬 It’s a wrap: drag the card onto the 🎞️ Post-production Suite'
+            : fresh.length > 0 ? '🎞️ Show ready: drag its card onto the 📡 tower'
+              : state.projects.length === 0 ? 'Tap the ✍️ Writers’ Room to write a script'
+                : null;
 
   const startPlacing = (kind: BuildingKind) => {
     setMenu(false);
@@ -68,11 +82,16 @@ export function LotHome({
       <div className="lot-stage">
         <Suspense fallback={<div className="lot lot-loading"><span className="small muted">Opening the lot…</span></div>}>
           <LotView state={state} placing={placing} setPlacing={setPlacing} selectedId={selected} onSelect={setSelected}
-            onCard={(kind, id) => (kind === 'script' ? onShoot(id) : onOpenShow(id))} />
+            onCard={(kind, id) => setCard({ kind, id })} onCardDrop={(kind, id) => advance(kind, id)} />
         </Suspense>
         {!placing && (
           <div className="lot-tools">
             <button className="btn primary small" onClick={() => setMenu(true)}>🏗️ Build</button>
+            {state.unopened.length > 0 && (
+              <button className="btn primary lot-pack" onClick={() => onOpenPack(state.unopened[0].id)}>
+                🎁 Open your pack{state.unopened.length > 1 ? ` (${state.unopened.length})` : ''}
+              </button>
+            )}
           </div>
         )}
         {hint && <div className="lot-hint" role="status">{hint}</div>}
@@ -121,7 +140,7 @@ export function LotHome({
 
       {building && !placing && (
         <Sheet title={`${buildingDef(building.kind).icon} ${buildingDef(building.kind).name}`} onClose={() => setSelected(null)}>
-          <BuildingActions state={state} building={building} onWrite={() => act(onWrite)} onShoot={(id) => act(() => onShoot(id))}
+          <BuildingActions state={state} building={building} onWrite={() => act(onWrite)} onAdvance={advance}
             onGuide={() => act(() => goTab('schedule'))} onOpenShow={(id) => act(() => onOpenShow(id))} />
           <BuildingInfo state={state} id={building.id} />
           {(!buildingDef(building.kind).fixed || upgradeCost(state, building) !== null) && (
@@ -147,22 +166,27 @@ export function LotHome({
           )}
         </Sheet>
       )}
+      {card && !placing && <CardSheet state={state} kind={card.kind} id={card.id} onClose={() => setCard(null)} onNext={() => advance(card.kind, card.id)} />}
     </div>
   );
 }
 
-/** What you do at this building: write at the Writers' Room, shoot at a Sound Stage, schedule at the tower. */
+/** What you do at this building: write at the Writers' Room, shoot at a Sound Stage, finish in post, release at the tower. */
 function BuildingActions({
-  state, building, onWrite, onShoot, onGuide, onOpenShow,
-}: { state: GameState; building: Building; onWrite: () => void; onShoot: (projectId: string) => void; onGuide: () => void; onOpenShow: (id: string) => void }) {
-  const held = state.projects.filter(isHeldScript);
+  state, building, onWrite, onAdvance, onGuide, onOpenShow,
+}: {
+  state: GameState; building: Building; onWrite: () => void; onAdvance: (kind: 'script' | 'shot' | 'show', id: string) => void;
+  onGuide: () => void; onOpenShow: (id: string) => void;
+}) {
+  const scripts = state.projects.filter(isHeldScript);
+  const shots = state.projects.filter(isHeldShot);
   const scheduled = new Set(Object.values(state.schedule));
   const ready = state.shows.filter((x) => !x.archived && x.episodesLeft > 0 && !scheduled.has(x.id));
-  const scriptRow = (p: GameState['projects'][number]) => (
-    <button key={p.id} className="lot-pick" onClick={() => onShoot(p.id)}>
+  const row = (p: GameState['projects'][number], kind: 'script' | 'shot', label: string) => (
+    <button key={p.id} className="lot-pick" onClick={() => onAdvance(kind, p.id)}>
       <span className="lp-icon">{formatById(p.formatId).icon}</span>
       <span className="lp-main"><b>{p.name}{p.season > 1 ? ` · S${p.season}` : ''}</b><span className="tiny muted">{formatById(p.formatId).name} · script {'★'.repeat(p.script!.stars)}{'☆'.repeat(5 - p.script!.stars)}</span></span>
-      <span className="chip good">🎬 Shoot</span>
+      <span className="chip good">{label}</span>
     </button>
   );
   if (building.kind === 'writers') {
@@ -171,43 +195,52 @@ function BuildingActions({
       <div className="stack lot-actions">
         <button className="btn primary big" disabled={state.formats.length === 0} onClick={onWrite}>✍️ Write a new script</button>
         {state.formats.length === 0
-          ? <p className="tiny muted">Open your program pack first: it has the formats and topics to write about.</p>
+          ? <p className="tiny muted">Open your pack first: it has the formats and topics to write about.</p>
           : room.used >= room.capacity && <p className="tiny muted">Every Writers’ Room is busy, so a new script waits its turn. Expand the room to write more at once.</p>}
-        {held.length > 0 && <div className="stack-sm"><b className="small">Finished scripts</b>{held.map(scriptRow)}</div>}
+        {scripts.length > 0 && <div className="stack-sm"><b className="small">Finished scripts: take one to the Sound Stage</b>{scripts.map((p) => row(p, 'script', '🎬 Shoot'))}</div>}
       </div>
     );
   }
   if (building.kind === 'stage') {
     return (
       <div className="stack lot-actions">
-        {held.length > 0
-          ? <div className="stack-sm"><b className="small">🎬 Shoot a program: pick a finished script</b>{held.map(scriptRow)}</div>
+        {scripts.length > 0
+          ? <div className="stack-sm"><b className="small">🎬 Shoot a program: pick a finished script</b>{scripts.map((p) => row(p, 'script', '🎬 Shoot'))}</div>
           : <>
-            <p className="small">Programs are shot here from finished scripts. You have no script waiting.</p>
+            <p className="small">Programs are shot here from finished scripts: you choose the cast and the crew. You have no script waiting.</p>
             <button className="btn primary big" disabled={state.formats.length === 0} onClick={onWrite}>✍️ Write a script first</button>
           </>}
+        {shots.length > 0 && <div className="stack-sm"><b className="small">Filmed, waiting for post-production</b>{shots.map((p) => row(p, 'shot', '🎞️ Post'))}</div>}
+      </div>
+    );
+  }
+  if (building.kind === 'post') {
+    return (
+      <div className="stack lot-actions">
+        {shots.length > 0
+          ? <div className="stack-sm"><b className="small">🎞️ Finish a program: sound, music and visual effects</b>{shots.map((p) => row(p, 'shot', '🎞️ Post'))}</div>
+          : <p className="small">Filmed programs are finished here: sound, music and visual effects. Nothing is waiting for post right now.</p>}
       </div>
     );
   }
   if (building.kind === 'tower') {
     return (
       <div className="stack lot-actions">
-        <button className="btn primary big" onClick={onGuide}>📺 Open the Guide</button>
         {ready.length > 0 && (
-          <div className="stack-sm"><b className="small">Ready to air, no time slot yet</b>
+          <div className="stack-sm"><b className="small">Ready to air: release them, then pick a time slot</b>
             {ready.map((x) => (
-              <button key={x.id} className="lot-pick" onClick={() => onOpenShow(x.id)}>
+              <button key={x.id} className="lot-pick" onClick={() => (x.released ? onOpenShow(x.id) : onAdvance('show', x.id))}>
                 <span className="lp-icon">{formatById(x.formatId).icon}</span>
-                <span className="lp-main"><b>{x.name}</b><span className="tiny muted">{formatById(x.formatId).name} · {x.episodesLeft} episodes</span></span>
-                <span className="chip">{grade(x.quality)}</span>
+                <span className="lp-main"><b>{x.name}</b><span className="tiny muted">{formatById(x.formatId).name} · {x.episodesLeft} episode{x.episodesLeft !== 1 && 's'}</span></span>
+                <span className="chip good">{x.released ? grade(x.quality) : '📡 Release'}</span>
               </button>
             ))}
           </div>
         )}
+        <button className={ready.length > 0 ? 'btn ghost big' : 'btn primary big'} onClick={onGuide}>📺 Open the Guide</button>
       </div>
     );
   }
-  if (building.kind === 'post') return <p className="small lot-actions">Shot programs come here on their own for editing, sound and effects. When one is done it’s ready to air.</p>;
   return null;
 }
 
@@ -216,7 +249,7 @@ function BuildingInfo({ state, id }: { state: GameState; id: string }) {
   const b = state.lot.buildings.find((x) => x.id === id)!;
   const def = buildingDef(b.kind);
   const inside = occupants(state, b.id);
-  const queue = def.stage ? state.projects.filter((p) => p.stage === def.stage && !p.buildingId && !isHeldScript(p)) : [];
+  const queue = def.stage ? state.projects.filter((p) => p.stage === def.stage && !p.buildingId && !p.hold) : [];
   const next = upgradeCost(state, b);
   return (
     <div className="stack">

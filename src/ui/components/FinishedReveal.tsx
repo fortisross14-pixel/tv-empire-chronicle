@@ -6,7 +6,8 @@ import { cx, gradeClass } from '../util';
 export function FinishedReveal({ shows, state, onClose }: { shows: Show[]; state: GameState; onClose: () => void }) {
   return (
     <Sheet title={shows.length > 1 ? 'Shows complete! 🎬' : 'Show complete! 🎬'} onClose={onClose}
-      footer={<button className="btn primary" onClick={onClose}>Great — to the schedule</button>}>
+      footer={<button className="btn primary" onClick={onClose}>Great — back to the lot</button>}>
+      <p className="small muted" style={{ marginBottom: 12 }}>It’s waiting as a card by the Post-production Suite. Drag it onto the 📡 tower to pick the poster and the marketing, then give it a time slot.</p>
       <div className="stack">
         {shows.map((show) => {
           const format = formatById(show.formatId);

@@ -9,7 +9,8 @@ import {
   airWeek, answerEvent, bidOnRights, buyPack, createShow, dismissReveal, expandToNational, expandToState, licenseGaps, newMissionGame,
   openPack, scheduleShow, signAffiliate, usePromo, useSponsor, cancelShow, ackMission, nextLicense, upgradeBuilding, buildBuilding,
 } from '../game';
-import { formatById, AREAS } from '../data/formats';
+import { formatById, AREAS, AREA_SKILL } from '../data/formats';
+import { leadRole, roleScore, rolesFor } from '../data/roles';
 import { topicById } from '../data/topics';
 import { LEVELS, TIER_COST, freshIdeas, levelsFor, previewPlan, projectPeople, type ShowPlan } from '../production';
 import { appeal } from '../appeal';
@@ -64,8 +65,8 @@ function bestPlan(s: GameState, renewId: string | null): ShowPlan | null {
       return cands.sort((a, b) => sc(b) - sc(a));
     };
     const writers = pick('writer', (p) => p.skills[format.genre]);
-    const crews = pick('crew', (p) => AREAS.reduce((s2, a) => s2 + format.ideal[a] * p.skills[a], 0) / 10 + p.skills.production * 0.1);
-    const talents = pick('talent', (p) => p.skills[format.screenSkill] * 0.65 + p.skills.charisma * 0.35);
+    const crews = pick('crew', (p) => AREAS.reduce((s2, a) => s2 + format.ideal[a] * p.skills[AREA_SKILL[a]], 0) / 10 + p.skills.production * 0.1);
+    const talents = pick('talent', (p) => roleScore(c.f, leadRole(c.f), p, c.t));
     if (!writers.length || !crews.length || !talents.length) continue;
     const points = scalePoints(format.ideal, L.points, L.maxPerArea);
     const ip = renew ? null : usableIps(s).map((x) => ({ x, b: ipBonus(x, c.f) })).filter((e) => e.b.fit >= 2).sort((a, b) => b.b.fame - a.b.fame)[0];
@@ -73,16 +74,27 @@ function bestPlan(s: GameState, renewId: string | null): ShowPlan | null {
       name: `Show ${s.nextId}`, formatId: c.f, topicId: c.t, writerId: writers[0].id, crewId: crews[0].id, talentId: talents[0].id,
       points, level, showId: renewId, scriptTime: 'standard', ipId: ip?.x.id ?? null,
     };
-    if (level !== 'basic') {
-      plan.writer2Id = writers[1]?.id ?? null;
-      if (level === 'aaa') plan.writer3Id = writers[2]?.id ?? null;
+    // Like a player: a better crew card on a slider when one is free, and good people in the optional parts.
+    {
       const specs: Partial<Record<Area, string>> = {};
       const used = new Set([crews[0].id]);
       for (const a of AREAS.filter((a) => format.ideal[a] > 0).sort((x, y) => format.ideal[y] - format.ideal[x])) {
-        const c2 = (people.filter((p) => p.kind === 'crew' && !used.has(p.id) && free(p)) as any[]).sort((x, y) => y.skills[a] - x.skills[a])[0];
-        if (c2 && c2.skills[a] > crews[0].skills[a]) { specs[a] = c2.id; used.add(c2.id); }
+        const k = AREA_SKILL[a];
+        const c2 = (people.filter((p) => p.kind === 'crew' && !used.has(p.id) && free(p)) as any[]).sort((x, y) => y.skills[k] - x.skills[k])[0];
+        if (c2 && c2.skills[k] > crews[0].skills[k] + 8) { specs[a] = c2.id; used.add(c2.id); }
       }
       plan.specialists = specs;
+      const cast: Record<string, string> = {};
+      const taken = new Set([talents[0].id]);
+      for (const role of rolesFor(c.f).slice(1)) {
+        const t2 = (people.filter((p) => p.kind === 'talent' && !taken.has(p.id) && free(p)) as any[]).sort((x, y) => roleScore(c.f, role, y, c.t) - roleScore(c.f, role, x, c.t))[0];
+        if (t2 && roleScore(c.f, role, t2, c.t) >= 55) { cast[role.id] = t2.id; taken.add(t2.id); }
+      }
+      plan.cast = cast;
+    }
+    if (level !== 'basic') {
+      plan.writer2Id = writers[1]?.id ?? null;
+      if (level === 'aaa') plan.writer3Id = writers[2]?.id ?? null;
       const t2 = s.topics.filter((t) => t !== c.t && topicById(t).fits[c.f]).sort((x, y) => topicById(y).fits[c.f] - topicById(x).fits[c.f])[0];
       plan.topic2Id = renew ? null : t2 ?? null;
     }

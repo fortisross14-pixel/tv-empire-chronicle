@@ -483,6 +483,42 @@ at the side on tablets and laptops.
   through them). The tile grid shows only while placing. Reduced-motion is respected.
 - Saves v15 add `lot` and `Project.buildingId`; older saves get a lot sized for their tier.
 
+## 18. Making a show, step by step (built; replaces the one-screen wizard of section 4)
+
+A show moves across the lot as a card, and the player starts every step:
+
+| Step | Where | The player chooses | Pays | Then |
+|---|---|---|---|---|
+| Script | Writers' Room | format, topic(s), IP, writers, writing time | 15% | a **script card** by the room |
+| Studio | Sound Stage | the cast (one person per part), a crew lead, and 4 sliders with a person on each: directing, dressing & make-up, visual art, set | up to 75% | a **filmed card** by the stage |
+| Post | Post-production Suite | 3 sliders with a person on each: sound, music, visual effects | the rest | a **ready-to-air card** by the suite |
+| Release | Broadcast Tower | the poster and the marketing (none, local buzz, big campaign) | marketing | the Guide, to pick a time slot |
+
+- **Cards.** Tap a card for its details at that step. Hold and drag it onto the next building
+  (it glows) to open that step; the card's label can be grabbed too, and every step also has a
+  button in the building's panel.
+- **Focus points** are split 60/40: 6 studio + 4 post on a basic show (9+6 advanced, 12+8
+  AAA). Each format's ideal split follows the same 6/4.
+- **Crew** have six skills: directing, dressing, visual, sets, audio (sound and music), effects,
+  plus producing (speed and cost). One crew lead covers every slider until you put another
+  crew card on it. Studio upgrades set a minimum per slider.
+- **On screen.** Stars have six skills (hosting, acting, physical, voice, looks, brain), fame,
+  a gender and an age group. Each format has a lead part and optional parts (co-host, judge,
+  analyst, co-lead, supporting actor, singer, narrator…), each asking for two skills; the topic
+  adds a third for the lead (sports → physical, quiz → brain…) and sometimes an age that suits.
+  Screen power = the lead's fit + a bonus for each optional part filled well. Data:
+  `src/engine/data/roles.ts`.
+- **Reviews.** At the premiere a "reviews are back" screen counts up the public and the
+  critics scores (out of 10) and stamps the total grade, before the week's ratings.
+- **Start.** A new station has unopened packs; the lot shows a big "Open your pack" button and
+  the Writers' Room explains why it can't write yet.
+- Engine: `writeScript`, `shootScript`, `postShow`, `releaseShow`; `Project.hold`
+  ('script' | 'shot') marks a card waiting for the player; `createShow` still plans everything
+  at once (`auto`), which the playtest bot uses. Saves are v16 (old skills and sliders are
+  converted).
+- **Next (not built):** more building types (graphics and sound studios with their own leads,
+  offices), how buildings unlock, and paying for staff on the way to AAA shows.
+
 ## 13. Build waves
 
 0. **Foundation** — remove the old code, TS + engine/UI split, card components,
@@ -523,6 +559,7 @@ Next (planned):
 15. **Visual and navigation polish** ✅ — see docs/audits/2026-11-11-polish.md.
 16. **Balancing** ✅ — casual target; see docs/audits/2026-11-11-balance.md.
 17. **The studio lot** ✅ — 3D Home, buildings with capacity, build mode (section 17).
+18. **Step-by-step production** ✅ — script, studio, post and release as cards you drag; parts and new skills (section 18).
 
 The last three waves are always:
 

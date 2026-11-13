@@ -2,7 +2,7 @@ import type { GameState, Pack, PackKind, PosterSpec, SlotId } from './types';
 import { CITY } from './data/names';
 import { addHouseCards } from './people';
 import { applyPack, makePack, MOVIE_PACK_PRICE, PRICES } from './packs';
-import { GameError, projectPeople, startProject, startScript, startShoot, type ScriptPlan, type ShootPlan, type ShowPlan } from './production';
+import { GameError, TIER_COST, projectPeople, startPost, startProject, startScript, startShoot, type PostPlan, type ScriptPlan, type ShootPlan, type ShowPlan } from './production';
 import { makeRivals } from './rivals';
 import { applyPromo, applySponsor } from './network';
 import { resolvePendingEvent } from './events';
@@ -29,7 +29,7 @@ export function newMissionGame(
   return s;
 }
 
-export const SAVE_VERSION = 15;
+export const SAVE_VERSION = 16;
 
 /** What it takes to become a State network. */
 export const STATE_LICENSE = { reputation: 30, cash: 250, fee: 200 };
@@ -170,6 +170,32 @@ export const writeScript = (state: GameState, plan: ScriptPlan) =>
 /** Shoot a finished script at a Sound Stage. */
 export const shootScript = (state: GameState, projectId: string, plan: ShootPlan) =>
   produce(state, (s) => startShoot(s, projectId, plan));
+
+/** Send a filmed show to a Post-production Suite. */
+export const postShow = (state: GameState, projectId: string, plan: PostPlan) =>
+  produce(state, (s) => startPost(s, projectId, plan));
+
+/** Marketing for a finished season: what it costs ($K, before the tier multiplier) and the hype it brings. */
+export const MARKETING = [
+  { label: 'No campaign', blurb: 'Let the show speak for itself.', cost: 0, hype: 0 },
+  { label: 'Local buzz', blurb: 'Posters, radio spots and a few interviews.', cost: 5, hype: 12 },
+  { label: 'Big campaign', blurb: 'Billboards, trailers and a launch party.', cost: 14, hype: 28 },
+] as const;
+export const marketingCost = (s: Pick<GameState, 'tier'>, level: 0 | 1 | 2) => Math.round(MARKETING[level].cost * TIER_COST[s.tier]);
+
+/** The last step before airing, at the tower: pick the marketing (the poster is set with setPoster). */
+export const releaseShow = (state: GameState, showId: string, marketing: 0 | 1 | 2) =>
+  produce(state, (s) => {
+    const show = s.shows.find((x) => x.id === showId);
+    if (!show) throw new GameError('Show not found.');
+    if (show.released) throw new GameError('This season is already released.');
+    const cost = marketingCost(s, marketing);
+    if (s.cash < cost) throw new GameError('Not enough cash for that campaign.');
+    s.cash = round1(s.cash - cost);
+    show.hype = Math.min(100, show.hype + MARKETING[marketing].hype);
+    show.released = true;
+    show.marketing = marketing;
+  });
 
 export const cancelProject = (state: GameState, projectId: string) =>
   produce(state, (s) => {

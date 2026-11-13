@@ -60,6 +60,9 @@ export class LotScene {
   private walkers = new Map<string, Walker>();
   private cardsGroup = new THREE.Group();
   private cards = new Map<string, { mesh: THREE.Group; key: string; t: number; spot: THREE.Vector3 }>();
+  /** A card being dragged by a finger or the mouse. */
+  private cardDrag: { id: string; kind: LotCard['kind']; pointer: number; x: number; y: number; moved: boolean; at: THREE.Vector3; over: string | null } | null = null;
+  private dropRings = new Map<string, THREE.Mesh>();
   private ghost: THREE.Group | null = null;
   private ghostKey = '';
   private selection: THREE.Mesh;
@@ -85,6 +88,8 @@ export class LotScene {
     onTile: (x: number, y: number) => void;
     onBuilding: (id: string) => void;
     onCard: (kind: LotCard['kind'], id: string) => void;
+    /** A card was dragged onto a building that takes it to its next step. */
+    onCardDrop: (kind: LotCard['kind'], id: string, buildingId: string) => void;
     onLabels: (labels: LotLabel[]) => void;
   }) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
@@ -194,6 +199,11 @@ export class LotScene {
   private down = (e: PointerEvent) => {
     this.canvas.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // A finger on a card picks the card up instead of moving the map.
+    if (this.pointers.size === 1 && this.model && !this.model.ghost) {
+      const hit = this.cardAt(e.clientX, e.clientY);
+      if (hit) { this.cardDrag = { ...hit, pointer: e.pointerId, x: e.clientX, y: e.clientY, moved: false, at: this.cards.get(hit.id)!.spot.clone(), over: null }; return; }
+    }
     if (this.pointers.size === 1) this.dragStart = { x: e.clientX, y: e.clientY, target: this.target.clone(), moved: false };
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
@@ -203,6 +213,18 @@ export class LotScene {
   private moveP = (e: PointerEvent) => {
     if (!this.pointers.has(e.pointerId)) return;
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const cd = this.cardDrag;
+    if (cd && cd.pointer === e.pointerId) {
+      if (!cd.moved && Math.hypot(e.clientX - cd.x, e.clientY - cd.y) < 8) return;
+      if (!cd.moved) { cd.moved = true; this.showDropRings(cd.id); }
+      // The card follows the finger, floating a little above the ground.
+      const ray = this.rayAt(e.clientX, e.clientY);
+      const p = new THREE.Vector3();
+      if (ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.5), p)) cd.at.copy(p);
+      cd.over = this.dropTargetAt(cd.id, e.clientX, e.clientY);
+      this.kick(300);
+      return;
+    }
     if (this.pinch && this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
       this.setZoom(this.pinch.zoom * (Math.hypot(a.x - b.x, a.y - b.y) / this.pinch.dist), true);
@@ -228,6 +250,22 @@ export class LotScene {
     this.kick();
   };
   private up = (e: PointerEvent) => {
+    const cd = this.cardDrag;
+    if (cd && cd.pointer === e.pointerId) {
+      this.cardDrag = null;
+      this.pointers.delete(e.pointerId);
+      this.hideDropRings();
+      if (e.type === 'pointercancel') { this.kick(500); return; }
+      if (!cd.moved) this.handlers.onCard(cd.kind, cd.id);
+      else if (cd.over) {
+        const b = this.meshes.get(cd.over);
+        if (b && !b.anim) b.anim = { kind: 'bounce', t: 0 };
+        this.burst(cd.at, 10, ['#ffd23f', '#ffffff', '#5be3a1'], { speed: 1.5, up: 1.6, gravity: 4, life: 0.7, size: 0.07, bits: true });
+        this.handlers.onCardDrop(cd.kind, cd.id, cd.over);
+      }
+      this.kick(700);
+      return;
+    }
     const d = this.dragStart;
     const tap = d && !d.moved && this.pointers.size === 1;
     this.pointers.delete(e.pointerId);
@@ -243,18 +281,79 @@ export class LotScene {
   }
   zoomBy(f: number) { this.setZoom(this.zoom * f); }
 
-  private pick(cx: number, cy: number) {
-    if (!this.model) return;
+  /** Pick a card up from outside the canvas (its label was pressed): the canvas takes over the finger. */
+  grabCard(id: string, kind: LotCard['kind'], e: { pointerId: number; clientX: number; clientY: number }) {
+    const have = this.cards.get(id);
+    if (!have || this.cardDrag) return;
+    try { this.canvas.setPointerCapture(e.pointerId); } catch { /* the pointer is already gone */ }
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    this.cardDrag = { id, kind, pointer: e.pointerId, x: e.clientX, y: e.clientY, moved: false, at: have.spot.clone(), over: null };
+  }
+
+  private rayAt(cx: number, cy: number): THREE.Raycaster {
     const r = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
     const ray = new THREE.Raycaster();
     ray.setFromCamera(ndc, this.camera);
+    return ray;
+  }
+  private cardAt(cx: number, cy: number): { id: string; kind: LotCard['kind'] } | null {
+    for (const h of this.rayAt(cx, cy).intersectObjects(this.cardsGroup.children, true)) {
+      let o: THREE.Object3D | null = h.object;
+      while (o && !o.userData.cardId) o = o.parent;
+      if (o?.userData.cardId) return { id: o.userData.cardId, kind: o.userData.cardKind };
+    }
+    return null;
+  }
+  /**
+   * The building a dragged card is over, judged on screen (what the player sees): the finger
+   * is close to the building's body anywhere between its base and its roof.
+   */
+  private dropTargetAt(cardId: string, cx: number, cy: number): string | null {
+    const m = this.model!;
+    const r = this.canvas.getBoundingClientRect();
+    const px = (v: THREE.Vector3) => { const p = v.clone().project(this.camera); return { x: r.left + (p.x + 1) / 2 * r.width, y: r.top + (1 - p.y) / 2 * r.height }; };
+    const perUnit = r.width / (this.camera.right - this.camera.left);
+    let best: { id: string; d: number } | null = null;
+    for (const id of m.cards.find((c) => c.id === cardId)?.targets ?? []) {
+      const b = m.buildings.find((x) => x.id === id);
+      if (!b) continue;
+      const f = footprint(b);
+      const base = px(this.centerOf(b)), top = px(this.centerOf(b).setY(this.topOf(id)));
+      // Distance from the finger to the line from the building's base to its top.
+      const vx = top.x - base.x, vy = top.y - base.y;
+      const k = THREE.MathUtils.clamp(((cx - base.x) * vx + (cy - base.y) * vy) / (vx * vx + vy * vy || 1), 0, 1);
+      const d = Math.hypot(cx - (base.x + vx * k), cy - (base.y + vy * k));
+      const reach = Math.max(54, (Math.max(f.w, f.h) / 2 + 0.7) * perUnit);
+      if (d < reach && (!best || d < best.d)) best = { id, d };
+    }
+    return best?.id ?? null;
+  }
+  /** Glowing frames on the buildings a dragged card can go to. */
+  private showDropRings(cardId: string) {
+    const m = this.model!;
+    for (const id of m.cards.find((c) => c.id === cardId)?.targets ?? []) {
+      const b = m.buildings.find((x) => x.id === id);
+      if (!b || this.dropRings.has(id)) continue;
+      const f = footprint(b);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.72, 4, 1).rotateZ(Math.PI / 4), new THREE.MeshBasicMaterial({ color: 0x5be3a1, transparent: true, opacity: 0.9, depthWrite: false }));
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.copy(this.centerOf(b)).setY(0.1);
+      ring.userData.size = [f.w * 1.25, f.h * 1.25];
+      this.scene.add(ring);
+      this.dropRings.set(id, ring);
+    }
+  }
+  private hideDropRings() {
+    for (const ring of this.dropRings.values()) { this.scene.remove(ring); ring.geometry.dispose(); (ring.material as THREE.Material).dispose(); }
+    this.dropRings.clear();
+    for (const e of this.meshes.values()) if (!e.anim) e.group.scale.setScalar((e.group.userData.baseScale as number) ?? 1);
+  }
+
+  private pick(cx: number, cy: number) {
+    if (!this.model) return;
+    const ray = this.rayAt(cx, cy);
     if (!this.model.ghost) {
-      for (const h of ray.intersectObjects(this.cardsGroup.children, true)) {
-        let o: THREE.Object3D | null = h.object;
-        while (o && !o.userData.cardId) o = o.parent;
-        if (o?.userData.cardId) return this.handlers.onCard(o.userData.cardKind, o.userData.cardId);
-      }
       const hits = ray.intersectObjects(this.buildingsGroup.children, true);
       for (const h of hits) {
         if (h.object.name === 'beamCone') continue;
@@ -531,9 +630,11 @@ export class LotScene {
       const spot = new THREE.Vector3(i * 1.25 - 1, 1.0, 0);
       if (host) {
         const f = footprint(host);
-        spot.copy(this.centerOf(host)).add(c.kind === 'script'
-          ? new THREE.Vector3(-f.w / 2 + 0.5 + i * 1.25, 1.0, f.h / 2 + 0.6)
-          : new THREE.Vector3(f.w / 2 + 0.7 + i * 1.25, 1.0, f.h / 2 + 0.2));
+        // In a row along the front of the building it came out of.
+        // Finished shows line up along the building's right side, clear of the tower's badge.
+        spot.copy(this.centerOf(host)).add(c.kind === 'show'
+          ? new THREE.Vector3(f.w / 2 + 0.65, 1.0, f.h / 2 - 0.4 - i * 1.25)
+          : new THREE.Vector3(-f.w / 2 + 0.5 + i * 1.25, 1.0, f.h / 2 + 0.6));
       }
       const key = `${c.kind}:${c.title}:${c.note}:${c.icon}`;
       let have = this.cards.get(c.id);
@@ -746,8 +847,22 @@ export class LotScene {
     for (const c of this.cards.values()) {
       if (c.t < 1) { c.t = Math.min(1, c.t + dt / 0.5); c.mesh.scale.setScalar(1.8 * Math.max(0.01, easeOutBack(c.t))); hot = true; }
       const ph = now / 600 + n++ * 1.3;
-      c.mesh.position.set(c.spot.x, c.spot.y + (calm ? 0 : Math.sin(ph) * 0.06), c.spot.z);
-      c.mesh.rotation.set(-0.12, Math.PI / 4 + (calm ? 0 : Math.sin(ph * 0.7) * 0.18), 0);
+      const held = this.cardDrag?.moved && this.cards.get(this.cardDrag.id) === c ? this.cardDrag : null;
+      if (held) {
+        // In the hand: it trails the finger a touch, leans the way it moves and grows.
+        const before = c.mesh.position.clone();
+        c.mesh.position.lerp(held.at, 1 - Math.exp(-dt * 28));
+        const lean = THREE.MathUtils.clamp((c.mesh.position.x - before.x - (c.mesh.position.z - before.z)) * 6, -0.5, 0.5);
+        c.mesh.rotation.set(-0.25, Math.PI / 4, THREE.MathUtils.lerp(c.mesh.rotation.z, -lean, 0.3));
+        c.mesh.scale.setScalar(THREE.MathUtils.lerp(c.mesh.scale.x, held.over ? 1.5 : 2.2, 0.25));
+        hot = true;
+      } else {
+        const to = new THREE.Vector3(c.spot.x, c.spot.y + (calm ? 0 : Math.sin(ph) * 0.06), c.spot.z);
+        // Let go: it springs back to its place.
+        if (c.mesh.position.distanceTo(to) > 0.12) { c.mesh.position.lerp(to, 1 - Math.exp(-dt * 14)); hot = true; } else c.mesh.position.copy(to);
+        c.mesh.rotation.set(-0.12, Math.PI / 4 + (calm ? 0 : Math.sin(ph * 0.7) * 0.18), 0);
+        if (c.t >= 1) c.mesh.scale.setScalar(THREE.MathUtils.lerp(c.mesh.scale.x, 1.8, 0.3));
+      }
       moving = true;
     }
 
@@ -831,6 +946,18 @@ export class LotScene {
       if (w.t >= 1) { this.scene.remove(w.mesh); w.mesh.geometry.dispose(); (w.mesh.material as THREE.Material).dispose(); this.waves.splice(i, 1); }
     }
 
+    // Where a dragged card can go: frames pulse, the one under the finger lights up.
+    for (const [id, ring] of this.dropRings) {
+      const [sx, sy] = ring.userData.size as [number, number];
+      const on = this.cardDrag?.over === id;
+      const k = on ? 1.12 : 1 + 0.05 * Math.sin(now / 180);
+      ring.scale.set(sx * k, sy * k, 1);
+      (ring.material as THREE.MeshBasicMaterial).color.set(on ? 0xffffff : 0x5be3a1);
+      const e = this.meshes.get(id);
+      if (e && !e.anim) { const base = (e.group.userData.baseScale as number) ?? 1; e.group.scale.setScalar(base * (on ? 1.07 : 1)); }
+      moving = hot = true;
+    }
+
     // The selection frame breathes; the placement ghost hovers.
     if (this.selection.visible) {
       const [sx, sy] = this.selection.userData.size as [number, number];
@@ -859,7 +986,7 @@ export class LotScene {
     }
     for (const c of m.cards) {
       const have = this.cards.get(c.id);
-      if (!have) continue;
+      if (!have || (this.cardDrag?.moved && this.cardDrag.id === c.id)) continue;
       const p = have.spot.clone().add(new THREE.Vector3(0, 0.95, 0)).project(this.camera);
       out.push({ id: c.id, x: Math.round((p.x + 1) / 2 * r.width), y: Math.round((1 - p.y) / 2 * r.height), visible: p.z < 1, card: c.kind });
     }
