@@ -23,11 +23,11 @@ export interface BuildingDef {
 }
 
 export const BUILDINGS: Record<BuildingKind, BuildingDef> = {
-  writers: { kind: 'writers', name: "Writers' Room", icon: '✍️', stage: 'script', size: [2, 2], capacity: [1, 2, 3], cost: 30, upgrades: [40, 90], tier: 'local', color: '#5ce1ff',
+  writers: { kind: 'writers', name: "Writers' Room", icon: '✍️', stage: 'script', size: [2, 2], capacity: [1, 2, 3], cost: 30, upgrades: [20, 90], tier: 'local', color: '#5ce1ff',
     blurb: 'Scripts are written here. Each level fits one more script at a time.' },
-  stage: { kind: 'stage', name: 'Sound Stage', icon: '🎬', stage: 'production', size: [3, 2], capacity: [1, 2, 3], cost: 60, upgrades: [80, 180], tier: 'local', color: '#ffd23f',
+  stage: { kind: 'stage', name: 'Sound Stage', icon: '🎬', stage: 'production', size: [3, 2], capacity: [1, 2, 3], cost: 60, upgrades: [40, 180], tier: 'local', color: '#ffd23f',
     blurb: 'Shows are shot here. Each level fits one more production at a time.' },
-  post: { kind: 'post', name: 'Post-production Suite', icon: '🎞️', stage: 'post', size: [2, 2], capacity: [1, 2, 3], cost: 40, upgrades: [50, 120], tier: 'local', color: '#ff7ad9',
+  post: { kind: 'post', name: 'Post-production Suite', icon: '🎞️', stage: 'post', size: [2, 2], capacity: [1, 2, 3], cost: 40, upgrades: [25, 120], tier: 'local', color: '#ff7ad9',
     blurb: 'Editing, sound and effects. Each level fits one more show at a time.' },
   tower: { kind: 'tower', name: 'Broadcast Tower', icon: '📡', size: [1, 1], cost: 0, tier: 'local', fixed: true, color: '#ff4d6d',
     blurb: 'Where finished shows go on air.' },

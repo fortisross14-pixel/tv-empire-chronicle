@@ -133,6 +133,12 @@ export function growLot(s: GameState): void {
   s.lot.h = Math.max(s.lot.h, LOT_SIZE[s.tier].h);
 }
 
+/** A new license comes with extensions: every room is raised to level 2 at State, 3 at National. */
+export function licenseUpgrades(s: GameState): void {
+  const level: Building['level'] = s.tier === 'national' ? 3 : s.tier === 'state' ? 2 : 1;
+  for (const b of s.lot.buildings) if (buildingDef(b.kind).stage && b.level < level) b.level = level;
+}
+
 /** Mission stations that start big get a lot to match: expanded rooms, a second stage at National. */
 export function presetLot(s: GameState): void {
   growLot(s);

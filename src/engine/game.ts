@@ -12,7 +12,7 @@ import { AFFILIATE_MAX, affiliateCost, emptySchedule, reachOf, slotsOf, tierSlot
 import { addNews, round1 } from './news';
 import { simulateWeek, CHAMPION_WEEKS, LOAN } from './sim';
 import { applyMission, applySandbox } from './mission';
-import { build, growLot, move, presetLot, sell, starterLot, upgrade } from './lot';
+import { build, growLot, licenseUpgrades, move, presetLot, sell, starterLot, upgrade } from './lot';
 import type { BuildingKind } from './types';
 import type { SandboxDifficulty } from './types';
 import { missionById } from './data/missions';
@@ -32,7 +32,7 @@ export function newMissionGame(
 export const SAVE_VERSION = 15;
 
 /** What it takes to become a State network. */
-export const STATE_LICENSE = { reputation: 35, cash: 250, fee: 200 };
+export const STATE_LICENSE = { reputation: 30, cash: 250, fee: 200 };
 /** What it takes to go National. */
 export const NATIONAL_LICENSE = { reputation: 60, cash: 4000, fee: 2500 };
 export const START_CASH = 120;
@@ -288,6 +288,7 @@ function moveUp(s: GameState) {
   s.sweeps = { shareSum: 0, samples: 0 };
   s.milestone = lic.tier;
   growLot(s);
+  licenseUpgrades(s);
   // A welcome gift: movies of the new tier, so the bigger schedule isn't empty on day one.
   s.unopened.push(makePack(s, 'movies'));
   return lic.tier;

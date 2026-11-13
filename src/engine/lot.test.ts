@@ -88,6 +88,7 @@ test('the lot grows with the State license', () => {
   s.reputation = 99; s.cash = 99_999;
   s = expandToState(s);
   expect({ w: s.lot.w, h: s.lot.h }).toEqual(LOT_SIZE.state);
+  expect(stageUse(s, 'production').capacity).toBe(2); // rooms come expanded
 });
 
 test('State and National mission stations start with expanded rooms', () => {

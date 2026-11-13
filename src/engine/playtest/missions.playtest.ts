@@ -234,10 +234,12 @@ export function playState(start0: GameState, goals: Goal[], weeks: number, onWee
     // Like a player: when productions queue for a full building, expand it (or build another).
     for (const stage of ['script', 'production', 'post'] as const) {
       const waiting = s.projects.filter((p) => p.stage === stage && !p.buildingId).length;
-      if (!waiting) continue;
+      // Expand early, like a player planning ahead: two of everything once there's spare cash.
+      const roomy = s.lot.buildings.filter((b) => buildingDef(b.kind).stage === stage).reduce((a, b) => a + (buildingDef(b.kind).capacity?.[b.level - 1] ?? 0), 0) >= 2;
+      if (!waiting && roomy) continue;
       const host = s.lot.buildings.filter((b) => buildingDef(b.kind).stage === stage).sort((a, b) => a.level - b.level)[0];
       const cost = host ? upgradeCost(s, host) : null;
-      if (host && cost !== null && s.cash - cost > buffer) { try { s = upgradeBuilding(s, host.id); } catch { /* */ } }
+      if (host && cost !== null && s.cash - cost > (waiting ? buffer : buffer * 2)) { try { s = upgradeBuilding(s, host.id); } catch { /* */ } }
       else if (s.cash - buildCost(s, host?.kind ?? 'writers') > buffer * 2 && host) {
         for (let y = 0; y < s.lot.h; y++) for (let x = 0; x < s.lot.w; x++) {
           if (!placementProblem(s.lot, { kind: host.kind, x, y, rot: 0 })) { try { s = buildBuilding(s, host.kind, x, y, 0); } catch { /* */ } y = s.lot.h; break; }

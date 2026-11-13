@@ -265,6 +265,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
               <div>📺 <b>15 slots:</b> Mon–Wed, Thu–Fri and Weekend, with Afternoon and Late Night.</div>
               <div>👥 <b>{TIERS.state.households / 1000}M households</b> — and ${TIERS.state.overhead}K/week running costs.</div>
               <div>🎁 <b>A free movie pack</b> to help fill the bigger schedule: open it from Home.</div>
+              <div>🏗️ <b>A bigger lot</b>, and every room expanded to hold 2 productions.</div>
               <div>🎛️ <b>Advanced productions:</b> 2 writers, specialists per area, 15 focus points, 2 topics.</div>
               <div>🃏 New formats in packs: <b>Animation</b> and <b>Late Show</b>.</div>
               <div>📜 State rights at the Rights Market.</div>
@@ -283,6 +284,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
               <div>📺 <b>20 slots:</b> Mon–Tue, Wed–Thu, Friday and Weekend, five dayparts each.</div>
               <div>📡 <b>Reach {Math.round(reachOf(state) * 100)}%</b> of {TIERS.national.households / 1000}M households. Sign affiliates to grow it.</div>
               <div>🎁 <b>A free movie pack</b> to help fill the bigger schedule: open it from Home.</div>
+              <div>🏗️ <b>A bigger lot</b>, and every room fully expanded to hold 3 productions.</div>
               <div>🎬 <b>AAA productions:</b> 3 writers, a full crew, 20 focus points.</div>
               <div>🌌 <b>Big IP</b> at the Rights Market: Galaxy Wars, the Gridiron League.</div>
               <div>🏆 The <b>full Glimmy Awards</b>, and spin-offs for your hits.</div>
