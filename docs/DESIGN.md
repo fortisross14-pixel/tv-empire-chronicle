@@ -465,6 +465,16 @@ at the side on tablets and laptops.
 - **Life.** Productions travel as film reels from building to building and fly to the tower
   when finished; free staff wander; pop-ups show scripts done, shows ready, waits and the
   week's money. Rendering is on demand and pauses when the page is hidden.
+- **Two steps, two buildings.** Tap the Writers' Room to *write a script* (format, topic,
+  writers; 15% of the show's cost). The finished script leaves the room and stands on the
+  lot as a 3D card. Tap the card, or a Sound Stage, to *shoot* it: crew, cast, focus points
+  and the rest of the cost. Post is automatic. Finished programs without a time slot stand
+  as cards by the tower; tapping one opens it. Engine: `writeScript` / `shootScript`
+  (`startScript`, `startShoot`); a held script is `stage: 'script'` with `script` set and
+  `crewId: null`. `createShow` still does both at once (used by the playtest bot).
+- **Badges.** Each working building has a round icon badge in its colour with how full it
+  is; it bounces with a + or ! when there is something to do there. A one-line hint on the
+  lot says what to do next.
 - **Look.** A floating island in afternoon light: lawn with flowers, hedges, a studio gate,
   pavement, a road with passing cars and the parked news van. Models live in
   `src/ui/lot/lotModels.ts` (shared flat-shaded materials). Windows light up and the stage

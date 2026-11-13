@@ -1,4 +1,4 @@
-import { freshIdeas, networkById, projectPeople, rightsById, type GameState } from '../engine';
+import { freshIdeas, isHeldScript, networkById, projectPeople, rightsById, stageUse, type GameState } from '../engine';
 import type { Todo } from './screens/WeekScreen';
 
 type TabId = 'schedule' | 'studio' | 'cards' | 'shop';
@@ -6,7 +6,7 @@ type TabId = 'schedule' | 'studio' | 'cards' | 'shop';
 /** What the Home "Up next" list suggests, most urgent first. Pure: reads the state only. */
 export function buildTodos(
   state: GameState,
-  act: { openPack: (packId: string) => void; goTab: (tab: TabId) => void; newShow: () => void },
+  act: { openPack: (packId: string) => void; goTab: (tab: TabId) => void; newShow: () => void; shoot: (projectId: string) => void },
 ): Todo[] {
   const todos: Todo[] = [];
   const week = state.year * 52 + state.week;
@@ -23,12 +23,17 @@ export function buildTodos(
   }
   const booked = (id: string) => state.projects.some((pr) => projectPeople(pr).includes(id));
   const freeKinds = new Set(state.people.filter((p) => (p.house || p.uses > 0) && !booked(p.id)).map((p) => p.kind));
-  if (state.formats.length > 0 && freeKinds.size === 3) {
+  // Finished scripts wait for a crew and cast.
+  for (const p of state.projects.filter(isHeldScript)) {
+    todos.push({ id: `shoot-${p.id}`, emoji: '🎬', title: `Shoot “${p.name}”`, detail: `The script is written (${'★'.repeat(p.script!.stars)}). Pick the crew and cast at a Sound Stage.`, onClick: () => act.shoot(p.id) });
+  }
+  const room = stageUse(state, 'script');
+  if (state.formats.length > 0 && freeKinds.has('writer') && room.used < room.capacity) {
     todos.push({
       id: 'team-free',
       emoji: '✍️',
-      title: state.shows.length === 0 && state.projects.length === 0 ? 'Create your first show' : 'Your team is free',
-      detail: 'Pick a format and topic, build the team, split the focus points.',
+      title: state.shows.length === 0 && state.projects.length === 0 ? 'Write your first script' : 'The Writers’ Room is free',
+      detail: 'Pick a format, a topic and a writer. You choose the crew and cast when the script is done.',
       onClick: act.newShow,
     });
   }

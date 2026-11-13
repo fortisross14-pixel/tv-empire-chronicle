@@ -226,7 +226,9 @@ export function ProjectCard({ project, state, onCancel }: { project: Project; st
             <div className="show-meta">{format.name} · {topic.icon} {topic.name}{project.topic2Id && ` + ${topicById(project.topic2Id).icon}`}{project.level === 'advanced' && ' · Advanced'}{project.twist && ' · 🌀 Twist'}</div>
           </div>
         </div>
-        <span className="chip dark">{weeksLeft} wk{weeksLeft !== 1 && 's'}</span>
+        {project.stage === 'script' && project.script && !project.crewId
+          ? <span className="chip good">Script ready {'★'.repeat(project.script.stars)}</span>
+          : <span className="chip dark">{weeksLeft} wk{weeksLeft !== 1 && 's'}</span>}
       </div>
       <div className="stages">
         {STAGES.map((st, i) => {

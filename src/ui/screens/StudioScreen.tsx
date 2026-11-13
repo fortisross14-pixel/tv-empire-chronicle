@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  isHeldScript,
   AREAS, AREA_LABEL, IP_KIND_LABEL, LEVELS, STAGE_LABEL, formatById, grade, ipWorth, projectPeople, slotLabel, topicById,
   type GameState, type Project, type Show, type SlotId,
 } from '../../engine';
@@ -23,8 +24,8 @@ function statusOf(s: GameState, show: Show): { id: Exclude<Filter, 'all'>; label
 }
 
 export function StudioScreen({
-  state, onNewShow, onCancelProject, onOpenShow,
-}: { state: GameState; onNewShow: () => void; onCancelProject: (id: string) => void; onOpenShow: (id: string) => void }) {
+  state, onNewShow, onCancelProject, onOpenShow, onShoot,
+}: { state: GameState; onNewShow: () => void; onCancelProject: (id: string) => void; onOpenShow: (id: string) => void; onShoot: (projectId: string) => void }) {
   const ask = useConfirm();
   const [filter, setFilter] = useState<Filter>('all');
   const [open, setOpen] = useState<string | null>(null);
@@ -43,9 +44,9 @@ export function StudioScreen({
         <div className="spread">
           <div>
             <h2 style={{ fontSize: 22 }}>🎬 Studio</h2>
-            <p className="small" style={{ opacity: 0.75 }}>Script → Production → Post. Pack cards spend 1 use per season; house staff are free.</p>
+            <p className="small" style={{ opacity: 0.75 }}>Write a script, then shoot it: Script → Production → Post. Pack cards spend 1 use per season; house staff are free.</p>
           </div>
-          <button className="btn primary" onClick={onNewShow} disabled={state.formats.length === 0}>+ New show</button>
+          <button className="btn primary" onClick={onNewShow} disabled={state.formats.length === 0}>✍️ New script</button>
         </div>
         {state.formats.length === 0 && <p className="small" style={{ marginTop: 8, opacity: 0.8 }}>Open your program pack first (Home).</p>}
       </section>
@@ -53,7 +54,7 @@ export function StudioScreen({
       <section>
         <div className="section-title"><h2>In production</h2><span className="sub">{state.projects.length} · tap for details</span></div>
         {state.projects.length === 0
-          ? <div className="empty"><div className="big">🎞️</div>Nothing in the works. Start a new show.</div>
+          ? <div className="empty"><div className="big">🎞️</div>Nothing in the works. Write a new script.</div>
           : <div className="grid-wide">{state.projects.map((p) => (
             <div key={p.id} className="stack-sm">
               <div className="project-open" role="button" tabIndex={0} aria-expanded={open === p.id}
@@ -63,6 +64,7 @@ export function StudioScreen({
                   onCancel={() => void ask({ title: `Scrap "${p.name}"?`, text: 'You get half the budget back, and the team gets their season back.', confirm: 'Scrap it', danger: true })
                     .then((ok) => ok && onCancelProject(p.id))} />
               </div>
+              {isHeldScript(p) && <button className="btn primary" onClick={() => onShoot(p.id)}>🎬 Shoot this script</button>}
               {open === p.id && <ProjectDetails project={p} state={state} />}
             </div>
           ))}</div>}

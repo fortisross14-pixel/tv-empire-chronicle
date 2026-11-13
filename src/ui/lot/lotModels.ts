@@ -447,3 +447,67 @@ export function gateMesh(): THREE.Group {
   star.rotation.x = Math.PI / 2; star.position.set(0, 1.84, 0); star.castShadow = true;
   return k.g;
 }
+
+export interface LotCard { id: string; kind: 'script' | 'show'; hostId: string | null; title: string; icon: string; color: string; note: string }
+
+function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  c.beginPath();
+  c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+/** The face of a card: a script page (cream) or a finished programme (dark, with its grade). */
+function cardFace(card: LotCard): THREE.CanvasTexture {
+  const W = 256, H = 356;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const c = canvas.getContext('2d')!;
+  const script = card.kind === 'script';
+  c.fillStyle = script ? '#fff8e6' : '#2b1750';
+  roundRect(c, 0, 0, W, H, 26); c.fill();
+  c.save(); roundRect(c, 0, 0, W, H, 26); c.clip();
+  c.fillStyle = card.color; c.fillRect(0, 0, W, 150);
+  c.fillStyle = 'rgba(255,255,255,0.18)'; c.fillRect(0, 0, W, 44);
+  c.restore();
+  c.lineWidth = 10; c.strokeStyle = script ? '#3b2a55' : '#ffd23f';
+  roundRect(c, 5, 5, W - 10, H - 10, 22); c.stroke();
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = '#2b1750'; c.font = '900 22px Figtree, system-ui, sans-serif';
+  c.fillText(script ? 'SCRIPT' : 'READY TO AIR', W / 2, 26);
+  c.font = '84px system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+  c.fillText(card.icon, W / 2, 100);
+  // Title, on up to three lines.
+  c.fillStyle = script ? '#2b1750' : '#ffffff'; c.font = '900 30px Figtree, system-ui, sans-serif';
+  const words = card.title.split(' ');
+  const lines: string[] = [];
+  for (const w of words) {
+    const last = lines[lines.length - 1];
+    if (last !== undefined && c.measureText(`${last} ${w}`).width < W - 40) lines[lines.length - 1] = `${last} ${w}`;
+    else lines.push(w);
+  }
+  lines.slice(0, 3).forEach((l, i) => c.fillText(l, W / 2, 190 + i * 34, W - 30));
+  if (script) {
+    c.fillStyle = '#e09a00'; c.font = '900 40px system-ui, sans-serif';
+    c.fillText(card.note, W / 2, 314);
+  } else {
+    c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(W / 2, 306, 34, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#2b1750'; c.font = '900 34px Figtree, system-ui, sans-serif';
+    c.fillText(card.note, W / 2, 308);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+/** A standing card: a finished script waiting to be shot, or a programme waiting for a slot. */
+export function cardMesh(card: LotCard): THREE.Group {
+  const g = new THREE.Group();
+  const face = new THREE.MeshBasicMaterial({ map: cardFace(card) });
+  const edge = M(card.kind === 'script' ? '#3b2a55' : '#ffd23f');
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.86, 0.05), [edge, edge, edge, edge, face, face]);
+  body.castShadow = true;
+  body.name = 'cardBody';
+  g.add(body);
+  return g;
+}

@@ -825,6 +825,32 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
 .lot-pop.bad { background: var(--bad); color: #fff; }
 .lot-pop.info { background: var(--focus); color: var(--bg); }
 @keyframes lotPop { 0% { opacity: 0; transform: translateY(8px) scale(.8); } 12% { opacity: 1; transform: translateY(0) scale(1.05); } 75% { opacity: 1; transform: translateY(-28px); } 100% { opacity: 0; transform: translateY(-40px); } }
+/* Building badges: a big round icon in the building's colour, with how full it is underneath. */
+.lot-badge { position: absolute; left: 0; top: 0; translate: -50% -100%; display: grid; justify-items: center; gap: 3px; pointer-events: auto; cursor: pointer; padding: 0; background: none; border: 0; color: var(--text); }
+.lb-icon { position: relative; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; font-size: 24px; background: #fff; border: 4px solid var(--c, #fff);
+  box-shadow: 0 6px 14px rgba(5,0,20,.45); transition: transform .15s; }
+.lot-badge:active .lb-icon { transform: scale(.92); }
+.lot-badge.nudge .lb-icon { animation: lot-nudge 1.6s ease-in-out infinite; }
+.lb-icon em { position: absolute; right: -6px; top: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 15px;
+  background: var(--good); color: #0b2b1d; border: 2px solid #fff; }
+.lb-cap { display: flex; gap: 4px; align-items: center; padding: 1px 8px; border-radius: 999px; background: rgba(28,15,51,.88); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.lot-badge.full .lb-cap b { color: #ffd23f; }
+.lb-cap i { font-style: normal; color: #ff8fa3; }
+@keyframes lot-nudge { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.06); } }
+/* The button over a card on the lot. */
+.lot-cta { position: absolute; left: 0; top: 0; translate: -50% -100%; pointer-events: auto; cursor: pointer; border: 0; padding: 0; background: none; font: inherit; }
+.lot-cta span { display: block; padding: 6px 12px; border-radius: 999px; font-weight: 900; font-size: 14px; white-space: nowrap;
+  background: var(--good); color: #0b2b1d; box-shadow: 0 6px 14px rgba(5,0,20,.45); animation: lot-nudge 1.6s ease-in-out infinite; }
+.lot-cta.show span { background: #ffd23f; color: #2b1750; }
+.lot-hint { position: absolute; left: 50%; translate: -50% 0; bottom: 132px; z-index: 1; pointer-events: none; padding: 8px 14px; border-radius: 999px; background: #fff; color: #2b1750; font-size: 14px; font-weight: 800; text-align: center; width: max-content; max-width: calc(100% - 32px); box-shadow: var(--shadow); }
+.lot-actions { margin-bottom: 14px; }
+.lot-actions .btn.big { width: 100%; min-height: 54px; font-size: 17px; }
+.lot-pick { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px; border-radius: var(--r-sm); background: var(--tile); border: 0; color: var(--text); font: inherit; cursor: pointer; }
+.lot-pick:active { transform: scale(.985); }
+.lp-icon { font-size: 26px; }
+.lp-main { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.lot-manage { display: grid; gap: 6px; margin-top: 16px; padding: 12px 0 72px; border-top: 1px solid var(--line); }
+@media (prefers-reduced-motion: reduce) { .lot-badge.nudge .lb-icon, .lot-cta span { animation: none; } }
 .lot-zoom { position: absolute; right: 12px; top: 12px; display: grid; gap: 6px; }
 .lot-zoom .btn { width: 40px; height: 40px; padding: 0; background: rgba(28,15,51,.7); }
 .lot-tools { position: absolute; left: 12px; top: 12px; display: grid; gap: 8px; justify-items: start; }
@@ -852,6 +878,7 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
   .lot-stage { height: calc(100dvh - 64px); }
   .lot { inset: 0; }
   .lot-place { bottom: 16px; left: 16px; right: auto; max-width: 420px; }
+  .lot-hint { bottom: 20px; left: calc((100% - 400px) / 2); }
   .lot-drawer { position: relative; left: auto; right: auto; bottom: auto; max-height: calc(100dvh - 64px); overflow-y: auto; border-radius: 0; box-shadow: none; z-index: 1; }
   .lot-home.open .lot-drawer { max-height: calc(100dvh - 64px); }
   .lot-handle { display: none; }

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  GameError, airWeek, buildBuilding, moveBuilding, upgradeBuilding, sellBuilding, buildingDef, buyBusinessCard, buyPack, cancelProject, archiveShow, createShow, ackMission, newMissionGame, recordMission,
+  GameError, airWeek, buildBuilding, moveBuilding, upgradeBuilding, sellBuilding, buildingDef, buyBusinessCard, buyPack, cancelProject, archiveShow, writeScript, shootScript, ackMission, newMissionGame, recordMission,
   dateLabel, dismissFinished, dismissReveal, openPack, saveGame, scheduleShow, useBusinessCard,
   setPoster, answerEvent, dismissCeremony, dismissMilestone, expandToState, expandToNational, signAffiliate, TIERS, releasePerson, usePromo, useSponsor, networkById, bidOnRights, assignSportsTeam,
-  reachOf, SANDBOX_GOALS, type GameState, type Goal, type ShowPlan,
+  reachOf, SANDBOX_GOALS, type GameState, type Goal,
 } from '../engine';
 import { NewShowWizard } from './components/NewShowWizard';
 import { PackReveal } from './components/PackReveal';
@@ -79,7 +79,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
   state: GameState; setState: (s: GameState) => void; slot: number; onMenu: () => void; onRetry: () => void;
 }) {
   const [tab, setTab] = useState<Tab>('week');
-  const [wizard, setWizard] = useState<{ renew?: string; spinoff?: string } | null>(null);
+  const [wizard, setWizard] = useState<{ renew?: string; spinoff?: string; shoot?: string } | null>(null);
   const [showResults, setShowResults] = useState(false);
   const [usingCard, setUsingCard] = useState<string | null>(null);
   const [openShow, setOpenShow] = useState<string | null>(null);
@@ -146,7 +146,8 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
   const todos = buildTodos(state, {
     openPack: (id) => run((s) => openPack(s, id)),
     goTab: setTab,
-    newShow: () => { setTab('studio'); setWizard({}); },
+    newShow: () => setWizard({}),
+    shoot: (id) => setWizard({ shoot: id }),
   });
   const scheduled = new Set(Object.values(state.schedule));
 
@@ -175,7 +176,8 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
             onBuild={(kind, x, y, rot) => run((s) => buildBuilding(s, kind, x, y, rot), `${buildingDef(kind).name} built!`)}
             onMove={(id, x, y, rot) => run((s) => moveBuilding(s, id, x, y, rot), 'Moved.')}
             onUpgrade={(id) => run((s) => upgradeBuilding(s, id), 'Expanded! It holds one more now.')}
-            onSell={(id) => run((s) => sellBuilding(s, id), 'Sold.')}>
+            onSell={(id) => run((s) => sellBuilding(s, id), 'Sold.')}
+            onWrite={() => setWizard({})} onShoot={(id) => setWizard({ shoot: id })} goTab={setTab} onOpenShow={setOpenShow}>
           <WeekScreen state={state} todos={todos} onMenu={onMenu}
             onExpand={() => {
               void ask({ title: 'Buy the license?', text: 'Running costs rise a lot, but so does the audience. Make sure you have shows ready for the bigger schedule.', confirm: 'Buy license' })
@@ -192,7 +194,7 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
             onAssignTeam={(rid, c, t) => run((s) => assignSportsTeam(s, rid, c, t), 'Broadcast team set.')} />
         )}
         {tab === 'studio' && (
-          <StudioScreen state={state} onNewShow={() => setWizard({})} onOpenShow={setOpenShow}
+          <StudioScreen state={state} onNewShow={() => setWizard({})} onOpenShow={setOpenShow} onShoot={(id) => setWizard({ shoot: id })}
             onCancelProject={(id) => run((s) => cancelProject(s, id), 'Production scrapped.')} />
         )}
         {tab === 'cards' && (
@@ -226,8 +228,9 @@ function Game({ state, setState, slot, onMenu, onRetry }: {
       </nav>
 
       {wizard && (
-        <NewShowWizard state={state} renewShowId={wizard.renew} spinoffOf={wizard.spinoff} onClose={() => setWizard(null)}
-          onCreate={(plan: ShowPlan) => run((s) => createShow(s, plan), `"${plan.name || 'New season'}" is in production!`)} />
+        <NewShowWizard state={state} renewShowId={wizard.renew} spinoffOf={wizard.spinoff} shootProjectId={wizard.shoot} onClose={() => setWizard(null)}
+          onWrite={(plan) => run((s) => writeScript(s, plan), `The writers are on “${plan.name || 'the new season'}”. ✍️`)}
+          onShoot={(id, plan) => run((s) => shootScript(s, id, plan), 'Cameras rolling! 🎬')} />
       )}
       {showMissionResult && (
         <MissionResult state={state} onMenu={onMenu} onRetry={onRetry}

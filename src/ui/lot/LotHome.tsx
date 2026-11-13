@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState, type ReactNode } from 'react';
 import {
-  BUILDINGS, STAGE_LABEL, buildCost, buildingDef, capacityOf, occupants, placementProblem, upgradeCost,
-  type BuildingKind, type GameState, type Tier,
+  BUILDINGS, STAGE_LABEL, buildCost, buildingDef, capacityOf, formatById, grade, isHeldScript, occupants, placementProblem, stageUse, upgradeCost,
+  type Building, type BuildingKind, type GameState, type Tier,
 } from '../../engine';
 import { Sheet } from '../components/Sheet';
 import { useConfirm } from '../components/Confirm';
@@ -16,7 +16,7 @@ const TIER_ORDER: Tier[] = ['local', 'state', 'national'];
  * pulls up from the bottom on phones and sits at the side on tablets and laptops.
  */
 export function LotHome({
-  state, children, onBuild, onMove, onUpgrade, onSell,
+  state, children, onBuild, onMove, onUpgrade, onSell, onWrite, onShoot, goTab, onOpenShow,
 }: {
   state: GameState;
   children: ReactNode;
@@ -24,6 +24,12 @@ export function LotHome({
   onMove: (id: string, x: number, y: number, rot: number) => boolean;
   onUpgrade: (id: string) => boolean;
   onSell: (id: string) => boolean;
+  /** Open the script wizard (Writers' Room). */
+  onWrite: () => void;
+  /** Open the shooting wizard for a finished script (Sound Stage). */
+  onShoot: (projectId: string) => void;
+  goTab: (tab: 'schedule' | 'studio' | 'cards' | 'shop') => void;
+  onOpenShow: (id: string) => void;
 }) {
   const [placing, setPlacing] = useState<Placing | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -32,6 +38,13 @@ export function LotHome({
   const ask = useConfirm();
   const problem = placing ? placementProblem(state.lot, placing, placing.moving ?? undefined) : null;
   const building = selected ? state.lot.buildings.find((b) => b.id === selected) : undefined;
+  const held = state.projects.filter(isHeldScript);
+  const act = (fn: () => void) => { setSelected(null); fn(); };
+  // One line that says what to do next on the lot.
+  const hint = placing || state.formats.length === 0 ? null
+    : held.length > 0 ? '📄 A script is ready: tap its card to shoot it'
+      : state.projects.length === 0 ? 'Tap the ✍️ Writers’ Room to write a script'
+        : null;
 
   const startPlacing = (kind: BuildingKind) => {
     setMenu(false);
@@ -54,13 +67,15 @@ export function LotHome({
     <div className={cx('lot-home', open && 'open')}>
       <div className="lot-stage">
         <Suspense fallback={<div className="lot lot-loading"><span className="small muted">Opening the lot…</span></div>}>
-          <LotView state={state} placing={placing} setPlacing={setPlacing} selectedId={selected} onSelect={setSelected} />
+          <LotView state={state} placing={placing} setPlacing={setPlacing} selectedId={selected} onSelect={setSelected}
+            onCard={(kind, id) => (kind === 'script' ? onShoot(id) : onOpenShow(id))} />
         </Suspense>
         {!placing && (
           <div className="lot-tools">
             <button className="btn primary small" onClick={() => setMenu(true)}>🏗️ Build</button>
           </div>
         )}
+        {hint && <div className="lot-hint" role="status">{hint}</div>}
         {placing && (
           <div className="lot-place panel">
             <b>{buildingDef(placing.kind).icon} {placing.moving ? 'Move' : 'Place'} the {buildingDef(placing.kind).name}</b>
@@ -106,27 +121,94 @@ export function LotHome({
 
       {building && !placing && (
         <Sheet title={`${buildingDef(building.kind).icon} ${buildingDef(building.kind).name}`} onClose={() => setSelected(null)}>
+          <BuildingActions state={state} building={building} onWrite={() => act(onWrite)} onShoot={(id) => act(() => onShoot(id))}
+            onGuide={() => act(() => goTab('schedule'))} onOpenShow={(id) => act(() => onOpenShow(id))} />
           <BuildingInfo state={state} id={building.id} />
-          <div className="sheet-foot">
-            {!buildingDef(building.kind).fixed && (
-              <button className="btn ghost" onClick={() => { setPlacing({ kind: building.kind, x: building.x, y: building.y, rot: building.rot, moving: building.id }); setSelected(null); }}>Move</button>
-            )}
-            {upgradeCost(state, building) !== null && (
-              <button className="btn primary" disabled={state.cash < upgradeCost(state, building)!} onClick={() => onUpgrade(building.id)}>
-                Expand · {money(upgradeCost(state, building)!)}
-              </button>
-            )}
-            {!buildingDef(building.kind).fixed && (
-              <button className="btn danger" onClick={() => {
-                void ask({ title: `Sell the ${buildingDef(building.kind).name}?`, text: 'You get half of what it cost back.', confirm: 'Sell', danger: true })
-                  .then((ok) => { if (ok && onSell(building.id)) setSelected(null); });
-              }}>Sell</button>
-            )}
-          </div>
+          {(!buildingDef(building.kind).fixed || upgradeCost(state, building) !== null) && (
+            <div className="lot-manage">
+              <span className="tiny muted">Building</span>
+              <div className="row">
+                {!buildingDef(building.kind).fixed && (
+                  <button className="btn ghost small" onClick={() => { setPlacing({ kind: building.kind, x: building.x, y: building.y, rot: building.rot, moving: building.id }); setSelected(null); }}>Move</button>
+                )}
+                {upgradeCost(state, building) !== null && (
+                  <button className="btn ghost small" disabled={state.cash < upgradeCost(state, building)!} onClick={() => onUpgrade(building.id)}>
+                    Expand · {money(upgradeCost(state, building)!)}
+                  </button>
+                )}
+                {!buildingDef(building.kind).fixed && (
+                  <button className="btn danger small" onClick={() => {
+                    void ask({ title: `Sell the ${buildingDef(building.kind).name}?`, text: 'You get half of what it cost back.', confirm: 'Sell', danger: true })
+                      .then((ok) => { if (ok && onSell(building.id)) setSelected(null); });
+                  }}>Sell</button>
+                )}
+              </div>
+            </div>
+          )}
         </Sheet>
       )}
     </div>
   );
+}
+
+/** What you do at this building: write at the Writers' Room, shoot at a Sound Stage, schedule at the tower. */
+function BuildingActions({
+  state, building, onWrite, onShoot, onGuide, onOpenShow,
+}: { state: GameState; building: Building; onWrite: () => void; onShoot: (projectId: string) => void; onGuide: () => void; onOpenShow: (id: string) => void }) {
+  const held = state.projects.filter(isHeldScript);
+  const scheduled = new Set(Object.values(state.schedule));
+  const ready = state.shows.filter((x) => !x.archived && x.episodesLeft > 0 && !scheduled.has(x.id));
+  const scriptRow = (p: GameState['projects'][number]) => (
+    <button key={p.id} className="lot-pick" onClick={() => onShoot(p.id)}>
+      <span className="lp-icon">{formatById(p.formatId).icon}</span>
+      <span className="lp-main"><b>{p.name}{p.season > 1 ? ` · S${p.season}` : ''}</b><span className="tiny muted">{formatById(p.formatId).name} · script {'★'.repeat(p.script!.stars)}{'☆'.repeat(5 - p.script!.stars)}</span></span>
+      <span className="chip good">🎬 Shoot</span>
+    </button>
+  );
+  if (building.kind === 'writers') {
+    const room = stageUse(state, 'script');
+    return (
+      <div className="stack lot-actions">
+        <button className="btn primary big" disabled={state.formats.length === 0} onClick={onWrite}>✍️ Write a new script</button>
+        {state.formats.length === 0
+          ? <p className="tiny muted">Open your program pack first: it has the formats and topics to write about.</p>
+          : room.used >= room.capacity && <p className="tiny muted">Every Writers’ Room is busy, so a new script waits its turn. Expand the room to write more at once.</p>}
+        {held.length > 0 && <div className="stack-sm"><b className="small">Finished scripts</b>{held.map(scriptRow)}</div>}
+      </div>
+    );
+  }
+  if (building.kind === 'stage') {
+    return (
+      <div className="stack lot-actions">
+        {held.length > 0
+          ? <div className="stack-sm"><b className="small">🎬 Shoot a program: pick a finished script</b>{held.map(scriptRow)}</div>
+          : <>
+            <p className="small">Programs are shot here from finished scripts. You have no script waiting.</p>
+            <button className="btn primary big" disabled={state.formats.length === 0} onClick={onWrite}>✍️ Write a script first</button>
+          </>}
+      </div>
+    );
+  }
+  if (building.kind === 'tower') {
+    return (
+      <div className="stack lot-actions">
+        <button className="btn primary big" onClick={onGuide}>📺 Open the Guide</button>
+        {ready.length > 0 && (
+          <div className="stack-sm"><b className="small">Ready to air, no time slot yet</b>
+            {ready.map((x) => (
+              <button key={x.id} className="lot-pick" onClick={() => onOpenShow(x.id)}>
+                <span className="lp-icon">{formatById(x.formatId).icon}</span>
+                <span className="lp-main"><b>{x.name}</b><span className="tiny muted">{formatById(x.formatId).name} · {x.episodesLeft} episodes</span></span>
+                <span className="chip">{grade(x.quality)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (building.kind === 'post') return <p className="small lot-actions">Shot programs come here on their own for editing, sound and effects. When one is done it’s ready to air.</p>;
+  return null;
 }
 
 /** What's inside a building and what's queuing for it. */
@@ -134,11 +216,11 @@ function BuildingInfo({ state, id }: { state: GameState; id: string }) {
   const b = state.lot.buildings.find((x) => x.id === id)!;
   const def = buildingDef(b.kind);
   const inside = occupants(state, b.id);
-  const queue = def.stage ? state.projects.filter((p) => p.stage === def.stage && !p.buildingId) : [];
+  const queue = def.stage ? state.projects.filter((p) => p.stage === def.stage && !p.buildingId && !isHeldScript(p)) : [];
   const next = upgradeCost(state, b);
   return (
     <div className="stack">
-      <p className="small muted">{def.blurb}</p>
+      {!def.stage && b.kind !== 'tower' && <p className="small muted">{def.blurb}</p>}
       {def.capacity && (
         <div className="panel stack-sm small">
           <div className="spread"><span>Level</span><b>{'★'.repeat(b.level)}{'☆'.repeat(3 - b.level)}</b></div>
@@ -159,7 +241,7 @@ function BuildingInfo({ state, id }: { state: GameState; id: string }) {
           </>}
         </div>
       )}
-      {b.kind === 'tower' && <p className="small">Finished shows fly here when they go on air. Air weeks with the ▶ button.</p>}
+      {b.kind === 'tower' && <p className="small muted">Finished programs wait here as cards until you give them a time slot. Air weeks with the ▶ button.</p>}
     </div>
   );
 }

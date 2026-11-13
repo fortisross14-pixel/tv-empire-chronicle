@@ -71,8 +71,9 @@ export interface Project {
   weeksLeft: number;
   durations: Record<Stage, number>;
   writerId: string;
-  crewId: string;
-  talentId: string;
+  /** Crew lead and on-screen talent: null until the finished script is sent to a Sound Stage. */
+  crewId: string | null;
+  talentId: string | null;
   level: ProductionLevel;
   writer2Id: string | null;
   writer3Id: string | null;

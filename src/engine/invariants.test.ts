@@ -4,6 +4,7 @@ import {
   airWeek, answerEvent, buyPack, cancelShow, createShow, dismissFinished, dismissReveal, newMissionGame, openPack, scheduleShow, SAVE_VERSION,
 } from './game';
 import { GameError } from './errors';
+import { projectPeople } from './production';
 import { FORMATS } from './data/formats';
 import { topicsForFormat } from './data/topics';
 import { rightsById } from './data/rights';
@@ -32,7 +33,7 @@ function check(s: GameState, where: string) {
   }
   const people = new Set(s.people.map((p) => p.id));
   for (const p of s.people) if (p.uses < 0) fail(`${p.name} has ${p.uses} uses`);
-  for (const pr of s.projects) for (const id of [pr.writerId, pr.crewId, pr.talentId]) if (!people.has(id)) fail(`project ${pr.name} lost ${id}`);
+  for (const pr of s.projects) for (const id of projectPeople(pr)) if (!people.has(id)) fail(`project ${pr.name} lost ${id}`);
   for (const sh of s.shows) {
     if (!Number.isFinite(sh.quality) || !Number.isFinite(sh.novelty)) fail(`${sh.name} has bad numbers`);
     if (sh.ipId && !s.ips.some((x) => x.id === sh.ipId)) fail(`${sh.name} points at missing IP`);

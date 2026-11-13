@@ -101,7 +101,7 @@ export function projectPoster(p: Project): PosterProps {
     spec: autoPoster({ id: p.showId ?? p.id, name: p.name, formatId: p.formatId, topicId: p.topicId, topic2Id: p.topic2Id }),
     formatId: p.formatId, topicId: p.topicId, title: p.name + (p.season > 1 ? ` · S${p.season}` : ''),
     sub: `${formatById(p.formatId).name}${p.script ? ` · script ${'★'.repeat(p.script.stars)}` : ''}${p.waitingOn ? ` · waiting for ${p.waitingOn}` : ''}`,
-    badge: `${STAGE_SHORT[p.stage]} · ${left} wk${left !== 1 ? 's' : ''}`, progress: doneWeeks / total, wide: true,
+    badge: p.stage === 'script' && p.script && !p.crewId ? 'Script ready · shoot it' : `${STAGE_SHORT[p.stage]} · ${left} wk${left !== 1 ? 's' : ''}`, progress: doneWeeks / Math.max(1, total), wide: true,
   };
 }
 

@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import type { Building, BuildingKind } from '../../engine';
 import { buildingDef, footprint } from '../../engine';
-import { BULB_OFF, BULB_ON, M, WIN_OFF, WIN_ON, buildingMesh, carMesh, forgetShared, gateMesh, isShared, lampMesh, reelMesh, walkerMesh } from './lotModels';
+import { BULB_OFF, BULB_ON, M, WIN_OFF, WIN_ON, buildingMesh, carMesh, cardMesh, forgetShared, gateMesh, isShared, lampMesh, reelMesh, walkerMesh, type LotCard } from './lotModels';
+
+export type { LotCard };
 
 /** What the scene draws: the lot, its buildings, productions in flight, a placement ghost. */
 export interface LotModel {
@@ -11,13 +13,15 @@ export interface LotModel {
   buildings: Building[];
   /** Productions: which building they're in (null = waiting outside its next one). */
   projects: { id: string; buildingId: string | null; waitingAt: string | null; color: string }[];
+  /** Finished things standing on the lot as cards: scripts to shoot, programmes to schedule. */
+  cards: LotCard[];
   /** Free people strolling on the lot. */
   walkers: { id: string; color: string }[];
   ghost: { kind: BuildingKind; x: number; y: number; rot: number; ok: boolean } | null;
   selectedId: string | null;
 }
 
-export interface LotLabel { id: string; x: number; y: number; visible: boolean }
+export interface LotLabel { id: string; x: number; y: number; visible: boolean; card?: LotCard['kind'] }
 
 const REDUCED = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CAM_OFFSET = new THREE.Vector3(14, 16, 14);
@@ -54,6 +58,8 @@ export class LotScene {
   private meshes = new Map<string, Entry>();
   private reels = new Map<string, Reel>();
   private walkers = new Map<string, Walker>();
+  private cardsGroup = new THREE.Group();
+  private cards = new Map<string, { mesh: THREE.Group; key: string; t: number; spot: THREE.Vector3 }>();
   private ghost: THREE.Group | null = null;
   private ghostKey = '';
   private selection: THREE.Mesh;
@@ -78,6 +84,7 @@ export class LotScene {
   constructor(private canvas: HTMLCanvasElement, private handlers: {
     onTile: (x: number, y: number) => void;
     onBuilding: (id: string) => void;
+    onCard: (kind: LotCard['kind'], id: string) => void;
     onLabels: (labels: LotLabel[]) => void;
   }) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
@@ -97,7 +104,7 @@ export class LotScene {
     const fill = new THREE.DirectionalLight(0xb9d4ff, 0.55);
     fill.position.set(10, 6, 2);
     this.scene.add(fill);
-    this.scene.add(this.ground, this.buildingsGroup);
+    this.scene.add(this.ground, this.buildingsGroup, this.cardsGroup);
     this.selection = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.7, 4, 1).rotateZ(Math.PI / 4), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false }));
     this.selection.rotation.x = -Math.PI / 2;
     this.selection.visible = false;
@@ -212,7 +219,7 @@ export class LotScene {
     const worldPerPx = (this.camera.right - this.camera.left) / r.width;
     const right = new THREE.Vector3(1, 0, -1).normalize();
     const fwd = new THREE.Vector3(-1, 0, -1).normalize();
-    const next = d.target.clone().addScaledVector(right, -dx * worldPerPx).addScaledVector(fwd, -dy * worldPerPx * 1.4);
+    const next = d.target.clone().addScaledVector(right, -dx * worldPerPx).addScaledVector(fwd, dy * worldPerPx * 1.59);
     const m = this.model;
     if (m) { next.x = THREE.MathUtils.clamp(next.x, -m.w / 2, m.w / 2); next.z = THREE.MathUtils.clamp(next.z, -m.h / 2, m.h / 2 + FRONT); }
     this.target.copy(next);
@@ -243,6 +250,11 @@ export class LotScene {
     const ray = new THREE.Raycaster();
     ray.setFromCamera(ndc, this.camera);
     if (!this.model.ghost) {
+      for (const h of ray.intersectObjects(this.cardsGroup.children, true)) {
+        let o: THREE.Object3D | null = h.object;
+        while (o && !o.userData.cardId) o = o.parent;
+        if (o?.userData.cardId) return this.handlers.onCard(o.userData.cardKind, o.userData.cardId);
+      }
       const hits = ray.intersectObjects(this.buildingsGroup.children, true);
       for (const h of hits) {
         if (h.object.name === 'beamCone') continue;
@@ -267,12 +279,13 @@ export class LotScene {
     if (sizeChanged) {
       this.buildGround();
       this.fitZoom();
-      if (!this.started) { this.target.set(0, 0, 0.4); this.camTarget.copy(this.target); this.camZoom = this.zoom * 0.82; }
+      if (!this.started) { this.target.set(-1.1, 0, -0.5); this.camTarget.copy(this.target); this.camZoom = this.zoom * 0.82; }
       this.updateCamera();
     }
     this.syncBuildings();
     this.syncGhost();
     this.syncReels();
+    this.syncCards();
     this.syncWalkers();
     if (this.gridLines) this.gridLines.visible = !!m.ghost;
     const sel = m.selectedId ? m.buildings.find((b) => b.id === m.selectedId) : undefined;
@@ -465,7 +478,8 @@ export class LotScene {
     const host = m.buildings.find((b) => b.id === (p.buildingId ?? p.waitingAt));
     if (!host) return new THREE.Vector3(0, 0.6, 0);
     const c = this.centerOf(host);
-    if (p.buildingId) return c.add(new THREE.Vector3((index % 3 - 1) * 0.5, this.topOf(host.id) + 0.4, 0));
+    // In work: the reel hovers by the front corner, clear of the badge above the roof.
+    if (p.buildingId) { const f = footprint(host); return c.add(new THREE.Vector3(f.w / 2 - 0.1, this.topOf(host.id) * 0.55 + 0.25, f.h / 2 - 0.2 - index * 0.5)); }
     const f = footprint(host);
     return c.add(new THREE.Vector3(f.w / 2 + 0.35, 0.4, -f.h / 2 + 0.4 + index * 0.5)); // the queue outside
   }
@@ -502,6 +516,43 @@ export class LotScene {
         this.scene.remove(r.mesh); this.free(r.mesh); this.reels.delete(id);
       }
     }
+  }
+
+  /** Cards stand in a row in front of their building (scripts by the Writers' Room, programmes by the tower). */
+  private syncCards() {
+    const m = this.model!;
+    const seen = new Set<string>();
+    const perHost = new Map<string, number>();
+    for (const c of m.cards) {
+      seen.add(c.id);
+      const host = m.buildings.find((b) => b.id === c.hostId);
+      const i = perHost.get(c.hostId ?? '') ?? 0;
+      perHost.set(c.hostId ?? '', i + 1);
+      const spot = new THREE.Vector3(i * 1.25 - 1, 1.0, 0);
+      if (host) {
+        const f = footprint(host);
+        spot.copy(this.centerOf(host)).add(c.kind === 'script'
+          ? new THREE.Vector3(-f.w / 2 + 0.5 + i * 1.25, 1.0, f.h / 2 + 0.6)
+          : new THREE.Vector3(f.w / 2 + 0.7 + i * 1.25, 1.0, f.h / 2 + 0.2));
+      }
+      const key = `${c.kind}:${c.title}:${c.note}:${c.icon}`;
+      let have = this.cards.get(c.id);
+      if (have && have.key !== key) { this.cardsGroup.remove(have.mesh); this.free(have.mesh); this.cards.delete(c.id); have = undefined; }
+      if (!have) {
+        const mesh = cardMesh(c);
+        mesh.traverse((o) => { o.userData.cardId = c.id; o.userData.cardKind = c.kind; });
+        mesh.rotation.set(0, Math.PI / 4, 0);
+        mesh.position.copy(spot);
+        if (this.started) {
+          mesh.scale.setScalar(0.01);
+          this.burst(spot, 12, ['#ffd23f', '#ffffff', '#ff9ae2'], { speed: 1.4, up: 1.8, gravity: 4, life: 0.8, size: 0.07, bits: true });
+        }
+        this.cardsGroup.add(mesh);
+        if (!this.started) mesh.scale.setScalar(1.8);
+        this.cards.set(c.id, { mesh, key, t: this.started ? 0 : 1, spot });
+      } else have.spot = spot;
+    }
+    for (const [id, c] of this.cards) if (!seen.has(id)) { this.cardsGroup.remove(c.mesh); this.free(c.mesh); this.cards.delete(id); }
   }
 
   // ---------- strolling staff ----------
@@ -690,6 +741,16 @@ export class LotScene {
       moving = true;
     }
 
+    // Cards pop up, then hover and rock gently so they catch the eye.
+    let n = 0;
+    for (const c of this.cards.values()) {
+      if (c.t < 1) { c.t = Math.min(1, c.t + dt / 0.5); c.mesh.scale.setScalar(1.8 * Math.max(0.01, easeOutBack(c.t))); hot = true; }
+      const ph = now / 600 + n++ * 1.3;
+      c.mesh.position.set(c.spot.x, c.spot.y + (calm ? 0 : Math.sin(ph) * 0.06), c.spot.z);
+      c.mesh.rotation.set(-0.12, Math.PI / 4 + (calm ? 0 : Math.sin(ph * 0.7) * 0.18), 0);
+      moving = true;
+    }
+
     // Staff stroll around the buildings and stop for a moment now and then.
     if (!calm) for (const w of this.walkers.values()) {
       if (w.wait > 0) {
@@ -793,8 +854,14 @@ export class LotScene {
     const out: LotLabel[] = [];
     for (const b of m.buildings) {
       if (!buildingDef(b.kind).stage && b.kind !== 'tower') continue;
-      const p = this.centerOf(b).add(new THREE.Vector3(0, this.topOf(b.id) + (buildingDef(b.kind).stage ? 0.95 : 0.25), 0)).project(this.camera);
+      const p = this.centerOf(b).add(new THREE.Vector3(0, this.topOf(b.id) + (buildingDef(b.kind).stage ? 0.55 : 0.2), 0)).project(this.camera);
       out.push({ id: b.id, x: Math.round((p.x + 1) / 2 * r.width), y: Math.round((1 - p.y) / 2 * r.height), visible: p.z < 1 });
+    }
+    for (const c of m.cards) {
+      const have = this.cards.get(c.id);
+      if (!have) continue;
+      const p = have.spot.clone().add(new THREE.Vector3(0, 0.95, 0)).project(this.camera);
+      out.push({ id: c.id, x: Math.round((p.x + 1) / 2 * r.width), y: Math.round((1 - p.y) / 2 * r.height), visible: p.z < 1, card: c.kind });
     }
     const key = out.map((l) => `${l.id}:${l.x}:${l.y}`).join('|');
     if (key === this.labelKey) return;

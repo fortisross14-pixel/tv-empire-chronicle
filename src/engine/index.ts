@@ -7,8 +7,8 @@ export * from './people';
 export * from './packs';
 export {
   computeScores, previewPlan, suggestTitle, grade, focusMatch, STAGE_LABEL, MAX_POINTS_PER_AREA, LEVELS, projectPeople, stagePeople, levelsFor, canSpinOff, SPINOFF,
-  SCRIPT_TIME, CLASSIC_QUALITY, scriptStars, teamBonus, freshIdeas,
-  type ShowPlan, type ScoreBreakdown,
+  SCRIPT_TIME, CLASSIC_QUALITY, scriptStars, teamBonus, freshIdeas, previewScript, previewShoot, isHeldScript,
+  type ShowPlan, type ScriptPlan, type ShootPlan, type ScoreBreakdown,
 } from './production';
 export * from './data/formats';
 export * from './data/topics';

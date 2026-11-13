@@ -2,7 +2,7 @@ import type { GameState, Pack, PackKind, PosterSpec, SlotId } from './types';
 import { CITY } from './data/names';
 import { addHouseCards } from './people';
 import { applyPack, makePack, MOVIE_PACK_PRICE, PRICES } from './packs';
-import { GameError, projectPeople, startProject, type ShowPlan } from './production';
+import { GameError, projectPeople, startProject, startScript, startShoot, type ScriptPlan, type ShootPlan, type ShowPlan } from './production';
 import { makeRivals } from './rivals';
 import { applyPromo, applySponsor } from './network';
 import { resolvePendingEvent } from './events';
@@ -162,6 +162,14 @@ export const useBusinessCard = (state: GameState, personId: string) =>
 
 export const createShow = (state: GameState, plan: ShowPlan) =>
   produce(state, (s) => startProject(s, plan));
+
+/** Order a script at the Writers' Room; it becomes a script card when it's written. */
+export const writeScript = (state: GameState, plan: ScriptPlan) =>
+  produce(state, (s) => { startScript(s, plan); });
+
+/** Shoot a finished script at a Sound Stage. */
+export const shootScript = (state: GameState, projectId: string, plan: ShootPlan) =>
+  produce(state, (s) => startShoot(s, projectId, plan));
 
 export const cancelProject = (state: GameState, projectId: string) =>
   produce(state, (s) => {

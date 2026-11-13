@@ -1,6 +1,7 @@
 // The studio lot: buildings, capacity per stage, building rules, saves.
-import { airWeek, buildBuilding, createShow, expandToState, moveBuilding, newMissionGame, openPack, sellBuilding, upgradeBuilding, SAVE_VERSION } from './game';
+import { airWeek, buildBuilding, createShow, shootScript, writeScript, expandToState, moveBuilding, newMissionGame, openPack, sellBuilding, upgradeBuilding, SAVE_VERSION } from './game';
 import { capacityOf, footprint, stageUse } from './lot';
+import { isHeldScript, previewPlan } from './production';
 import { LOT_SIZE } from './data/buildings';
 import { FORMATS } from './data/formats';
 import { topicsForFormat } from './data/topics';
@@ -108,4 +109,28 @@ test('version 14 saves get a lot sized for their tier', () => {
   expect(up.version).toBe(SAVE_VERSION);
   expect({ w: up.lot.w, h: up.lot.h }).toEqual(LOT_SIZE.state);
   expect(stageUse(up, 'script').capacity).toBe(2);
+});
+
+test('a script is written first, waits as a card, then is shot with a crew and cast', () => {
+  let s = ready(7);
+  const full = plan(s, 0);
+  const fullCost = previewPlan(s, full).cost;
+  const { crewId, talentId, points, ...idea } = full;
+  s = writeScript(s, idea);
+  expect(s.projects[0]).toMatchObject({ stage: 'script', crewId: null, talentId: null });
+  expect(s.projects[0].buildingId).toBeTruthy();
+  for (let i = 0; i < 10 && !s.projects[0].script; i++) s = week(s);
+  const held = s.projects[0];
+  expect(isHeldScript(held)).toBe(true);
+  expect(held.buildingId).toBeNull(); // the Writers' Room is free again
+  expect(stageUse(s, 'script').used).toBe(0);
+  s = week(s);
+  expect(isHeldScript(s.projects[0])).toBe(true); // it waits for the player
+  expect(() => shootScript(s, held.id, { crewId, talentId, points: { ...points, direction: 99 } })).toThrow(/focus points/);
+  s = shootScript(s, held.id, { crewId, talentId, points });
+  expect(s.projects[0]).toMatchObject({ stage: 'production', crewId, talentId });
+  expect(s.projects[0].cost).toBe(fullCost); // same price as the one-step plan
+  for (let i = 0; i < 20 && s.projects.length; i++) s = week(s);
+  expect(s.shows).toHaveLength(1);
+  expect(s.shows[0].scriptStars).toBe(held.script!.stars);
 });
