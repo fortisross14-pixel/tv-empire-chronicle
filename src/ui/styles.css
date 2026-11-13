@@ -850,7 +850,7 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
 .lot-pick:active { transform: scale(.985); }
 .lp-icon { font-size: 26px; }
 .lp-main { flex: 1; display: grid; gap: 2px; min-width: 0; }
-.lot-manage { display: grid; gap: 6px; margin-top: 16px; padding: 12px 0 72px; border-top: 1px solid var(--line); }
+.lot-manage { display: grid; gap: 6px; margin-top: 16px; padding: 12px 0 4px; border-top: 1px solid var(--line); }
 @media (prefers-reduced-motion: reduce) { .lot-badge.nudge .lb-icon, .lot-cta span { animation: none; } }
 .lot-zoom { position: absolute; right: 12px; top: 12px; display: grid; gap: 6px; }
 .lot-zoom .btn { width: 40px; height: 40px; padding: 0; background: rgba(28,15,51,.7); }
@@ -925,3 +925,46 @@ button.card:active:not(:disabled), button.poster:active, .todo:active:not(:disab
 .market-tabs button { padding-left: 4px; padding-right: 4px; white-space: nowrap; font-size: 13px; }
 .lot-pick.selected { box-shadow: 0 0 0 2px var(--focus) inset; }
 .lot-pick:disabled { opacity: .55; cursor: default; }
+
+/* A production at work inside a building. */
+.work-card { display: grid; gap: 8px; padding: 12px; border-radius: 16px; background: var(--tile); border-left: 6px solid var(--c, var(--accent)); }
+.work-bar { height: 12px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+.work-bar i { display: block; height: 100%; border-radius: 999px; background: var(--good); transition: width .5s cubic-bezier(.2,.8,.2,1); }
+
+/* The card from the lot, big: a script page or a filmed show. */
+.big-card { max-width: 300px; width: 100%; margin: 0 auto; border-radius: 22px; overflow: hidden; border: 5px solid #3b2a55; background: #fff8e6; color: #2b1750; box-shadow: var(--shadow); rotate: -1.5deg; }
+.big-card.shot { border-color: #1c6f9c; background: #dff4ff; }
+.bc-head { position: relative; display: grid; place-items: center; height: 120px; background: var(--c, var(--accent)); }
+.bc-kind { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-weight: 900; font-size: 12px; letter-spacing: .14em; color: #2b1750; }
+.bc-icon { font-size: 60px; line-height: 1; margin-top: 14px; }
+.bc-body { display: grid; gap: 6px; padding: 14px 16px 16px; text-align: center; }
+.bc-body h3 { font-size: 22px; line-height: 1.15; color: #2b1750; }
+.bc-meta { font-size: 13px; font-weight: 700; opacity: .75; }
+.bc-stars { font-size: 28px; letter-spacing: 2px; color: #e09a00; }
+.bc-stars span { color: rgba(43,23,80,.18); }
+.bc-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; opacity: .7; padding-top: 6px; border-top: 1px dashed rgba(43,23,80,.25); }
+
+/* Picked: a bright frame and a tick, so there is no doubt who has the part. */
+.card.selected { box-shadow: inset 0 0 0 4px var(--focus), 0 8px 20px rgba(5,0,20,.4); transform: translateY(-2px); }
+.card .picked { position: absolute; top: 8px; right: 8px; z-index: 2; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--good); color: #0b2b1d; font-weight: 900; font-size: 15px; box-shadow: 0 0 0 3px var(--tile); }
+.card.person.selected .ovr { margin-right: 30px; }
+
+/* Rarity you can see at a glance: a coloured frame and wash, a ringed avatar, a filled tag. */
+.card.person { --rc: var(--common); --rc-wash: transparent; box-shadow: inset 0 0 0 2px rgba(154,143,179,.35); }
+.card.person.rarity-rare { --rc: var(--rare); --rc-wash: rgba(90,169,255,.2); }
+.card.person.rarity-epic { --rc: var(--epic); --rc-wash: rgba(196,135,255,.24); }
+.card.person.rarity-legend { --rc: var(--legend); --rc-wash: rgba(255,200,87,.26); }
+.card.person.rarity-rare, .card.person.rarity-epic, .card.person.rarity-legend {
+  background: linear-gradient(165deg, var(--rc-wash), var(--tile) 62%); box-shadow: inset 0 0 0 3px var(--rc); }
+.card.person.rarity-legend { box-shadow: inset 0 0 0 3px var(--rc), 0 0 18px rgba(255,200,87,.35); }
+.card.person.selected, .card.person.rarity-rare.selected, .card.person.rarity-epic.selected, .card.person.rarity-legend.selected {
+  box-shadow: inset 0 0 0 4px var(--focus), inset 0 0 0 7px var(--rc), 0 8px 20px rgba(5,0,20,.4); }
+.card.person .avatar { box-shadow: 0 0 0 3px var(--tile), 0 0 0 6px var(--rc); border-radius: 14px; }
+.card.person .rarity-tag { padding: 2px 9px; border-radius: 999px; background: var(--rc); color: #1c0f33; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; font-size: 10px; }
+.card.person.rarity-common .rarity-tag { background: rgba(154,143,179,.3); color: var(--text-2); }
+.card.person.house .rarity-tag { background: rgba(255,255,255,.1); color: var(--text-2); }
+.rarity-tag.common, .rarity-tag.rare, .rarity-tag.epic, .rarity-tag.legend { padding: 2px 9px; border-radius: 999px; font-weight: 900; text-transform: uppercase; font-size: 10px; letter-spacing: .04em; color: #1c0f33; display: inline-block; }
+.rarity-tag.common { background: var(--common); }
+.rarity-tag.rare { background: var(--rare); }
+.rarity-tag.epic { background: var(--epic); }
+.rarity-tag.legend { background: var(--legend); }

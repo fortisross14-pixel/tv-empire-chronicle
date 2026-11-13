@@ -83,6 +83,7 @@ export function PersonCard({
           <span>×{person.uses}</span>
         </span>}
       </div>
+      {selected && <span className="picked" aria-hidden="true">✓</span>}
       {note && <div className="busy-band">{note}</div>}
       {!person.house && person.uses <= 0 && <div className="retired-band">NO USES LEFT</div>}
     </Tag>

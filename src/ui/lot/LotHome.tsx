@@ -174,6 +174,41 @@ export function LotHome({
   );
 }
 
+/** What a building is working on right now: a card per production with its progress. */
+function InProgress({ state, projects, verb }: { state: GameState; projects: GameState['projects']; verb: string }) {
+  if (projects.length === 0) return null;
+  const who = (p: GameState['projects'][number]) => {
+    const ids = p.stage === 'script' ? [p.writerId, p.writer2Id, p.writer3Id] : p.stage === 'production' ? [p.crewId, ...Object.values(p.cast)] : [p.crewId, ...Object.values(p.specialists)];
+    return [...new Set(ids.filter(Boolean))].map((id) => state.people.find((x) => x.id === id)?.name).filter(Boolean).slice(0, 3).join(', ');
+  };
+  return (
+    <div className="stack-sm">
+      <b className="small">{verb}</b>
+      {projects.map((p) => {
+        const total = Math.max(1, p.durations[p.stage]);
+        const done = Math.min(total, total - p.weeksLeft);
+        const f = formatById(p.formatId);
+        return (
+          <div key={p.id} className="work-card" style={{ ['--c' as string]: f.color }}>
+            <div className="spread">
+              <span className="row" style={{ gap: 8, minWidth: 0 }}><span style={{ fontSize: 26 }}>{f.icon}</span>
+                <span style={{ minWidth: 0 }}><b>{p.name}{p.season > 1 ? ` · S${p.season}` : ''}</b><span className="tiny muted" style={{ display: 'block' }}>{f.name} · {who(p)}</span></span></span>
+              <span className="chip dark">{p.weeksLeft} wk{p.weeksLeft !== 1 && 's'} left</span>
+            </div>
+            <div className="work-bar" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label={`${p.name}: week ${done} of ${total}`}>
+              <i style={{ width: `${Math.max(6, (done / total) * 100)}%` }} />
+            </div>
+            <div className="spread tiny muted">
+              <span>Week {done} of {total}</span>
+              {p.waitingOn ? <span className="neg">Paused: waiting for {p.waitingOn}</span> : <span>Air weeks to move it on</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** What you do at this building: write at the Writers' Room, shoot at a Sound Stage, finish in post, release at the tower. */
 function BuildingActions({
   state, building, onWrite, onAdvance, onGuide, onOpenShow, onMarket,
@@ -192,11 +227,15 @@ function BuildingActions({
       <span className="chip good">{label}</span>
     </button>
   );
+  const working = occupants(state, building.id);
   if (building.kind === 'writers') {
     const room = stageUse(state, 'script');
     return (
       <div className="stack lot-actions">
-        <button className="btn primary big" disabled={state.formats.length === 0} onClick={onWrite}>✍️ Write a new script</button>
+        <InProgress state={state} projects={working} verb="Being written" />
+        <button className={working.length ? 'btn ghost big' : 'btn primary big'} disabled={state.formats.length === 0} onClick={onWrite}>
+          ✍️ {working.length ? 'Write another script' : 'Write a new script'}
+        </button>
         {state.formats.length === 0
           ? <p className="tiny muted">Open your pack first: it has the formats and topics to write about.</p>
           : room.used >= room.capacity && <p className="tiny muted">Every Writers’ Room is busy, so a new script waits its turn. Expand the room to write more at once.</p>}
@@ -207,11 +246,12 @@ function BuildingActions({
   if (building.kind === 'stage') {
     return (
       <div className="stack lot-actions">
+        <InProgress state={state} projects={working} verb="Being shot" />
         {scripts.length > 0
           ? <div className="stack-sm"><b className="small">🎬 Shoot a program: pick a finished script</b>{scripts.map((p) => row(p, 'script', '🎬 Shoot'))}</div>
           : <>
-            <p className="small">Programs are shot here from finished scripts: you choose the cast and the crew. You have no script waiting.</p>
-            <button className="btn primary big" disabled={state.formats.length === 0} onClick={onWrite}>✍️ Write a script first</button>
+            {working.length === 0 && <p className="small">Programs are shot here from finished scripts: you choose the cast and the crew. You have no script waiting.</p>}
+            <button className={working.length ? 'btn ghost big' : 'btn primary big'} disabled={state.formats.length === 0} onClick={onWrite}>✍️ {working.length ? 'Write another script' : 'Write a script first'}</button>
           </>}
         {shots.length > 0 && <div className="stack-sm"><b className="small">Filmed, waiting for post-production</b>{shots.map((p) => row(p, 'shot', '🎞️ Post'))}</div>}
       </div>
@@ -220,9 +260,10 @@ function BuildingActions({
   if (building.kind === 'post') {
     return (
       <div className="stack lot-actions">
+        <InProgress state={state} projects={working} verb="In post-production" />
         {shots.length > 0
           ? <div className="stack-sm"><b className="small">🎞️ Finish a program: sound, music and visual effects</b>{shots.map((p) => row(p, 'shot', '🎞️ Post'))}</div>
-          : <p className="small">Filmed programs are finished here: sound, music and visual effects. Nothing is waiting for post right now.</p>}
+          : working.length === 0 && <p className="small">Filmed programs are finished here: sound, music and visual effects. Nothing is waiting for post right now.</p>}
       </div>
     );
   }
@@ -303,10 +344,7 @@ function BuildingInfo({ state, id }: { state: GameState; id: string }) {
       )}
       {def.stage && (
         <div className="stack-sm">
-          <b className="small">Inside now</b>
-          {inside.length === 0 ? <p className="tiny muted">Empty: ready for the next {STAGE_LABEL[def.stage].toLowerCase()}.</p> : inside.map((p) => (
-            <div key={p.id} className="spread small"><span>{p.name}</span><span className="muted">{p.weeksLeft} of {p.durations[p.stage]} wk left</span></div>
-          ))}
+          {inside.length === 0 && <p className="tiny muted">Empty: ready for the next {STAGE_LABEL[def.stage].toLowerCase()}.</p>}
           {queue.length > 0 && <>
             <b className="small neg">Waiting outside ({queue.length})</b>
             {queue.map((p) => <div key={p.id} className="spread small"><span>{p.name}</span><span className="muted">needs a free {def.name}</span></div>)}

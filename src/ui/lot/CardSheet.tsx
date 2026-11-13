@@ -41,6 +41,15 @@ export function CardSheet({
     <Sheet title={`${kind === 'script' ? '📄' : '🎬'} ${p.name}${p.season > 1 ? ` · S${p.season}` : ''}`} onClose={onClose}
       footer={<button className="btn primary" onClick={onNext}>{kind === 'script' ? '🎬 Take it to the Sound Stage' : '🎞️ Take it to post-production'}</button>}>
       <div className="stack">
+        <div className={cx('big-card', kind)} style={{ ['--c' as string]: format.color }}>
+          <div className="bc-head"><span className="bc-kind">{kind === 'script' ? 'SCRIPT' : 'FILMED'}</span><span className="bc-icon">{format.icon}</span></div>
+          <div className="bc-body">
+            <h3>{p.name}{p.season > 1 ? ` · Season ${p.season}` : ''}</h3>
+            <div className="bc-meta">{format.name} · {topic.icon} {topic.name}{p.topic2Id ? ` + ${topicById(p.topic2Id).icon} ${topicById(p.topic2Id).name}` : ''}</div>
+            <div className="bc-stars" aria-label={`${p.script?.stars ?? 0}-star script`}>{'★'.repeat(p.script?.stars ?? 0)}<span>{'★'.repeat(5 - (p.script?.stars ?? 0))}</span></div>
+            <div className="bc-foot"><span>{LEVELS[p.level].label}</span><span>{kind === 'script' ? 'Ready for the studio' : 'Ready for post-production'}</span></div>
+          </div>
+        </div>
         <div className="panel stack-sm small">
           <div className="spread"><span>{format.icon} {format.name} · {topic.icon} {topic.name}{p.topic2Id ? ` + ${topicById(p.topic2Id).icon}` : ''}</span><span className="chip">{LEVELS[p.level].label}</span></div>
           <div className="spread"><span>Script</span><ScriptStars n={p.script?.stars ?? 0} /></div>

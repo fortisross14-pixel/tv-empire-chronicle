@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { cx } from '../util';
 
@@ -24,7 +25,9 @@ export function Sheet({
   }, []);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  return (
+  // Rendered at the top of the page, so a sheet always covers the whole screen (header, tab
+  // bar and the Air button included) wherever in the app it was opened from.
+  return createPortal(
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose?.()}>
       <div className={cx('sheet', wide && 'wide')} role="dialog" aria-modal="true">
         <div className="sheet-head">
@@ -34,6 +37,7 @@ export function Sheet({
         {children}
         {footer && <div className="sheet-foot">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
